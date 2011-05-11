@@ -1,0 +1,35 @@
+#edit-bibliographic-citation-wrapper input{
+	width: 95%;
+}
+
+.classification_biblio_list {
+	padding:0px;
+	float:left;
+}
+
+.classification_biblio_list {
+	list-style:none;
+	background:none;
+	font-size:small;
+}
+
+.classification_biblio_list li a {
+	background:none;
+	display: block;
+	line-height: 20px;
+	height: 20px;
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	outline: none;
+	padding: 1px 5px;
+	padding-left: 24px;
+}
+
+.classification_biblio_list li.edit a {
+	background-image: url("../images/book_edit.gif");
+}
+
+
+.classification_biblio_list li.add  a {
+	background-image: url("../images/book_add.gif");
+}

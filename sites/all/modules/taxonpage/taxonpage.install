@@ -1,0 +1,37 @@
+<?php
+
+function taxonpage_install() {
+  variable_set("taxonpage_show_license",TRUE);
+  variable_set("taxonpage_show_flag",TRUE);
+  variable_set("taxonpage_show_tree",TRUE);
+}
+
+function taxonpage_update_6100() {
+  global $conf;
+  $ret = array();
+  $license = !isset($conf['taxonpage_show_license']) ? variable_set("taxonpage_show_license",TRUE) : '';
+  $license = variable_get("taxonpage_show_license",FALSE) == FALSE ? variable_set("taxonpage_show_license",FALSE) : variable_set("taxonpage_show_license",TRUE);
+  $tree = !isset($conf['taxonpage_show_tree']) ? variable_set("taxonpage_show_tree",TRUE) : '';
+  $tree = variable_get("taxonpage_show_tree",FALSE) == FALSE ? variable_set("taxonpage_show_tree",FALSE) : variable_set("taxonpage_show_tree",TRUE);
+  return $ret;
+}
+
+function taxonpage_update_6101() {
+	$ret = array();
+	variable_del('taxonpage_show_tree');
+	return $ret;
+}
+
+function taxonpage_update_6102() {
+	$ret = array();
+	variable_set('taxonpage_show_flag',TRUE);
+	return $ret;
+}
+
+function taxonpage_update_6103() {
+	$ret = array();
+	variable_del('taxonpage_show_flag');
+	variable_del('taxonpage_show_citation');
+	return $ret;
+}
+

@@ -1,0 +1,51 @@
+<?php
+
+function image_lifedesk_install() {
+  drupal_install_schema('image_lifedesk');
+  db_query("UPDATE {system} SET weight = 98 WHERE name = 'image_lifedesk' and type = 'module'");
+}
+
+function lifedesk_image_uninstall() {
+  drupal_uninstall_schema('image_lifedesk');
+}
+
+function image_lifedesk_schema() {
+	$schema['image_lifedesk'] = array(
+    'fields' => array(
+      'nid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'The node id for the image'
+      ),
+      'credit' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'description' => 'The credit for the image'
+      ),
+      'rights' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'description' => 'Individual or institution that hold the rights for the image'
+      ),
+      'exemplar' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Flag to designate if image is exemplar'
+      ),
+    ),
+    'primary key' => array('nid'),
+  );
+
+  return $schema;
+}
+
+function image_lifedesk_update_6001() {
+	$ret = array();
+	$ret[] = update_sql("UPDATE {system} SET weight = 98 WHERE name = 'image_lifedesk' and type = 'module'");
+	return $ret;
+}

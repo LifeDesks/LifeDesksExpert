@@ -1,0 +1,12 @@
+name = Compare Schema
+description = "Compares schema between two different databases and provides options to update."
+package = "LifeDesk"
+project = "compare_schema"
+
+dependencies[] = multisite_manager
+dependencies[] = db_switch
+dependencies[] = locale
+
+core = 6.x
+
+version = "6.x-1.0"

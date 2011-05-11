@@ -1,0 +1,39 @@
+<?php
+
+function lifedesk_stats_install() {
+
+}
+
+function lifedesk_stats_uninstall() {
+
+}
+
+/**
+ * Implementation of hook_requirements().
+ */
+function lifedesk_stats_requirements($phase) {
+  $requirements = array();
+
+    if ($phase == 'runtime' || $phase == 'install') {
+    // File paths
+    $lifedesk_stats_path = file_create_path('lifedesk_stats');
+
+    if (!file_check_directory($lifedesk_stats_path, FILE_CREATE_DIRECTORY)) {
+      $requirements['lifedesk_stats_dir'] = array(
+        'value' => t('Missing directory'),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => t("The lifedesk_stats module's directory %lifedesk_stats-dir is missing.", array('%lifedesk_stats-dir' => $lifedesk_stats_path)),
+      );
+    }
+
+    else {
+      $requirements['lifedesk_stats_dir'] = array(
+        'value' => t('Exists (%path)', array('%path' => $lifedesk_stats_path)),
+        'severity' => REQUIREMENT_OK,
+      );
+    }
+    $requirements['lifedesk_stats_dir']['title'] = t('lifedesk_stats module directory');
+  }
+
+  return $requirements;
+}

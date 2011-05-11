@@ -1,0 +1,21 @@
+#taxon_description_instructions {
+  margin: .75em 0 .75em;
+  padding: .5em 1em;
+  background-color: #ccffcc;
+  border: 1px solid #008800;
+}
+
+input.taxon_description-buttons {
+  border: thin solid;
+  border-color: #cccccc #555555 #555555 #cccccc;
+  background-color: #f2f2f2;
+  background-repeat: no-repeat;
+  background-position:3px;
+  padding-left: 25px;
+  padding-bottom: 3px;
+  height: 28px;
+}
+
+input.export {
+  background-image: url(../images/csv.gif);
+}

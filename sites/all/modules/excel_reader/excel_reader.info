@@ -1,0 +1,8 @@
+name = Excel Reader
+description = "Makes it possible to parse Excel files into an array."
+package = "LifeDesk"
+project = "excel_reader"
+
+core = 6.x
+
+version = "6.x-6000"

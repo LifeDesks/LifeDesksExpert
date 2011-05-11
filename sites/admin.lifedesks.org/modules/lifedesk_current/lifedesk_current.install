@@ -1,0 +1,368 @@
+<?php
+
+/**
+ * Implementation of hook_install().
+ */
+function lifedesk_current_install() {
+  drupal_load('module', 'content');
+  content_notify('install', 'lifedesk_current');
+
+	module_load_install('content_copy');
+	
+	
+	$content['type']  = array (
+	  'name' => 'LifeDesk Current Tasks',
+	  'type' => 'lifedesk_current',
+	  'description' => 'Create a list of current tasks under development for LifeDesk to appear at http://www.lifedesks.org/newfeatures/current.',
+	  'title_label' => 'Title',
+	  'body_label' => '',
+	  'min_word_count' => '0',
+	  'help' => '',
+	  'node_options' => 
+	  array (
+	    'status' => false,
+	    'promote' => false,
+	    'sticky' => false,
+	    'revision' => false,
+	  ),
+	  'language_content_type' => '0',
+	  'old_type' => 'lifedesk_current',
+	  'orig_type' => '',
+	  'module' => 'node',
+	  'custom' => '1',
+	  'modified' => '1',
+	  'locked' => '0',
+	  'comment' => '2',
+	  'comment_default_mode' => '4',
+	  'comment_default_order' => '1',
+	  'comment_default_per_page' => '50',
+	  'comment_controls' => '3',
+	  'comment_anonymous' => 0,
+	  'comment_subject_field' => '1',
+	  'comment_preview' => '1',
+	  'comment_form_location' => '0',
+	  'ant' => '1',
+	  'ant_pattern' => '<?php
+					  $token = \'[field_releaseversion-raw]\';
+					  if (empty($token)) {
+					    return \'[type]\';
+					  }
+					  else {
+					    return \'LifeDesk Current Tasks: \' . $token;
+					  } 
+					?>',
+	  'ant_php' => 1,
+	);
+	$content['fields']  = array (
+	  0 => 
+	  array (
+	    'label' => 'Release Version',
+	    'field_name' => 'field_releaseversion',
+	    'type' => 'text',
+	    'widget_type' => 'text_textfield',
+	    'change' => 'Change basic information',
+	    'weight' => '32',
+	    'rows' => 5,
+	    'size' => '60',
+	    'description' => 'e.g. 2.50 (the current iteration)',
+	    'default_value' => 
+	    array (
+	      0 => 
+	      array (
+	        'value' => '',
+	        '_error_element' => 'default_value_widget][field_releaseversion][0][value',
+	      ),
+	    ),
+	    'default_value_php' => '',
+	    'default_value_widget' => NULL,
+	    'group' => false,
+	    'required' => 1,
+	    'multiple' => '0',
+	    'text_processing' => '0',
+	    'max_length' => '',
+	    'allowed_values' => '',
+	    'allowed_values_php' => '',
+	    'op' => 'Save field settings',
+	    'module' => 'text',
+	    'widget_module' => 'text',
+	    'columns' => 
+	    array (
+	      'value' => 
+	      array (
+	        'type' => 'text',
+	        'size' => 'big',
+	        'not null' => false,
+	        'sortable' => true,
+	        'views' => true,
+	      ),
+	    ),
+	    'display_settings' => 
+	    array (
+	      'weight' => '1',
+	      'parent' => '',
+	      4 => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'label' => 
+	      array (
+	        'format' => 'above',
+	        'exclude' => 0,
+	      ),
+	      'teaser' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'full' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'token' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	    ),
+	  ),
+	  1 => 
+	  array (
+	    'label' => 'Release Date',
+	    'field_name' => 'field_releasedate',
+	    'type' => 'text',
+	    'widget_type' => 'text_textfield',
+	    'change' => 'Change basic information',
+	    'weight' => '34',
+	    'rows' => 5,
+	    'size' => '60',
+	    'description' => 'e.g. April 2, 2010 (the expected release date)',
+	    'default_value' => 
+	    array (
+	      0 => 
+	      array (
+	        'value' => '',
+	        '_error_element' => 'default_value_widget][field_releasedate][0][value',
+	      ),
+	    ),
+	    'default_value_php' => '',
+	    'default_value_widget' => 
+	    array (
+	      'field_releasedate' => 
+	      array (
+	        0 => 
+	        array (
+	          'value' => '',
+	          '_error_element' => 'default_value_widget][field_releasedate][0][value',
+	        ),
+	      ),
+	    ),
+	    'group' => false,
+	    'required' => 1,
+	    'multiple' => '0',
+	    'text_processing' => '0',
+	    'max_length' => '',
+	    'allowed_values' => '',
+	    'allowed_values_php' => '',
+	    'op' => 'Save field settings',
+	    'module' => 'text',
+	    'widget_module' => 'text',
+	    'columns' => 
+	    array (
+	      'value' => 
+	      array (
+	        'type' => 'text',
+	        'size' => 'big',
+	        'not null' => false,
+	        'sortable' => true,
+	        'views' => true,
+	      ),
+	    ),
+	    'display_settings' => 
+	    array (
+	      'weight' => 0,
+	      'parent' => '',
+	      4 => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'label' => 
+	      array (
+	        'format' => 'above',
+	        'exclude' => 0,
+	      ),
+	      'teaser' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'full' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'token' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	    ),
+	  ),
+	  2 => 
+	  array (
+	    'label' => 'Tasks',
+	    'field_name' => 'field_tasks',
+	    'type' => 'text',
+	    'widget_type' => 'text_textfield',
+	    'change' => 'Change basic information',
+	    'weight' => '35',
+	    'rows' => 5,
+	    'size' => '60',
+	    'description' => '',
+	    'default_value' => 
+	    array (
+	      0 => 
+	      array (
+	        'value' => '',
+	        '_error_element' => 'default_value_widget][field_tasks][0][value',
+	      ),
+	    ),
+	    'default_value_php' => '',
+	    'default_value_widget' => 
+	    array (
+	      'field_tasks' => 
+	      array (
+	        0 => 
+	        array (
+	          'value' => '',
+	          '_error_element' => 'default_value_widget][field_tasks][0][value',
+	        ),
+	      ),
+	    ),
+	    'group' => false,
+	    'required' => 0,
+	    'multiple' => '1',
+	    'text_processing' => '0',
+	    'max_length' => '',
+	    'allowed_values' => '',
+	    'allowed_values_php' => '',
+	    'op' => 'Save field settings',
+	    'module' => 'text',
+	    'widget_module' => 'text',
+	    'columns' => 
+	    array (
+	      'value' => 
+	      array (
+	        'type' => 'text',
+	        'size' => 'big',
+	        'not null' => false,
+	        'sortable' => true,
+	        'views' => true,
+	      ),
+	    ),
+	    'display_settings' => 
+	    array (
+	      'label' => 
+	      array (
+	        'format' => 'above',
+	        'exclude' => 0,
+	      ),
+	      'teaser' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'full' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      4 => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'token' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	    ),
+	  ),
+	);
+	$content['extra']  = array (
+	  'title' => '-5',
+	  'revision_information' => '20',
+	  'comment_settings' => '30',
+	  'menu' => '-2',
+	);
+
+	$content_type = array(
+	  'values' => array(
+	    'type_name' => '<create>',
+	    'macro' => '$content = '. var_export($content, TRUE) .';',
+	  ),
+	);
+	
+	drupal_execute('content_copy_import_form', $content_type);
+	
+	_lifedesk_current_import_existing();
+}
+
+function lifedesk_current_uninstall() {
+  drupal_load('module', 'content');
+  content_notify('uninstall', 'lifedesk_current');
+
+  db_query("DELETE FROM {node_type} WHERE type='lifedesk_current'");
+
+  $qry = db_query("SELECT nid FROM {node} WHERE type='lifedesk_current'");
+
+  while($nodes = db_fetch_object($qry)) {
+    node_delete($nodes->nid);	
+  }
+
+  //remove all the fields
+  db_query("DROP TABLE {content_type_lifedesk_current}");
+  db_query("DROP TABLE {content_field_tasks}");
+  db_query("DELETE FROM {content_node_field} WHERE field_name = 'field_tasks'");
+  db_query("DELETE FROM {content_node_field_instance} WHERE type_name = 'lifedesk_current'");
+
+}
+
+function lifedesk_current_enable() {
+  drupal_load('module', 'content');
+  content_notify('enable', 'lifedesk_current');
+}
+
+function lifedesk_current_disable() {
+  drupal_load('module', 'content');
+  content_notify('disable', 'lifedesk_current');
+}
+
+function _lifedesk_current_import_existing() {
+	$versions[] = array(
+	  'field_releaseversion' => '2.35',
+	  'field_releasedate' => 'July 7, 2010',
+	  'field_tasks' => array(
+		'Upgrade Drupal Core and all contributed modules',
+		'Create an interface for site owners and administrators to enable additional languages for data entry'),
+	);
+	
+  foreach($versions as $value) {
+	$node = new stdClass();
+	$node->type = 'lifedesk_current';
+    $node->field_releaseversion[0]['value'] = $value['field_releaseversion'];
+    $node->field_releasedate[0]['value'] = $value['field_releasedate'];
+    foreach($value['field_tasks'] as $key => $task) {
+	  $node->field_tasks[$key]['value'] = $task;
+	  $node->field_tasks[$key]['format'] = 2;
+    }
+    $node->title = 'LifeDesk Current Tasks: ' . $value['field_releaseversion'];
+    $node->status = 1;
+    $node->op = t('Save');
+
+    node_save($node);
+  }
+}

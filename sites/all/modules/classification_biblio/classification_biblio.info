@@ -1,0 +1,12 @@
+name = Classification Bibliography
+description = "Integrates the bibliography & classification modules"
+package = "LifeDesk"
+project = "classification_biblio"
+
+dependencies[] = classification
+dependencies[] = classification_settings
+dependencies[] = biblio
+
+core = 6.x
+
+version = 6.x-6100

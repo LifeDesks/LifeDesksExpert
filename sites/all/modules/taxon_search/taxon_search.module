@@ -1,0 +1,189 @@
+<?php
+
+/**
+ * Implementation of hook_menu().
+ */
+function taxon_search_menu() {
+  $items = array();
+  $items['admin/settings/taxonsearch'] = array(
+    'title'              => 'Taxon Search',
+    'description'        => 'Administer Taxon Search.',
+    'page callback'      => 'drupal_get_form',
+    'page arguments'     => array('taxon_search_settings'),
+    'access callback'    => 'user_access',
+    'access arguments'   => array('administer search'),
+    'file'               => 'taxon_search.admin.inc',
+  );
+
+  return $items; 
+}
+
+ /**
+ * Implementation of hook_menu_alter().
+ */
+function taxon_search_menu_alter(&$menu) {
+  if (isset($menu['search/taxon_search/%menu_tail'])) {
+    $menu['search']['page callback'] = 'taxon_search_view';
+    $menu['search/taxon_search/%menu_tail']['page callback'] = 'taxon_search_view';
+  }
+}
+
+/**
+ * Implementation of hook_search().
+ */
+function taxon_search_search($op = 'search', $keys = NULL) {
+  switch ($op) {
+    case 'name':
+      return t('Taxa');
+
+    case 'search':
+        $page = isset($_GET['page']) ? $_GET['page'] : 0;
+        try {
+            $rows = variable_get('taxon_search_solr_rows', 10);
+            $shortname = variable_get('shortname', '');
+            $params = array('rows' => $rows);
+            if($shortname) $params['fq'][] = 'shortname:'.$shortname;
+            $results = taxon_search_execute($keys, 'search/' . arg(1), $page, $params);
+            return $results;
+          }
+          catch (Exception $e) {
+            watchdog('Taxon Search', nl2br(check_plain($e->getMessage())), NULL, WATCHDOG_ERROR);
+          }
+        break;
+  }
+}
+
+function taxon_search_execute($keys, $base_path = '', $page = 0, $params = array('rows' => 10)) {
+
+  $params['start'] = $page * $params['rows'];
+
+  $solr = taxon_search_get_solr();
+  // We must run htmlspecialchars() here since converted entities are in the index.
+  // and thus bare entities &, > or < won't match.
+  $response = $solr->search(htmlspecialchars($keys, ENT_NOQUOTES, 'UTF-8'), $params['start'], $params['rows'], $params);
+
+  return taxon_search_process_response($response, $params);
+}
+
+function taxon_search_get_solr($host = NULL, $port = NULL, $path = NULL) {
+  static $solr_cache;
+
+  if (empty($host)) {
+    $host = variable_get('taxon_search_solr_host', 'localhost');
+  }
+  if (empty($port)) {
+    $port = variable_get('taxon_search_solr_port', '8983');
+  }
+  if (empty($path)) {
+    $path = variable_get('taxon_search_solr_path', '/solr');
+  }
+
+  if (empty($solr_cache[$host][$port][$path])) {
+    list($module, $filepath, $class) = variable_get('apachesolr_service_class', array('apachesolr', 'Drupal_Apache_Solr_Service.php', 'Drupal_Apache_Solr_Service'));
+    include_once(drupal_get_path('module', $module) .'/'. $filepath);
+    $solr = new $class($host, $port, $path);
+    // Set a non-default behavior.
+    $solr->setCollapseSingleValueArrays(FALSE);
+    $solr_cache[$host][$port][$path] = $solr;
+  }
+  return $solr_cache[$host][$port][$path];
+}
+
+function taxon_search_process_response($response, $params) {
+  $results = array();
+  $total = $response->response->numFound;
+  apachesolr_pager_init($total, $params['rows']);
+  if ($total > 0) {
+    foreach ($response->response->docs as $doc) {
+      $extra = array();
+      $fields = array();
+      $snippet = "";
+      $parent_string = "";
+
+      $parents = array_reverse(taxonomy_get_parents_all($doc->tid));
+      $tot_parents = count($parents);
+
+      $i = 1;
+      foreach($parents as $parent) {
+        $separator = ($i !== $tot_parents) ? "-&gt;" : "";
+        $parent_string .= $parent->name . $separator;
+        $i++;
+      }
+
+      $snippet .= '<span class="treepath">' . theme('apachesolr_search_snippets', $doc, array(truncate_utf8($parent_string, 512, TRUE))) . '</span>';
+
+      $treepath = (isset($doc->treepath)) ? str_replace("Array->", "", $doc->treepath) : false;
+      if($treepath) {
+        $snippet .= '<span class="treepath colp">' . t('<em>Catalogue of Life</em>: ') . theme('apachesolr_search_snippets', $doc, array(truncate_utf8($treepath, 512, TRUE))) . '</span>';
+      }
+
+      foreach ($doc->getFieldNames() as $field_name) {
+        $fields[$field_name] = $doc->$field_name;
+      }
+
+      $results[] = array(
+        'type' => 'Taxon Term',
+        'link' => url("pages/" . $doc->tid, array('absolute' => TRUE)),
+        'title' => htmlspecialchars_decode($doc->name, ENT_QUOTES),
+        'date' => $doc->created,
+        'node' => $doc,
+        'extra' => $extra,
+        'snippet' => $snippet,
+        'fields' => $fields,
+      );
+
+    }
+
+  }
+  return $results;
+}
+
+/**
+ * Re-implementation of search_view().
+ */
+function taxon_search_view($type = NULL) {
+  if (empty($type)) {
+    // Note: search/X can not be a default tab because it would take on the
+    // path of its parent (search). It would prevent remembering keywords when
+    // switching tabs. This is why we drupal_goto to it from the parent instead.
+    drupal_goto('search/taxon_search');
+  }
+  $keys = trim(search_get_keys());
+  // Construct the search form.  If the user submits POST data, this will
+  // redirect to a GET request before the search actually runs.
+  if (isset($_POST['form_id']) && $_POST['form_id'] == 'search_form') {
+    $form = drupal_get_form('search_form', NULL, $keys, $type);
+  }
+  // We did not redirect, so run the search if needed.
+  $results = '';
+
+  // Only perform search if there is non-whitespace search term or filters:
+  if ($keys) {
+    // Log the search keys:
+    $log = $keys;
+    watchdog('search', '%keys (@type).', array('%keys' => $log, '@type' => t('Search')), WATCHDOG_NOTICE, l(t('results'), 'search/'. $type .'/'. $keys));
+
+    // Collect the search results:
+    $results = search_data($keys, $type);
+
+    if ($results) {
+      $results = theme('box', t('Search results'), $results);
+    }
+    else {
+      $results = theme('box', t('Your search yielded no results'), taxon_search_noresults_noresults());
+    }
+  }
+  if (empty($form)) {
+    // The form may be altered based on the query that was run.
+    $form = drupal_get_form('search_form', NULL, $keys, $type);
+  }
+  return $form . $results;
+}
+
+function taxon_search_noresults_noresults() {
+      return t('<ul>
+<li>Check if your spelling is correct.</li>
+<li>Remove quotes around phrases to match each taxon name string individually: <em>"Pardosa moesta"</em> will match less than <em>Pardosa moesta</em>.</li>
+</ul>');
+
+}

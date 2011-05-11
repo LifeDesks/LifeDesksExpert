@@ -1,0 +1,118 @@
+<?php
+
+function lifedesk_front_page_menu() {
+  $items['admin/build/frontpage'] = array(
+    'title' => t('Frontpage'),
+    'description' => 'Modify your frontpage.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('lifedesk_front_page_admin'),
+    'access arguments' => array('administer frontpage'));
+  return $items;
+}
+
+function lifedesk_front_page_admin() {
+  $form['anon'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Anonymous Visitors'),
+  );
+  $anon = variable_get('lifedesk_front_page_welcome_anonymous', array('body' => '', 'format' => FILTER_FORMAT_DEFAULT));
+  $form['anon']['lifedesk_front_page_welcome_anonymous'] = array(
+    '#type' => 'item',
+    '#tree' => TRUE,
+  );
+  $form['anon']['lifedesk_front_page_welcome_anonymous']['body'] = array(
+    '#type' => 'textarea',
+    '#default_value' => $anon['body'],
+    '#title' => t('Frontpage Welcome Text (Anonymous Users)'),
+    '#required' => TRUE,
+    '#cols' => 60,
+    '#rows' => 10,
+    '#description' => t('Paste your HTML or TEXT here. It will be displayed at the top/center on your frontpage.'),
+  );
+  $form['anon']['lifedesk_front_page_welcome_anonymous']['format'] = filter_form($anon['format'], NULL, array('lifedesk_front_page_welcome_anonymous','format'));
+
+  $form['anon']['options_anon'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Options for anonymous visitors'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+
+  $form['anon']['options_anon']['lifedesk_front_page_image_anon'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show latest image'),
+    '#default_value' => variable_get('lifedesk_front_page_image_anon', 1),
+  );
+
+  $form['anon']['options_anon']['lifedesk_front_page_online_anon'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show who\'s online'),
+    '#default_value' => variable_get('lifedesk_front_page_online_anon', 1),
+  );
+
+  $form['anon']['options_anon']['lifedesk_front_page_biblio_anon'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show latest biblio submissions'),
+    '#default_value' => variable_get('lifedesk_front_page_biblio_anon', 1),
+  );
+
+  $form['anon']['options_anon']['lifedesk_front_page_poll_anon'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show latest poll (if present)'),
+    '#default_value' => variable_get('lifedesk_front_page_poll_anon', 1),
+  );
+
+  $form['auth'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Authenticated Users'),
+  );
+
+  $auth = variable_get('lifedesk_front_page_welcome_authenticated', array('body' => '', 'format' => FILTER_FORMAT_DEFAULT));
+  $form['auth']['lifedesk_front_page_welcome_authenticated'] = array(
+    '#type' => 'item',
+    '#tree' => TRUE,
+  );
+  $form['auth']['lifedesk_front_page_welcome_authenticated']['body'] = array(
+    '#type' => 'textarea',
+    '#default_value' => $auth['body'],
+    '#title' => t('Frontpage Welcome Text (Authenticated Users)'),
+    '#required' => TRUE,
+    '#cols' => 60,
+    '#rows' => 10,
+    '#description' => t('Paste your HTML or TEXT here. It will be displayed at the top/center on your frontpage.'),
+  );
+  $form['auth']['lifedesk_front_page_welcome_authenticated']['format'] = filter_form($auth['format'], NULL, array('lifedesk_front_page_welcome_authenticated','format'));
+
+  $form['auth']['options_auth'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Options for authenticated visitors'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+
+  $form['auth']['options_auth']['lifedesk_front_page_image_auth'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show latest image'),
+    '#default_value' => variable_get('lifedesk_front_page_image_auth', 1),
+  );
+
+  $form['auth']['options_auth']['lifedesk_front_page_online_auth'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show who\'s online'),
+    '#default_value' => variable_get('lifedesk_front_page_online_auth', 1),
+  );
+
+  $form['auth']['options_auth']['lifedesk_front_page_biblio_auth'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show latest biblio submissions'),
+    '#default_value' => variable_get('lifedesk_front_page_biblio_auth', 1),
+  );
+
+  $form['auth']['options_auth']['lifedesk_front_page_poll_auth'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show latest poll (if present)'),
+    '#default_value' => variable_get('lifedesk_front_page_poll_auth', 1),
+  );
+
+  return system_settings_form($form);
+}

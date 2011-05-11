@@ -1,0 +1,11 @@
+name = Taxon List
+description = "A list of taxon pages."
+package = "LifeDesk"
+project = "taxon_list"
+
+dependencies[] = taxon_description
+dependencies[] = classification
+
+core = 6.x
+
+version = "6.x-1.0"

@@ -1,0 +1,221 @@
+<?php
+
+/**
+ * Implementation of hook_menu
+ */
+function image_lifedesk_menu() {
+  	$items['image-lifedesk/autocomplete'] = array(
+	    'title'             => 'Autocomplete',
+	    'page callback'     => 'image_lifedesk_autocomplete',
+	    'access callback'   => 'user_access',
+	    'access arguments'  => array('access content'),
+	    'type'              => MENU_CALLBACK
+	  );
+	
+	return $items;
+}
+
+/**
+ * Implementation of hook_form_alter
+ */
+function image_lifedesk_form_alter(&$form, $form_state, $form_id) {
+
+  if ($form_id == 'image_node_form') {
+    global $user;
+
+    //check to see if we have anything in the image gallery vocabulary 
+    $gallery_vid = variable_get('image_gallery_nav_vocabulary', 0);
+    $term = db_fetch_object(db_query("SELECT COUNT(*) AS sum FROM term_data WHERE vid = %d", $gallery_vid));
+    if($term->sum < 1) {
+	  $form['taxonomy'][$gallery_vid]['#description'] = t('Create a Gallery !link.', array('!link' => l(t('here'), 'admin/content/taxonomy/' . $gallery_vid . '/add/term')));
+    }
+
+    //add a credit field
+    $form['credit'] = array(
+     '#type' => 'textfield',
+     '#title' => t('Photographer'),
+     '#required' => TRUE,
+     '#default_value' => ($form['#node']->credit) ? $form['#node']->credit : $user->surname.", ".$user->givenname,
+     '#autocomplete_path' => 'image-lifedesk/autocomplete/credit',
+     '#weight' => $form['creativecommons_lite']['#weight']+1,
+    );
+
+    $form['rights'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Rights holder'),
+      '#description' => t('A person or organization owning or managing rights over the image. This information is required unless Public Domain license is selected.'),
+      '#default_value' => ($form['#node']->rights) ? $form['#node']->rights : '',
+      '#autocomplete_path' => 'image-lifedesk/autocomplete/rights',
+      '#weight' => $form['creativecommons_lite']['#weight']+2,
+    );
+
+    //add an exemplar checkbox
+    if(user_access('edit any images')) {
+      $form['exemplar'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Exemplar image'),
+        '#default_value' => ($form['#node']->exemplar == 1) ? TRUE : FALSE,
+        '#description' => t('Set this as an exemplar image, which will be presented before other images on its taxon page.'),
+        '#weight' => -8
+      );
+    }
+  }
+
+  if($form_id == 'image_admin_settings') {
+	$form['buttons']['#weight'] = 10;
+	$form['image_lifedesk'] = array(
+		'#type' => 'fieldset',
+		'#title' => t('Image LifeDesk'),
+		'#weight' => $form['buttons']['#weight']-1
+	);
+	$options = array(
+		'3' => 3,
+		'4' => 4,
+		'5' => 5
+	);
+    $form['image_lifedesk']['image_lifedesk_autocomplete_size'] = array(
+    	'#type' => 'radios',
+        '#title' => t('Autocomplete size'),
+        '#description' => t('Configure the minimum length of typed text for the credit and rights holder fields autocomplete'),
+        '#options' => $options,
+        '#default_value' => variable_get('image_lifedesk_autocomplete_size', 4),
+    );  
+  }
+
+  if($form_id == 'taxonomy_form_term') {
+    $gallery_vid = variable_get('image_gallery_nav_vocabulary', 0);
+    if($form['vid']['#value'] == $gallery_vid) {
+	   drupal_set_message(t("It is not advisable to use a taxon name for an image gallery because this would be better accomplished using your site's classification. If you wish to have a taxon-based image gallery, please submit or vote on this feature using the 'feedback' tab on the left side of your screen."), "warning");
+	   $form['identification']['name']['#title'] = t('Gallery name');
+	   $form['identification']['name']['#description'] = t('The name of this gallery');
+    }
+  }
+
+  if($form_id == 'taxonomy_form_vocabulary') {
+	$gallery_vid = variable_get('image_gallery_nav_vocabulary', 0);
+	if($form['vid']['#value'] == $gallery_vid) {
+	  	$form['content_types']['#access'] = user_access('administer site configuration');
+		$form['identification']['name']['#title'] = t('Image Gallery Collection Name');
+		$form['identification']['name']['#description'] = '';
+		$form['identification']['description']['#description'] = t('Description of the Image Gallery collection');
+		$form['identification']['help']['#description'] = t('Instructions to present to users when submitting an image.');
+		$form['settings']['tags']['#access'] = user_access('administer site configuration');
+		$form['settings']['multiple']['#description'] = t('Allows images to be appear in more than one gallery.');
+		$form['settings']['required']['#description'] = t('At least one gallery must be selected when submitting an image.');
+		$form['delete']['#access'] = user_access('administer site configuration');   
+	}
+  }
+}
+
+/**
+ * Implementation of hook_nodeapi
+ */
+function image_lifedesk_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  global $user;
+  if($node->type == 'image') {
+    switch($op) {
+       case 'load':
+         $image_data = db_fetch_array(db_query("SELECT credit, rights, exemplar FROM {image_lifedesk} WHERE nid=%d LIMIT 1", $node->nid));
+	     $node->credit = $image_data['credit'];
+	     $node->rights = $image_data['rights'];
+	     $node->exemplar = $image_data['exemplar'];
+       break;
+       
+       case 'validate':
+         if($node->cc_lite_license != 'publicdomain') {
+           if (!$node->rights) form_set_error('rights', t('Rights holder information can not be blank unless Public Domain license is selected'));
+         }
+       break;
+
+       case 'insert':
+         $exemplar = ($node->exemplar) ? $node->exemplar : 0;
+	     db_query("INSERT INTO {image_lifedesk} (nid, credit, rights, exemplar) VALUES (%d, '%s', '%s', %d)", $node->nid, $node->credit, $node->rights, $exemplar);
+       break;
+
+       case 'update':
+         db_query("UPDATE {image_lifedesk} SET credit = '%s', rights = '%s', exemplar = %d WHERE nid = %d", $node->credit, $node->rights, $node->exemplar, $node->nid);
+       break;
+       
+       case 'view' :
+         $is_author = $user->uid == $node->uid;
+         if(user_access('edit any images', $user) || (user_access('edit own images', $user) && $is_author)) {
+           if($node->cc_lite_license == 'publicdomain' && $user->uid == $node->uid && $node->rights) {
+             drupal_set_message('Public Domain license is selected and rights holder is indicated. In this case, rights holder information will not be displayed on the taxon pages.', 'warning');
+           }
+         }
+        break;
+
+    }
+  }
+}
+
+function image_lifedesk_autocomplete($type = 'credit', $string = '') {
+  $matches = array();
+  $sql = "";
+  switch($type) {
+    case 'credit':
+      $sql = "SELECT DISTINCT credit FROM {image_lifedesk} WHERE LOWER(credit) LIKE LOWER('%%%s%%') ORDER BY credit ASC";
+    break;
+
+    case 'rights':
+      $sql = "SELECT DISTINCT rights FROM {image_lifedesk} WHERE LOWER(rights) LIKE LOWER('%%%s%%') ORDER BY rights ASC";
+    break;  
+  }
+  $image_lifedesk_autocomplete = variable_get('image_lifedesk_autocomplete_size',4);
+  if (strlen($string) >= $image_lifedesk_autocomplete) {
+    $result = db_query_range($sql, array($string), 0, 10);
+    while ($data = db_fetch_array($result)) {
+	  $matches[$data[$type]] = check_plain($data[$type]);
+    }
+  }
+  print drupal_to_js($matches);
+  exit();
+}
+
+/**
+ * Override latest image block theme
+ */
+function phptemplate_image_block_latest($images, $size) {
+	$link = url('node/'. $images[0]->nid);
+	$output =  image_display($images[0], $size, $link);
+	return $output;
+}
+
+/**
+ * Override node image theme
+ */
+function phptemplate_image_display($node, $label, $url, $attributes) {
+
+    $output  = theme('image', $url, $node->title, $node->title, $attributes, FALSE);
+
+    if($label == 'thumbnail' && isset($node->new_file)) {
+	  $output = l($output, 'node/' . $node->nid, array('html' => true));
+    }
+    else {
+	    if($node->op !== "Preview") {
+		  	$path =  drupal_get_path('module', 'image_lifedesk');
+		    drupal_add_css($path .'/css/image_lifedesk.css');
+		    drupal_add_css($path . '/jqzoom/css/jqzoom.css');
+		    drupal_add_js($path . '/jqzoom/js/jquery.jqzoom1.0.1.js');	
+		    drupal_add_js($path . '/js/image_lifedesk.js');
+	    }
+	
+	    if($label == 'thumbnail') {
+		 $output = l($output, 'node/' . $node->nid, array('html' => true));
+	    }
+	    else {
+		    if($label == 'preview' && user_access('view original images')) {
+			  $output = l($output, 'image/view/' . $node->nid . '/_original', array('html' => true, 'absolute' => true, 'attributes' => array('class' => 'jqzoom')));
+		    }
+		 	$output .= '<div class="image-node-attribution">';
+		    $output .= ($node->credit) ? '<span><strong>' . t('Photographer:') . '</strong> ' . $node->credit . '</span>' : '';
+		    if ($node->cc_lite_license != 'publicdomain') {
+		      $output .= ($node->rights) ? '<span><strong>' . t('Rights holder:') . '</strong> ' . $node->rights . '</span>': '';
+		    }
+			$module_path = drupal_get_path('module', 'creativecommons_lite') .'/';
+			$output .= '<span>' . l('<img src="' . base_path() . $module_path . 'images/buttons_small/' . $node->cc_lite_license . '.png">', 'http://creativecommons.org/licenses/'.$node->cc_lite_license.'/3.0/', array('html' => true, 'attributes' => array('style' => 'width:80px;height:15px', 'title' => "Creative Commons: " . $node->cc_lite_license, 'alt' => "Creative Commons: " . $node->cc_lite_license, 'rel' => 'nofollow'))) . '</span>';
+			$output .= '</div>';
+	    }
+    }
+    return $output;
+}

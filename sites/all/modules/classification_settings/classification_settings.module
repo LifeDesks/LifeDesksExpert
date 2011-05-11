@@ -1,0 +1,1304 @@
+<?php
+
+/**
+ * Implementation of hook_theme
+ */
+function classification_settings_theme() {
+    return array(
+        'classification_settings_content_form' => array(
+            'arguments' => array('form' => NULL),
+        ),
+        'classification_settings_flags_config_form' => array(
+            'arguments' => array('form' => NULL),
+        ),
+    );
+}
+
+/**
+ * Implementation of hook_nodeapi
+ */
+function classification_nodeapi(&$node, $op, $arg = 0) {
+
+  $settings = variable_get('classification_settings',array());
+
+  switch ($op) {
+
+    case 'load':
+      break;
+
+    case 'prepare':
+      break;
+
+    case 'validate':
+
+      //put the js back when there is a node because it gets stripped out of the form_alter when validation fails
+      $module_path = drupal_get_path('module', 'classification_settings') .'/';
+      drupal_add_css($module_path . 'css/classification_settings.css');
+      drupal_add_js($module_path . 'js/classification_settings.js');
+
+      $classification_tags = array();
+      $settings = variable_get('classification_settings',array());
+
+      foreach (taxonomy_get_vocabularies($node->type) as $vid => $values) {
+        if (array_key_exists($vid,$settings)) {
+          $classification_tags[] = array(
+            'vid' => $vid,
+            'opt' => $settings[$vid]['settings'][$node->type]['opt']
+          );
+        }
+      }
+
+      if (!empty($classification_tags)) {
+        _classification_settings_enable_widget($classification_tags);
+      }
+        
+      break;
+
+    case 'presave':
+
+      if($node->taxonomy['tags']) {
+        foreach($node->taxonomy['tags'] as $vid => $value) {
+          //single and multitag adjustment
+          if(array_key_exists($vid,$settings) && !is_array($value) && !empty($node->taxonomy['classification_multitag'][$vid])) {
+            $tags = explode(',',$node->taxonomy['classification_multitag'][$vid]);
+            foreach($tags as $tid) {
+              $tids[$tid] = $tid;
+            }
+            $node->taxonomy[$vid] = $tids;
+          }
+          //tree selector adjustment
+          if(array_key_exists($vid,$settings) && is_array($value)) {
+            foreach($value as $key => $checked) {
+                $tids[str_replace('n','',$key)] = str_replace('n','',$key);
+            }
+            $node->taxonomy[$vid] = $tids;
+          }
+          if(array_key_exists($vid,$settings)) {
+            unset($node->taxonomy['tags'][$vid]);
+            unset($node->taxonomy['classification_multitag'][$vid]);
+          }
+        }
+      }
+
+      break;
+
+    case 'view':
+      if($node->taxonomy['tags']) {
+        foreach($node->taxonomy['tags'] as $vid => $value) {
+          //single and multitag adjustment
+          if(array_key_exists($vid,$settings) && !is_array($value) && !empty($node->taxonomy['classification_multitag'][$vid])) {
+            $tags = explode(',',$node->taxonomy['classification_multitag'][$vid]);
+            foreach($tags as $tid) {
+              $tids[$tid] = $tid;
+            }
+            $node->taxonomy[$vid] = $tids;
+          }
+          //tree selector adjustment
+          if(array_key_exists($vid,$settings) && is_array($value)) {
+            foreach($value as $key => $checked) {
+                $tids[str_replace('n','',$key)] = str_replace('n','',$key);
+            }
+          $node->taxonomy[$vid] = $tids;
+          } 
+          if(array_key_exists($vid,$settings)) {
+            unset($node->taxonomy['tags'][$vid]);
+            unset($node->taxonomy['classification_multitag'][$vid]);
+          }
+        }
+      }
+    case 'update':
+    case 'insert':
+    case 'delete':
+      break;
+
+  }
+
+}
+
+/**
+ * Implementation of hook_menu_alter
+ */
+function classification_settings_menu_alter(&$item) {
+    $taxonomy_module_path = drupal_get_path('module', 'taxonomy');
+
+    $item['admin/content/taxonomy/add/vocabulary/biological']['title'] = 'Biological classification';
+    $item['admin/content/taxonomy/add/vocabulary/biological']['page callback'] = 'drupal_get_form';
+    $item['admin/content/taxonomy/add/vocabulary/biological']['page arguments'] = array('taxonomy_form_vocabulary');
+    $item['admin/content/taxonomy/add/vocabulary/biological']['access arguments'] = array('administer taxonomy');
+    $item['admin/content/taxonomy/add/vocabulary/biological']['type'] = MENU_DEFAULT_LOCAL_TASK;
+    $item['admin/content/taxonomy/add/vocabulary/biological']['parent'] = 'admin/content/taxonomy';
+    $item['admin/content/taxonomy/add/vocabulary/biological']['file'] = 'taxonomy.admin.inc';
+    $item['admin/content/taxonomy/add/vocabulary/biological']['file path'] = $taxonomy_module_path;
+    $item['admin/content/taxonomy/add/vocabulary/biological']['weight'] = -10;
+
+    $item['admin/content/taxonomy/add/vocabulary/flags']['title'] = 'Biological flag';
+    $item['admin/content/taxonomy/add/vocabulary/flags']['page callback'] = 'drupal_get_form';
+    $item['admin/content/taxonomy/add/vocabulary/flags']['page arguments'] = array('taxonomy_form_vocabulary');
+    $item['admin/content/taxonomy/add/vocabulary/flags']['access arguments'] = array('administer taxonomy');
+    $item['admin/content/taxonomy/add/vocabulary/flags']['type'] = MENU_LOCAL_TASK;
+    $item['admin/content/taxonomy/add/vocabulary/flags']['parent'] = 'admin/content/taxonomy';
+    $item['admin/content/taxonomy/add/vocabulary/flags']['file'] = 'taxonomy.admin.inc';
+    $item['admin/content/taxonomy/add/vocabulary/flags']['file path'] = $taxonomy_module_path;
+    $item['admin/content/taxonomy/add/vocabulary/flags']['weight'] = -9;
+
+    $item['admin/content/taxonomy/add/vocabulary/tags']['title'] = 'Other';
+    $item['admin/content/taxonomy/add/vocabulary/tags']['page callback'] = 'drupal_get_form';
+    $item['admin/content/taxonomy/add/vocabulary/tags']['page arguments'] = array('taxonomy_form_vocabulary');
+    $item['admin/content/taxonomy/add/vocabulary/tags']['access arguments'] = array('administer taxonomy');
+    $item['admin/content/taxonomy/add/vocabulary/tags']['type'] = MENU_LOCAL_TASK;
+    $item['admin/content/taxonomy/add/vocabulary/tags']['parent'] = 'admin/content/taxonomy';
+    $item['admin/content/taxonomy/add/vocabulary/tags']['file'] = 'taxonomy.admin.inc';
+    $item['admin/content/taxonomy/add/vocabulary/tags']['file path'] = $taxonomy_module_path;
+    $item['admin/content/taxonomy/add/vocabulary/tags']['weight'] = -8;
+
+    $vocabs = taxonomy_get_vocabularies();
+    foreach($vocabs as $vocab) {
+        if(($vocab->module == 'classification') || ($vocab->module == 'taxon_description')) {
+            $item['admin/content/taxonomy/'.$vocab->vid]['access arguments'] = array('administer site configuration');
+        }
+        if(($vocab->module == 'taxon_description') || ($vocab->name == 'Deleted Names')) {
+            $item['admin/content/taxonomy/edit/vocabulary/'.$vocab->vid]['access arguments'] = array('administer site configuration');
+        }
+    }
+}
+
+/**
+ * Implementation of hook_form_alter
+ */
+function classification_settings_form_alter(&$form, $form_state, $form_id) {
+
+  switch ($form['#id']) {
+    
+    // We ensure some vocabularies are not visible in the Drupal taxonomy listing because we don't want them to be deleted or modified
+    case 'taxonomy-overview-vocabularies':
+    
+        //flush caches to ensure access permissions will be reset for menu_alter
+        drupal_flush_all_caches();
+    
+        if(!user_access('administer site configuration')) {
+          unset($form[CLASSIFICATION_DELETIONS], $form[CLASSIFICATION_LOST_FOUND], $form[TAXON_DESCRIPTION_CHAPTERS], $form[TAXON_DESCRIPTION_ORPHANED]);
+        }
+
+      break;
+
+    case 'taxonomy-overview-terms':
+      if($form['#vocabulary']['vid'] == CLASSIFICATION_RANKS) {
+        $italicize = variable_get('classification_italicize',array());
+        $query = db_query("SELECT tid FROM {term_data} WHERE vid=%d",CLASSIFICATION_RANKS);
+        while($result = db_fetch_object($query)) {
+          $key = 'tid:'.$result->tid.':0';
+          $default = array_key_exists($result->tid,$italicize) ? 1 : 0;
+          $form[$key]['italicize'] = array(
+            '#type' => 'checkbox',
+            '#default_value' => $default,
+            '#parents' => array('classification_italicize',$result->tid),
+          );
+        }
+      }
+
+      $form['vocab'] = array(
+        '#type' => 'hidden',
+        '#default_value' => $form['#vocabulary']['vid'],
+      );
+    
+      $form['#submit'][] = 'classification_settings_overview_terms_submit';
+
+    break;
+    
+    case 'taxonomy-form-vocabulary':
+        if(!user_access('administer site configuration')) {
+            $form['identification']['name']['#title'] = t('Tags Name');
+            $form['identification']['name']['#description'] = t('The name for this tag collection, e.g. <em>Image Tags</em>.');
+            $form['identification']['description']['#description'] = t('Description of the tag collection.');
+            $form['identification']['help']['#description'] = t('Instructions to present to users when typing tags using this collection, e.g. <em>"Enter a comma-separated list of tags."</em>');
+            $form['settings']['#weight'] = ($form['content_types']['#weight'])+1;
+            $form['submit']['#weight'] = ($form['content_types']['#weight'])+2;
+            $form['delete']['#weight'] = ($form['content_types']['#weight'])+2;
+            $form['settings']['required']['#description'] = t('At least one tag in this collection must be selected when submitting content.');
+            $form['settings']['tags']['#title'] = t('Free-form tags');
+            $form['settings']['tags']['#description'] = t('A comma separated list of free-form tags. When checked, this allows creation of tags that do not already exist in this tag collection. When not checked, tags from this collection are selected using a drop-down menu.');
+            $form['settings']['multiple']['#description'] = t('Allows content to have more than one tag in this collection. By default, this is true for free-form tags.');
+            $form['settings']['weight'] = array(
+                '#type' => 'hidden',
+                '#default_value' => 0,
+            );
+            $form['content_types']['nodes']['#description'] = t('Select content types to categorize using this collection of tags.');
+        }
+
+      //here goes check for argument then do access_denied if specific vid is passed in argument
+      $args = explode('/', $form['#action']);
+      switch($args[6]) {
+          case '':
+          case 'biological':
+                $form['warning'] = array(
+                  '#type' => 'markup',
+                  '#value' => '<div class="messages warning">' . t('Content cannot be associated with alternate biological classifications.') . '</div>',
+                  '#weight' => -99,
+                );
+                $form['identification']['name']['#title'] = t('Biological Classification Name');
+                $form['identification']['name']['#description'] = t('The name for this alternate biological classification, e.g. <em>ITIS Birds</em>');
+                $form['identification']['description']['#description'] = t('Description of the alternate biological classification.');
+                $form['identification']['help']['#access'] = user_access('administer site configuration');
+                $form['settings']['vocab'] = array(
+                  '#type' => 'hidden',
+                  '#default_value' => 1,
+                );
+                $form['settings']['#access'] = user_access('administer site configuration');
+                $form['content_types']['#access'] = user_access('administer site configuration');
+              break;
+          case 'flags':
+                $form['warning'] = array(
+                  '#type' => 'markup',
+                  '#value' => '<div class="messages status">' . t('Biological Flags are a special category of biological tag applied to names in your primary classification. For example, a Biological Flag called "Biogeographic Region" may have terms "Nearctic", "Palearctic" or "Holarctic" or another called "Ecosystem" may have terms "marine", "freshwater", or "terrestrial".') . '</div>',
+                  '#weight' => -99,
+                );
+                $form['identification']['name']['#title'] = t('Biological Flag Name');
+                $form['identification']['name']['#description'] = t('The name for this biological flag, e.g. <em>Biogeographic Region</em>.');
+                $form['identification']['description']['#description'] = t('Description of the biological flag.');
+                $form['identification']['help']['#access'] = user_access('administer site configuration');
+                $form['settings']['flags'] = array(
+                  '#type' => 'hidden',
+                  '#default_value' => 1,
+                );
+            $form['settings']['#access'] = user_access('administer site configuration');
+            $form['content_types']['#access'] = user_access('administer site configuration');
+                $form['flags_settings'] = array(
+            '#type' => 'fieldset',
+            '#title' => t('Flag settings'),
+            '#description' => t('The select list input type may be used to constrain flags to a single selection and requires that terms already exist. The autocomplete input type has the advantage of prompting for the creation of a new flag in the classification editor. However, such flags are not easily reconciled.'),
+            '#theme' => 'classification_settings_flags_config_form',
+          );
+
+                $weight_options = array();
+        for($i=-10;$i<=10;$i++) {
+            $weight_options[$i] = $i;
+        }
+
+        $input_types = array();
+        $input_types['options'] = t('Select list');
+                $input_types['textfield'] = t('Autocomplete');
+
+        $form['flags_settings'][$form['vid']['#value']]['req'] = array(
+            '#type' => 'checkbox',
+                    '#parents' => array('flags_settings','req'),
+                    '#default_value' => $classification_flags[$form['vid']['#value']]['settings']['req'] ? $classification_flags[$form['vid']['#value']]['settings']['req'] : 0,
+          );
+        $form['flags_settings'][$form['vid']['#value']]['wt'] = array(
+            '#type' => 'select',
+            '#options' => $weight_options,
+                    '#parents' => array('flags_settings','wt'),
+                    '#default_value' => $classification_flags[$form['vid']['#value']]['settings']['wt'] ? $classification_flags[$form['vid']['#value']]['settings']['wt'] : 0,
+                  );
+        $form['flags_settings'][$form['vid']['#value']]['opt'] = array(
+                    '#type' => 'select',
+            '#options' => $input_types,
+                    '#parents' => array('flags_settings','opt'),
+                    '#default_value' => $classification_flags[$form['vid']['#value']]['settings']['opt'] ? $classification_flags[$form['vid']['#value']]['settings']['opt'] : 0,
+                  );
+              break;
+
+          case 'tags':
+                $form['identification']['name']['#title'] = t('Tags Name');
+                $form['identification']['name']['#description'] = t('The name for this tag collection, e.g. <em>Image Tags</em>.');
+                $form['identification']['description']['#description'] = t('Description of this tag collection.');
+                $form['settings']['required']['#description'] = t('At least one tag in this collection must be selected when submitting content.');
+                $form['content_types']['nodes']['#description'] = t('Select content types to categorize using this collection of tags.');
+              break;
+
+          default:
+              break;
+      }
+
+      //temporarily add a few jQuery alerts within a necessary js (see comments inside js)
+      $module_path = drupal_get_path('module', 'classification_settings') .'/';
+      drupal_add_css($module_path . 'css/classification_settings.css');
+      drupal_add_js($module_path . 'js/classification_settings.js');
+
+      $classifications = array();
+      $classification_flags = variable_get('classification_flags',array());
+    
+      $vocabs = taxonomy_get_vocabularies();
+      foreach($vocabs as $vocab) {
+        if($vocab->module == 'classification') {
+          $classifications[$vocab->vid] = $vocab->vid;  
+        }
+      }
+    
+      //may also remove this when we can support multiple classifications for tagging
+      $form['vid']['#type'] = 'hidden';
+
+      //prevent the creation of identically named vocabs
+      $form['#validate'][] = 'classification_settings_name_validate';
+
+      if ($form['module']['#value'] == 'classification' || !isset( $form['module']['#value'] )) {
+
+        //reweight the form items
+        $form['identification']['#weight'] = 0;
+        $form['content_types']['#weight'] = 2;
+        $form['settings']['#weight'] = 8;
+        $form['submit']['#weight'] = 9;
+        $form['delete']['#weight'] = 10;
+    
+        $classification_settings = variable_get('classification_settings', array());
+
+        //if this is the editing interface (and not a new vocab), let's first check if it's a biological classification
+
+        if($form['vid']['#value'] && array_key_exists($form['vid']['#value'], $classifications)) {
+          
+          if($form['vid']['#value'] !== CLASSIFICATION_PRIMARY) {
+            drupal_set_title(t('Edit biological classification'));
+            $form['identification']['name']['#title'] = t('Biological Classification Name');
+          }
+          else {
+            drupal_set_title(t('Edit primary classification'));
+          }
+          $form['identification']['name']['#description'] = t('The name for this alternate classification, e.g. <em>ITIS Birds</em>');
+          $form['identification']['description']['#description'] = t('Description of the alternate classification');
+
+          // remove items for biological classifications
+          $form['identification']['help']['#access'] = user_access('administer site configuration');
+          $form['content_types']['#access'] = user_access('administer site configuration');
+          $form['settings']['#access'] = user_access('administer site configuration');
+        
+          //Prevent editing of the 'Taxa' vocab title and also add the settings
+          if($form['vid']['#value'] == CLASSIFICATION_PRIMARY) {
+
+              //hide the checkbox for this vocab to make sure it stays as the primary classification
+              $form['settings']['#access'] = user_access('administer site configuration');
+              $form['delete']['#access'] = user_access('administer site configuration');
+
+              $form['settings']['vocab'] = array(
+                '#type' => 'hidden',
+                '#value' => CLASSIFICATION_PRIMARY,
+              );
+              $form['settings']['weight'] = array(
+                '#type' => 'hidden',
+                '#value' => -99,
+              );              
+            
+              $vocab_name = $form['identification']['name']['#default_value'];
+              $form['identification']['name'] = array(
+                '#type' => 'hidden',
+                '#value' => $vocab_name
+              );
+              $form['identification']['vocab_name'] = array(
+                '#type' => 'markup',
+                '#value' => '<h3>' . variable_get('site_name','LifeDesk') . ' ' . t('classification (Taxa)') . '</h3>',
+                '#weight' => -20
+              );
+
+              $form['classification_settings'] = array(
+                '#type' => 'fieldset',
+                '#title' => t('Content type associations'),
+                '#description' => t('Select how content forms are modified to accept input of taxonomic names. Input types are positioned on the page according to their weight in ascending order.'),
+                '#weight' => 1,
+                '#theme' => 'classification_settings_content_form',
+              );
+
+              //get the content types
+              $node_types = node_get_types('names');
+
+              $weight_options = array();
+              for($i=-10;$i<=10;$i++) {
+                $weight_options[$i] = $i;
+              }
+
+              $input_types = array();
+              $input_types['single'] = t('Autocomplete');
+              $input_types['multiple'] = t('Multitag');
+              $input_types['tree'] = t('Tree selector');
+
+              $checked_types = array();
+
+              foreach ($node_types as $type => $value) {
+
+                $type_check = _classification_settings_node_type($form['vid']['#value'],$type);
+                if($type_check){
+                  $checked_types[$type] = $type;
+                }
+
+                $form['classification_settings'][$type]['type'] = array(
+                  '#type' => 'markup',
+                  '#value' => $value,
+                  '#parents' => array('classification_settings',$type,'type')
+                );
+                $form['classification_settings'][$type]['active'] = array(
+                  '#type' => 'checkbox',
+                  '#default_value' => $type_check,
+                  '#disabled' => ($classification_settings[$form['vid']['#value']]['settings'][$type]['req']) ? TRUE : FALSE,
+                  '#parents' => array('classification_settings',$type,'active'),
+                  '#attributes' => array('class' => 'classification_settings_active')
+                );
+                $form['classification_settings'][$type]['req'] = array(
+                  '#type' => 'checkbox',
+                  '#default_value' => $classification_settings[$form['vid']['#value']]['settings'][$type]['req'],
+                  '#parents' => array('classification_settings',$type,'req'),
+                  '#attributes' => array('class' => 'classification_settings_required')
+                );
+                $form['classification_settings'][$type]['wt'] = array(
+                  '#type' => 'select',
+                  '#options' => $weight_options,
+                  '#default_value' => $classification_settings[$form['vid']['#value']]['settings'][$type]['wt'],
+                  '#parents' => array('classification_settings',$type,'wt')
+                );
+                $form['classification_settings'][$type]['opt'] = array(
+                  '#type' => 'select',
+                  '#options' => $input_types,
+                  '#default_value' => $classification_settings[$form['vid']['#value']]['settings'][$type]['opt'],
+                  '#parents' => array('classification_settings',$type,'opt')
+                );
+              }
+
+              $form['names_display_viewer'] = array(
+                '#type' => 'fieldset',
+                '#title' => t('Public tree browser on the front page and on taxon pages'),
+                '#collapsible' => TRUE,
+                '#collapsed' => TRUE,
+                '#weight' => 2,
+              );
+
+              $default_viewer = variable_get('classification_viewer_names',0);
+              $options_viewer = array(0 => t('Show all names (vernaculars, synonyms, <em>etc.</em>)'), 1 => t('Hide vernaculars, synonyms, <em>etc.</em>'));
+              $default_canonicals = variable_get('classification_viewer_canonicals',1);
+              $options_canonicals = array(1 => t('Yes'), 0 => t('No'));
+
+              $form['names_display_viewer']['classification_viewer_names'] = array(
+                '#type' => 'radios',
+                '#title' => t('Visibility of names'),
+                '#options' => $options_viewer,
+                '#default_value' => $default_viewer,
+              );
+
+              $form['names_display_viewer']['classification_viewer_canonicals'] = array(
+                '#type' => 'radios',
+                '#title' => t('Convert names to canonical versions?'),
+                '#description' => t('Canonical names are algorithmically-produced versions of names without the authority information.'),
+                '#options' => $options_canonicals,
+                '#default_value' => $default_canonicals,
+              );
+
+              $form['names_display_elements'] = array(
+                '#type' => 'fieldset',
+                '#title' => t('Tree selector on data entry forms'),
+                '#collapsible' => TRUE,
+                '#collapsed' => TRUE,
+                '#weight' => 3,
+              );
+
+              $default_elements = variable_get('classification_elements_names',0);
+              $options_elements = array(0 => t('Show all names (vernaculars, synonyms, <em>etc.</em>)'), 1 => t('Hide vernaculars, synonyms, <em>etc.</em>'));
+              $default_elements_canonicals = variable_get('classification_elements_canonicals',0);
+              $options_elements_canonicals = array(1 => t('Yes'), 0 => t('No'));
+
+              $form['names_display_elements']['classification_elements_names'] = array(
+                '#type' => 'radios',
+                '#title' => t('Visibility of names'),
+                '#description' => t('WARNING: electing to hide vernaculars and synonyms from the tree selector will result in no associations drawn between hidden names and content'),
+                '#options' => $options_elements,
+                '#default_value' => $default_elements,
+              );
+
+              $form['names_display_elements']['classification_elements_canonicals'] = array(
+                '#type' => 'radios',
+                '#title' => t('Convert names to canonical versions?'),
+                '#description' => t('Canonical names are algorithmically-produced versions of names without the authority information.'),
+                '#options' => $options_elements_canonicals,
+                '#default_value' => $default_elements_canonicals,
+              );
+            
+              $form['classification_autocomplete_size'] = array(
+                '#type' => 'select',
+                '#title' => t('Number of typed characters required in autocomplete drop-down boxes'),
+                '#description' => t('More typed characters results in greater search precision'),
+                '#default_value' => variable_get('classification_autocomplete_size',3),
+                '#options' => array(3 => 3, 4 => 4, 5 => 5),
+                '#weight' => 4
+              );
+            
+              //preserve the default handling of vocabulary_node_types, but hide them with css
+
+              $form['content_types']['nodes'] = array(
+                '#type' => 'checkboxes',
+                '#options' => $checked_types,
+                '#prefix' => '<div id="classification-settings-node-types">',
+                '#suffix' => '</div>'
+              );
+           }
+           //now only show the single checkbox for alternate classifications & show a little warning
+           else {
+              $form['settings']['vocab'] = array(
+                '#type' => 'checkbox',
+                '#weight' => -2,
+                '#title' => t('Biological classification'), 
+                '#default_value' => ($form['vid']['#value'] && array_key_exists($form['vid']['#value'],$classifications)) ? 1 : 0, 
+                '#description' => t('Select if you want this to be an alternate, hierarchical biological classification.')
+              );
+              $form['warning'] = array(
+                  '#type' => 'markup',
+                  '#value' => '<div class="messages warning">' . t('WARNING: Deleting a biological classification will result in permanent loss of names data.') . '</div>',
+                  '#weight' => 3
+              );
+           }
+        }
+      }
+
+      //now deal with the settings interface for biological flags
+      elseif ($form['module']['#value'] == 'classification_flags') {
+        drupal_set_title(t('Edit biological flag'));
+        $form['warning'] = array(
+            '#type' => 'markup',
+            '#value' => '<div class="messages status">' . t('Biological Flags are a special category of biological tag applied to names in your primary classification. For example, a Biological Flag called "Biogeographic Region" may have terms "Nearctic", "Palearctic" or "Holarctic" or another called "Ecosystem" may have terms "marine", "freshwater", or "terrestrial".') . '</div>',
+            '#weight' => -99,
+          );
+        $form['identification']['name']['#title'] = t('Biological Flag Name');
+        $form['identification']['name']['#description'] = t('The name for this biological flag, e.g. <em>Biogeographic Region</em>.');
+        $form['identification']['description']['#description'] = t('Description of the biological flag.');
+        $form['identification']['help']['#access'] = user_access('administer site configuration');
+        $form['content_types']['#access'] = user_access('administer site configuration');
+        $form['settings']['#access'] = user_access('administer site configuration');
+        $form['submit']['#weight'] = 20;
+        $form['delete']['#weight'] = 20;
+
+        //Prevent renaming some flag type & hide the checkbox from ranks, relations, and vernacular types
+        if($form['vid']['#value'] == CLASSIFICATION_RANKS || $form['vid']['#value'] == CLASSIFICATION_RELATIONS || $form['vid']['#value'] == CLASSIFICATION_VERNS) {
+          $vocab_name = $form['identification']['name']['#default_value'];
+          $form['identification']['name'] = array(
+            '#type' => 'hidden',
+            '#value' => $vocab_name
+          );
+          $form['identification']['vocab_name'] = array(
+            '#type' => 'markup',
+            '#value' => '<h3>' . $vocab_name . '<span class="form-required">*</span></h3><div class="description"><span class="form-required">*</span>' . t('Title can not be edited') . '</div>',
+            '#weight' => -20
+          );
+    
+          //ditch the settings area, hide the delete button, then put a hidden checkbox back
+          $form['settings']['#access'] = user_access('administer site configuration');
+          $form['delete']['#access'] = user_access('administer site configuration');
+    
+          $form['settings']['flags'] = array(
+            '#type' => 'hidden',
+            '#value' => 1,
+          );
+        }
+    
+        //other kinds of flags are optional and they can be messed with
+        else {
+          $form['settings']['flags'] = array(
+            '#type' => 'checkbox',
+            '#weight' => -1,
+            '#title' => t('Biological flag'),
+            '#default_value' => ($form['vid']['#value'] && array_key_exists($form['vid']['#value'],$classification_flags)) ? 1 : 0,
+          );
+    
+          $form['flags_settings'] = array(
+            '#type' => 'fieldset',
+            '#title' => t('Flag settings'),
+            '#description' => t('The select list input type may be used to constrain flags to a single selection and requires that terms already exist. The autocomplete input type has the advantage of prompting for the creation of a new flag in the classification editor. However, such flags are not easily reconciled.'),
+            '#theme' => 'classification_settings_flags_config_form',
+          );
+
+          $weight_options = array();
+          for($i=-10;$i<=10;$i++) {
+            $weight_options[$i] = $i;
+          }
+
+          $input_types = array();
+          $input_types['options'] = t('Select list');
+          $input_types['textfield'] = t('Autocomplete');
+
+          $form['flags_settings'][$form['vid']['#value']]['req'] = array(
+            '#type' => 'checkbox',
+            '#parents' => array('flags_settings','req'),
+            '#default_value' => $classification_flags[$form['vid']['#value']]['settings']['req'] ? $classification_flags[$form['vid']['#value']]['settings']['req'] : 0,
+          );
+          $form['flags_settings'][$form['vid']['#value']]['wt'] = array(
+            '#type' => 'select',
+            '#options' => $weight_options,
+            '#parents' => array('flags_settings','wt'),
+            '#default_value' => $classification_flags[$form['vid']['#value']]['settings']['wt'] ? $classification_flags[$form['vid']['#value']]['settings']['wt'] : 0,
+          );
+          $form['flags_settings'][$form['vid']['#value']]['opt'] = array(
+            '#type' => 'select',
+            '#options' => $input_types,
+            '#parents' => array('flags_settings','opt'),
+            '#default_value' => $classification_flags[$form['vid']['#value']]['settings']['opt'] ? $classification_flags[$form['vid']['#value']]['settings']['opt'] : 0,
+          );
+          $form['flags_settings'][$form['vid']['#value']]['create'] = array(
+            '#type' => 'markup',
+            '#value' => l(t('add/edit flags'), 'admin/content/taxonomy/'.$form['vid']['#value']),
+            '#parents' => array('flags_settings',$form['vid']['#value'],'create')
+          );
+    
+          //show a warning
+          $form['warning'] = array(
+            '#type' => 'markup',
+            '#value' => '<div class="messages warning">' . t('WARNING: Deleting a biological flag will result in permanent loss of relationships between names.') . '</div>',
+            '#weight' => 3
+          );
+        }
+      }
+      else {
+        drupal_set_title(t('Edit tags'));   
+      }
+
+      if($form['vid']['#value']) {
+        $form['#redirect'] = 'admin/content/taxonomy/edit/vocabulary/' . $form['vid']['#value'];
+      }
+
+      //add aditional form submission function to make sure our stuff sticks
+      $form['#submit'][] = 'classification_settings_taxonomy_form_vocabulary_submit';
+
+    break;
+
+    case 'taxonomy-form-term':
+      unset($form['advanced'],$form['identification']['description']['#description']);
+
+      $vocabs = taxonomy_get_vocabularies();
+
+      if($vocabs[$form['#term']['vid']]->module == 'classification_flags' || $vocabs[$form['#term']['vid']]->module == 'classification') {
+        $form['message'] = array(
+          '#type' => 'markup',
+          '#value' => '<div class="messages warning">' . t('WARNING: Deleting this term may have disastrous, unintended consequences. Your data may be permanently lost. Delete this term only if you are certain it has never been used.') . '</div>',
+          '#weight' => 2,
+        );
+        
+        if($form['#term']['vid'] == CLASSIFICATION_VERNS) {
+          $form['identification']['message'] = array(
+            '#type' => 'markup',
+            '#value' => '<div class="messages status">' . t('Vernacular language codes must take the form "English,en" or "Anglais,en" where the two-letter code following the comma is the ') . l(t('ISO 639-1 language code'),'http://www.loc.gov/standards/iso639-2/php/code_list.php', array('absolute' => TRUE, 'attributes' => array('target' => "_blank"))) . '.</div>',
+            '#weight' => -5,
+          );
+        }   
+        
+        if($form['#term']['name'] == 'vernacular name' || $form['#term']['name'] == 'synonym') {
+          $term_value = $form['#term']['name']; 
+          $form['identification']['name'] = array(
+            '#type' => 'hidden',
+            '#value' => $term_value,
+            '#weight' => 20
+          );
+          $form['term_name'] = array(
+            '#type' => 'markup',
+            '#prefix' => '<div><strong>' . t('Term name') . ':</strong><span class="form-required">*</span><br />', 
+            '#value' => $term_value,
+            '#suffix' => '</div><br />',
+            '#weight' => -20,
+          );
+          $form['delete']['#access'] = user_access('administer site configuration');
+          $form['message']['#access'] = user_access('administer site configuration');;
+        }
+
+        $form['submit']['#weight'] = 3;
+        $form['delete']['#weight'] = 3;
+        $form['actions']['#weight'] = 3;
+      }
+    break;
+
+    //form altering for nodes
+    case 'node-form':
+
+        if($form['taxonomy']) {
+            //weight the taxonomy element to the top of the page
+            $form['taxonomy']['#weight'] = -10; 
+        }
+
+        $settings = variable_get('classification_settings',array());
+
+        $classification_tags[] = array(
+          'vid' => CLASSIFICATION_PRIMARY,
+          'opt' => $settings[CLASSIFICATION_PRIMARY]['settings'][$form['type']['#value']]['opt']
+        );
+
+        if($form_state['values']['preview'] != 'Preview') {
+          _classification_settings_enable_widget($classification_tags);
+        }
+
+        // Before we can support tagging using other biological classifications, we stick with 'Taxa'. This will be replaced with a foreach loop
+        if($form['taxonomy'] && $form['taxonomy']['tags'][CLASSIFICATION_PRIMARY]['#title'] == 'Taxa') {
+          $vocab_title = ($form['taxonomy']['tags'][CLASSIFICATION_PRIMARY]['#title'] == 'Taxa') ? variable_get('site_name','Taxa') . ' ' . t('classification') : $form['taxonomy']['tags'][CLASSIFICATION_PRIMARY]['#title'];
+        }
+
+        $taxa_settings = $settings[CLASSIFICATION_PRIMARY]['settings'][$form['type']['#value']];
+
+        if($form['taxonomy'] && $taxa_settings['active'] == 1) {
+
+          //ensure the preview state has the proper terms in place for the tags to be rebuilt
+          $default = ($form_state['values']['preview']=='Preview') ? $form_state['values']['taxonomy']['classification_multitag'][CLASSIFICATION_PRIMARY] : _classification_settings_terms(CLASSIFICATION_PRIMARY,$form['nid']['#value']);
+          $default_ancestry = ($form_state['values']['preview']=='Preview') ? $form_state['values']['taxonomy']['classification_multitag_ancestry'][CLASSIFICATION_PRIMARY] : _classification_settings_ancestry(CLASSIFICATION_PRIMARY,$form['nid']['#value']);
+    
+          if(arg(3)) {
+            $default = arg(3);
+          }
+    
+          switch($taxa_settings['opt']) {
+    
+            //single autocomplete
+            case 'single':
+              $form['taxonomy']['tags'][CLASSIFICATION_PRIMARY] = array(
+                '#title' => $vocab_title . ' (' . t('single select') . ')',
+                '#description' => '',
+                '#type' => 'textfield',
+                '#weight' => $taxa_settings['wt'],
+                '#autocomplete_path' => 'classification/autocomplete/' . CLASSIFICATION_PRIMARY,
+                '#maxlength' => 255,
+                '#required' => $taxa_settings['req'],
+                '#attributes' => array('class' => 'classification-singletag-' . CLASSIFICATION_PRIMARY)
+              );
+              $form['taxonomy']['classification_multitag'][CLASSIFICATION_PRIMARY] = array(
+                '#type' => 'hidden',
+                '#attributes' => array('class' => 'classification-singletag-tid-' . CLASSIFICATION_PRIMARY),
+                '#default_value' => $default,
+              );
+            break;
+    
+            //multiple tagging
+            case 'multiple':
+    
+              // classification_biblio (selection of original published description) breaks presentation so is first checked here as well
+              if(arg(3) !== 'classification') {           
+                $form['taxonomy']['tags'][CLASSIFICATION_PRIMARY] = array(
+                  '#title' => $vocab_title . ' (' . t('multiple select') . ')',
+                  '#description' => '',
+                  '#type' => 'textfield',
+                  '#weight' => $taxa_settings['wt'],
+                  '#autocomplete_path' => 'classification/autocomplete/' . CLASSIFICATION_PRIMARY,
+                  '#required' => $taxa_settings['req'],
+                  '#attributes' => array('class' => 'classification-multitag-' . CLASSIFICATION_PRIMARY)
+                );
+                $form['taxonomy']['classification_multitag'][CLASSIFICATION_PRIMARY] = array(
+                  '#type' => 'hidden',
+                  '#attributes' => array('class' => 'classification-multitag-tids-' . CLASSIFICATION_PRIMARY),
+                  '#default_value' => $default,
+                );
+            }
+
+            break;
+
+            //tree selector
+            case 'tree':
+    
+              // classification_biblio (selection of original published description) breaks presentation so is first checked here as well
+              if(arg(3) !== 'classification') {
+                $form['taxonomy']['tags'][CLASSIFICATION_PRIMARY] = array(
+                  '#title' => $vocab_title . ' (' . t('tree select') . ')',
+                  '#type' => 'classification_tree',
+                );
+
+                //holder for checked boxes
+                $form['taxonomy']['classification_multitag'][CLASSIFICATION_PRIMARY] = array(
+                  '#type' => 'hidden',
+                  '#title' => $vocab_title . ' (' . t('tree select') . ')',
+                  '#attributes' => array('class' => 'classification-multitag-tids-' . CLASSIFICATION_PRIMARY),
+                  '#default_value' => $default,
+                  '#required' => $taxa_settings['req'] 
+                );
+    
+                //holder for ancestry to expand nodes as needed
+                $form['taxonomy']['classification_multitag_ancestry'][CLASSIFICATION_PRIMARY] = array(
+                  '#type' => 'hidden',
+                  '#default_value' => $default_ancestry,
+                );
+        
+                //holder to initialize state of form (is adjusted in classification_settings_tags.js when checked boxes are changed)
+                $form['taxonomy']['classification_multitag_loader'][CLASSIFICATION_PRIMARY] = array(
+                  '#type' => 'hidden',
+                  '#default_value' => $default ? 'true' : 'false',
+                );
+            }
+         
+            break;
+          }
+
+        }
+    
+      break;
+
+      //unset node filters and categories
+      case 'node_admin_content':
+        unset($form['filters']['status']['category']);
+        unset($form['filters']['filter']['#options']['category']);
+      break;
+  
+  }
+
+}
+
+function _classification_settings_terms($vid,$nid) {
+    $terms = array();
+    $result = db_query("SELECT tn.tid FROM {term_node} tn INNER JOIN {term_data} td ON tn.tid=td.tid  WHERE tn.nid=%d AND td.vid=%d ORDER BY tn.tid", $nid, $vid);
+    while($term = db_fetch_object($result)) {
+        $terms[] = $term->tid;
+    }
+ 
+    return implode(',',$terms);
+}
+
+function _classification_settings_ancestry($vid,$nid) {
+    $ancestry = array();
+    $result = db_query("SELECT tid FROM {term_node} WHERE nid=%d",$nid);
+    while($term = db_fetch_object($result)) {
+        $current->tid = $term->tid;
+        while($parents = taxonomy_get_parents($current->tid)) {
+            $current = array_shift($parents);
+            $ancestry[] = 'n' . $current->tid;
+        }
+        
+    }
+    $ancestry = array_unique(array_reverse($ancestry));
+    $ancestry = implode(",", $ancestry);
+    return $ancestry;
+}
+
+/**
+ * Validation functions
+ */
+
+function classification_settings_name_validate($form, &$form_state) {
+    
+    if(!$form_state['values']['vid']) {
+      $vocab_new = $form_state['values']['name'];
+      $vocabs = taxonomy_get_vocabularies();
+    
+      $failed = false;
+      foreach($vocabs as $vocab) {
+        if(strtolower($vocab->name) == strtolower($vocab_new)) {
+            $failed = true;
+        }
+      }
+      if($failed) {
+        form_error($form['identification']['name'], t('Sorry, a vocabulary by that name already exists'));
+      }
+    }
+}
+
+/**
+ * Implementation of hook taxonomy to clean-up rows in term_relation_has_type and variables
+ */
+function classification_settings_taxonomy($op, $type, $item){
+
+  if($type == 'vocabulary' && $op == 'delete') {
+    $classification_flags = variable_get('classification_flags',array());
+    
+    if(array_key_exists($item['vid'],$classification_flags)) {
+        db_query("DELETE FROM {term_relation_types} WHERE vid=%d",$item['vid']);
+        unset($classification_flags[$item['vid']]);
+        variable_set('classification_flags',$classification_flags);
+        drupal_flush_all_caches();      
+    }
+    
+  }
+
+  if($type == 'vocabulary' && $op == 'update') {
+    $classification_flags = variable_get('classification_flags',array());
+
+    if(array_key_exists($item['vid'],$classification_flags)) {
+        db_query("UPDATE {term_relation_types} SET name='%s',namespace='%s' WHERE vid=%d", strtolower($item['name']), strtolower($item['name']), $item['vid']);     
+    }
+    
+  }
+
+  //this can be rather expensive if there are a lot of entries in term_relation_has_type, but it keeps the house clean
+  if($type == 'term' && $op == 'delete') {
+    db_query("DELETE FROM {term_relation_has_type} WHERE NOT EXISTS (SELECT tr.trid FROM {term_relation} tr WHERE tr.trid={term_relation_has_type}.trid )");
+  }
+
+}
+
+function classification_settings_taxonomy_form_vocabulary_submit($form, &$form_state){
+
+  $classification_settings = variable_get('classification_settings', array());
+  $classification_flags = variable_get('classification_flags', array());
+  
+  $biological_classification = $form_state['values']['vocab'];
+  $biological_flag = $form_state['values']['flags'];
+
+  $vid = $form_state['values']['vid'];
+ 
+  if($biological_classification) {
+    
+    //hard-code the taxon_description settings because may be unset with the front-end jQuery
+    if($form_state['values']['vid'] == CLASSIFICATION_PRIMARY) {
+
+      $classification_content = $form_state['values']['classification_settings'];
+      $classification_content['taxon_description'] = array(
+        'active' => 1,
+        'req' => 1,
+        'wt' => -10,
+        'opt' => 'single'
+      );
+
+      foreach($classification_content as $key => $value) {
+        if($value['active'] || $value['req']) {
+          $node[$key] = $key;
+          //put the content type active flag back because #disabled removes it from the array
+          $classification_content[$key]['active'] = 1;
+        }
+      }
+
+      $node = array_unique($node);
+      $form_state['values']['nodes'] = $node;
+
+      $classification_settings[$vid]['settings'] = $classification_content;
+      variable_set('classification_settings', $classification_settings);
+
+      variable_set('classification_viewer_names',$form_state['values']['classification_viewer_names']);
+      variable_set('classification_viewer_canonicals',$form_state['values']['classification_viewer_canonicals']);
+      variable_set('classification_autocomplete_size',$form_state['values']['classification_autocomplete_size']);
+      variable_set('classification_elements_names',$form_state['values']['classification_elements_names']);
+      variable_set('classification_elements_canonicals',$form_state['values']['classification_elements_canonicals']);
+    }
+
+    //save the vocab again
+    $form_state['values']['module'] = 'classification';
+    taxonomy_save_vocabulary($form_state['values']);
+    
+    //adjust default entries in vocabulary table
+    db_query("UPDATE {vocabulary} SET tags = 1, multiple = 1, required = 0, hierarchy = 1 WHERE vid=%d",$vid);
+
+  }
+  else if ($biological_flag) {
+    
+    $flags_content = $form_state['values']['flags_settings'];
+    
+    //let's adjust some settings for one that already exists
+    if($classification_flags[$vid]['settings']) {
+        $classification_flags[$vid] = array();
+        if(!empty($flags_content)) {
+          $classification_flags[$vid]['settings'] = $flags_content;
+        }
+    }
+    //we have a new one so we need an entry in the term_relation_types table
+    else {
+        $vocab_relation = array(
+          'name' => strtolower($form_state['values']['name']),
+          'namespace' => strtolower($form_state['values']['name']),
+          'description' => ' ',
+          'vid' => $form_state['values']['vid']
+        );
+        drupal_write_record('term_relation_types',$vocab_relation);
+
+        $classification_flags[$vid]['settings'] = $flags_content;   
+    }
+
+    variable_set('classification_flags',$classification_flags);
+
+    //save the vocab again
+    $form_state['values']['module'] = 'classification_flags';
+    taxonomy_save_vocabulary($form_state['values']);
+
+  }
+  else {
+    unset($classification_flags[$vid]);
+    variable_set('classification_flags',$classification_flags);
+    
+    //save the vocab again
+    taxonomy_save_vocabulary($form_state['values']);
+  }
+
+}
+
+function theme_classification_settings_content_form($form) {
+  $header = array(t('Content Type'), t('Enabled'), t('Required'), t('Weight on page'), t('Input type'));
+
+  foreach (element_children($form) as $key) {
+    $row = array();
+    $row[] = drupal_render($form[$key]['type']);
+    $row[] = drupal_render($form[$key]['active']);
+    $row[] = drupal_render($form[$key]['req']);
+    $row[] = drupal_render($form[$key]['wt']);
+    $row[] = drupal_render($form[$key]['opt']);
+    $rows[] = $row;
+  }
+  $output = theme('table', $header, $rows);
+  $output .= drupal_render($form);
+
+  return $output;
+}
+
+function theme_classification_settings_flags_config_form($form) {
+  $header = array(t('Required'), t('Weight on panel'), t('Input type'), t('Actions'));
+
+  foreach (element_children($form) as $key) {
+    $row = array();
+    $row[] = drupal_render($form[$key]['req']);
+    $row[] = drupal_render($form[$key]['wt']);
+    $row[] = drupal_render($form[$key]['opt']);
+    $row[] = drupal_render($form[$key]['create']);
+    $rows[] = $row;
+  }
+  $output = theme('table', $header, $rows);
+  $output .= drupal_render($form);
+
+  return $output;
+}
+
+/**
+ * Theme the vocabulary overview as a sortable list of vocabularies.
+ */
+function phptemplate_taxonomy_overview_vocabularies($form){
+
+  $rows = array();
+
+  $vocabs = taxonomy_get_vocabularies();
+
+  foreach($vocabs as $vocab) {
+    if($vocab->module == 'classification_flags') {
+      $classification_flags[$vocab->vid] = $vocab->vid; 
+    }
+    if($vocab->module == 'classification') {
+      $classifications[$vocab->vid] = $vocab->vid;
+    }
+  }
+
+  foreach (element_children($form) as $key) {
+    unset($form[$key]['edit']);
+    if (isset($form[$key]['name'] )) {
+      $vocabulary = &$form[$key];
+
+      $row = array();
+
+      if($vocabulary['#vocabulary']['vid'] == CLASSIFICATION_PRIMARY) {
+        $primary = true;
+        $vocabulary['name']['#value'] = '<strong>' . variable_get('site_name','Taxa') . ' ' . t('classification') . '</strong>';
+      }
+      else {
+        $primary = false;   
+      }
+
+      $row[] = drupal_render($vocabulary['name']);
+      if (isset($vocabulary['weight'])) {
+        $vocabulary['weight']['#attributes']['class'] = 'vocabulary-weight';
+        $row[] = drupal_render($vocabulary['weight'] );
+      }
+
+      unset($vocabulary['list']);
+
+      $vid = $vocabulary['#vocabulary']['vid'];
+
+      if (array_key_exists($vid,$classifications)) {
+        unset($vocabulary['list'],$vocabulary['add']);
+        $row[] = t('Biological classification');
+        $row[] = ($primary) ? drupal_render($vocabulary['types']) : t('N/A');
+        $row[] = array('data' => l('settings', 'admin/content/taxonomy/edit/vocabulary/' . $vid));
+        $row[] = l(t('add names'),'admin/classification/biological/import/' . $vid);
+        $row[] = l(t('edit names'),'admin/classification/biological/edit/' . $vid); 
+      }
+      else if (array_key_exists($vid,$classification_flags)) {
+        $row[] = t('Biological flag');
+        $row[] = t('N/A');
+        if($vid == CLASSIFICATION_RANKS || $vid == CLASSIFICATION_VERNS || $vid == CLASSIFICATION_RELATIONS) {
+            $row[] = '';    
+        }
+        else {
+            $row[] = array(
+              'data' => l('settings', 'admin/content/taxonomy/edit/vocabulary/' . $vid),
+            );  
+        }
+        $row[] = drupal_render($vocabulary['add']);
+        $row[] = l(t('edit terms'), 'admin/content/taxonomy/' . $vid);  
+      }
+      else {
+        $row[] = t('Other');
+        $row[] = drupal_render($vocabulary['types']);
+        $row[] = array(
+          'data' => l('settings', 'admin/content/taxonomy/edit/vocabulary/' . $vid),
+        );
+        $row[] = drupal_render($vocabulary['add']);
+        $row[] = l(t('edit terms'), 'admin/content/taxonomy/' . $vid);  
+      }
+      
+      $rows[] = array(
+        'data' => $row, 
+        'class' => 'draggable'
+      );
+    }
+  
+  }
+  if (empty($rows)) {
+    $rows[] = array(
+      array(
+        'data' => t('No vocabularies available.'), 
+        'colspan' => '6' 
+      ) 
+    );
+  }
+  
+  $header = array(
+    t('Name')
+  );
+  if (isset($form['submit'])) {
+    $header[] = t('Weight');
+    drupal_add_tabledrag('taxonomy', 'order', 'sibling', 'vocabulary-weight');
+  }
+  $header[] = t('Type');
+  $header[] = t('Content types');
+  $header[] = array(
+    'data' => t('Operations'), 
+    'colspan' => '3'
+  );
+  return drupal_render($form['message']) . theme('table', $header, $rows, array('id' => 'taxonomy')) . drupal_render($form);
+}
+
+/**
+ * Fix-up the taxonomy_overview_terms page because it will be useless for the vocabs used to mark relationships
+ */
+function phptemplate_taxonomy_overview_terms($form) {
+    
+  $page_increment  = $form['#page_increment'];
+  $page_entries    = $form['#page_entries'];
+  $back_peddle     = $form['#back_peddle'];
+  $forward_peddle  = $form['#forward_peddle'];
+
+  if ($form['#parent_fields']) {
+    drupal_add_tabledrag('taxonomy', 'match', 'parent', 'term-parent', 'term-parent', 'term-id', FALSE);
+    drupal_add_js(drupal_get_path('module', 'classification_settings') .'/js/classification_settings_drag.js');
+    drupal_add_js(array('taxonomy' => array('backPeddle' => $back_peddle, 'forwardPeddle' => $forward_peddle)), 'setting');
+  }
+
+  drupal_add_css(drupal_get_path('module', 'classification_settings') .'/css/classification_settings.css');
+
+  $errors = form_get_errors() != FALSE ? form_get_errors() : array();
+
+  $rows = array();
+
+  foreach (element_children($form) as $key) {
+    if (isset($form[$key]['#term'])) {
+      $term = &$form[$key];
+      unset($term['view']);
+      $row = array();
+      $row[] = $term['#term']['name'];
+
+      if ($form['#parent_fields']) {
+        $term['tid']['#attributes']['class'] = 'term-id';
+        $term['parent']['#attributes']['class'] = 'term-parent';
+        $row[0] .= drupal_render($term['parent']) . drupal_render($term['tid']);
+      }
+
+      switch($term['#term']['vid']) {
+        case CLASSIFICATION_RELATIONS:
+        //prevent editing of the word 'vernacular' because that describes a relationship
+        if($term['#term']['name'] == 'vernacular name' || $term['#term']['name'] == 'synonym') {
+          unset($term['edit']);
+          $row[] = '<span class="classification_settings_noedit">' . t('Cannot be edited') . '</span>';
+        }
+        else {
+          $row[] = drupal_render($term['edit']);
+        }
+        break;
+    
+        case CLASSIFICATION_RANKS:
+          $row[] = drupal_render($term['italicize']);
+          $row[] = drupal_render($term['edit']);          
+        break;
+    
+        default:
+          $row[] = drupal_render($term['edit']);
+      }
+
+      $row = array('data' => $row);
+      $rows[$key] = $row;
+    }
+  }
+
+  // Add necessary classes to rows.
+  $row_position = 0;
+  foreach ($rows as $key => $row) {
+    $classes = array();
+    if (isset($form['#parent_fields'])) {
+      $classes[] = 'draggable';
+    }
+    // Add classes that mark which terms belong to previous and next pages.
+    if ($row_position < $back_peddle || $row_position >= $page_entries - $forward_peddle) {
+      $classes[] = 'taxonomy-term-preview';
+    }
+
+    if ($row_position !== 0 && $row_position !== count($rows) - 1) {
+      if ($row_position == $back_peddle - 1 || $row_position == $page_entries - $forward_peddle - 1) {
+        $classes[] = 'taxonomy-term-divider-top';
+      }
+      elseif ($row_position == $back_peddle || $row_position == $page_entries - $forward_peddle) {
+        $classes[] = 'taxonomy-term-divider-bottom';
+      }
+    }
+
+    // Add an error class if this row contains a form error.
+    foreach ($errors as $error_key => $error) {
+      if (strpos($error_key, $key) === 0) {
+        $classes[] = 'error';
+      }
+    }
+    $rows[$key]['class'] = implode(' ', $classes);
+    $row_position++;
+  }
+
+  if (empty($rows)) {
+    $rows[] = array(array('data' => $form['#empty_text'], 'colspan' => '3'));
+  }
+
+  unset($form['reset_alphabetical']);
+
+  if($form['#vocabulary']['vid'] == CLASSIFICATION_RANKS) {
+    $header = array(t('Name'), t('Italicize'), t('Operations'));
+  }
+  else {
+    $header = array(t('Name'), t('Operations'));
+  }
+  $output = theme('table', $header, $rows, array('id' => 'taxonomy'));
+  $output .= drupal_render($form);
+  $output .= theme('pager', NULL, $page_increment);
+
+  return $output;
+}
+
+function classification_settings_overview_terms_submit($form,&$form_state) {
+
+    if($form_state['values']['vocab'] == CLASSIFICATION_RANKS) {
+        $form_state['values']['classification_italicize'] = array_filter($form_state['values']['classification_italicize']);
+        $classification_italicize = array();
+        foreach($form_state['values']['classification_italicize'] as $tid => $checked) {
+          $classification_italicize[$tid] = '';
+        }
+        variable_set('classification_italicize',$classification_italicize);
+    }
+    drupal_set_message(t('Your selections were saved'));
+}
+
+/**
+ * Helper functions
+ */
+function _classification_settings_enable_widget($field_ids) {
+
+  if ($field_ids && !is_array($field_ids)) {
+    $field_ids = array($field_ids);
+  }
+  if (!empty($field_ids)) {
+    drupal_add_css(drupal_get_path('module', 'classification_settings') .'/css/classification_settings.css', 'module');
+    drupal_add_js(array('classification_tags' => $field_ids), 'setting');
+    drupal_add_js(drupal_get_path('module', 'classification_settings') .'/js/classification_settings_tags.js', 'module');
+  } 
+}
+
+function _classification_settings_node_type($vid,$type) {
+    $result = db_fetch_object(db_query("SELECT * FROM {vocabulary_node_types} WHERE vid=%d AND type='%s'", $vid, $type));
+    $settings = variable_get('classification_settings',array());
+    if($settings[$vid]['settings'][$type]['active'] == 1 || $settings[$vid]['settings'][$type]['req'] == 1) {
+        return true;
+    }
+    return ($result->vid) ? true : false;
+}
+
+function _classification_settings_get_vid($name) {
+  $voc = db_fetch_object(db_query("SELECT vid FROM {vocabulary} WHERE name = '%s'", $name));
+  return $voc->vid;
+}
+
+function _classification_settings_split_field($data,$vid,$type='tree') {
+    if($type == 'tree') {
+        foreach($data as $ntid => $value) {
+            $tid = str_replace('n','',$ntid);
+            $tids[$tid] = $tid;
+        }
+        return $tids;
+    }
+}

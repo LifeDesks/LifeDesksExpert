@@ -1,0 +1,11 @@
+name = Classification Export
+description = "Exports biological classification(s)"
+package = "LifeDesk"
+project = "classification_export"
+
+dependencies[] = classification
+dependencies[] = excel_reader
+
+core = 6.x
+
+version = 6.x-6100

@@ -1,0 +1,117 @@
+<?php
+
+/**
+ * Implementation of hook_install().
+ */
+function lifedesk_taxa_install() {
+  drupal_install_schema('lifedesk_taxa');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function lifedesk_taxa_uninstall() {
+  drupal_uninstall_schema('lifedesk_taxa');
+  variable_del("lifedesk_taxa_last_rebuild");
+  variable_del("lifedesk_taxa_rebuild_freq");
+}
+
+function lifedesk_taxa_schema() {
+  $schema['lifedesk_taxa'] = array(
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique term ID.',
+      ),
+      'shortname' => array(
+        'type' => 'varchar', 
+        'not null' => TRUE, 
+        'length' => 255,
+        'description' => 'The shortname (or subdomain) of the LifeDesk site',
+      ),
+      'tid' => array(
+        'type'=>'int', 
+        'not null' => TRUE,
+        'description' => 'The id of the term in the primary classification',
+      ),
+      'name' => array(
+        'type' => 'varchar', 
+        'not null' => TRUE, 
+        'length' => 255,
+        'description' => 'The term in the primary classification',
+      ),
+      'scientific' => array(
+	    'type' => 'int',
+	    'not null' => TRUE,
+	    'default' => 0,
+	    'description' => 'A flag to determine if name is scientific or not'
+	  ),
+      'treepath' => array(
+        'type' => 'text',
+        'not null' => TRUE,
+        'default' => '',
+        'size' => 'big',
+        'description' => 'The treepath of the term in the primary classification',
+      ),
+    ),
+    'indexes' => array(
+      'id_treepath' => array('id',array('treepath', 30)),
+      'id_name' => array('id','name'),
+    ),
+    'primary key' => array('id'),			       
+  );
+  $schema['lifedesk_taxa_cache'] = array(
+	'fields' => array(
+    'name' => array(
+      'type' => 'varchar', 
+      'not null' => TRUE, 
+      'length' => 255,
+      'description' => 'The term',
+    ),
+    'treepath' => array(
+      'type' => 'text',
+      'not null' => TRUE,
+      'default' => '',
+      'size' => 'big',
+      'description' => 'The treepath of the term in the Catalogue of Life',
+    ),
+  ),
+  'primary key' => array('name'),			       
+  );
+
+  return $schema;
+}
+
+/**
+ * Implementation of hook_requirements().
+ */
+function lifedesk_taxa_requirements($phase) {
+    $requirements = array();
+
+    if ($phase == 'runtime' || $phase == 'install') {
+
+    // File paths
+    $export_path = file_create_path('lifedesk_taxa');
+
+    if (!file_check_directory($export_path, FILE_CREATE_DIRECTORY)) {
+      $requirements['lifedesk_taxa_dir'] = array(
+        'value' => t('Missing directory'),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => t("A LifeDesk taxa module's directory %export-dir is missing.", array('%export-dir' => $export_path)),
+      );
+    }
+
+    $requirements['lifedesk_taxa_dir']['title'] = t('LifeDesk taxa module directory');
+
+  }
+
+  return $requirements;
+}
+
+function lifedesk_taxa_update_6100() {
+	$ret = array();
+	variable_set('classification_checker_service_params', 'service.php?function=search&hierarchy_id=529&search=');
+	return $ret;
+}

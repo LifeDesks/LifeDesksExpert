@@ -1,0 +1,310 @@
+<?php
+ 
+/**
+ * Menu items
+ */
+function lifedesk_stats_menu() {
+  $items['admin/reports/lifedesk-stats'] = array(
+    'title' => t('LifeDesk statistics'),
+    'description' => t('View and download LifeDesk site statistics and email addresses'),
+    'page callback' => drupal_get_form,
+    'page arguments' => array('lifedesk_stats_form'),
+    'access arguments' => array('view LifeDesk stats'),
+    'type' => MENU_NORMAL_ITEM,
+    'weight' => -20,
+  );
+  $items['admin/reports/lifedesk-stats/emails'] = array(
+    'page callback' => 'lifedesk_stats_emails',
+    'access arguments' => array('view LifeDesk stats'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['admin/reports/lifedesk-stats/stats'] = array(
+    'page callback' => 'lifedesk_stats_stats',
+    'access arguments' => array('view LifeDesk stats'),
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm
+ */
+function lifedesk_stats_perm() {
+  return array(
+    'view LifeDesk stats'
+  );
+}
+
+/**
+ * Implementation of hook_theme
+*/
+function lifedesk_stats_theme() {
+  return array(
+    'lifedesk_stats_form' => array(
+      'arguments' => array('form' => NULL),
+    ),
+  );
+}
+
+function lifedesk_stats_form(&$form_state) {
+	  global $conf;
+	  $module_path = drupal_get_path('module', 'lifedesk_stats') .'/';
+	
+	  drupal_add_css($module_path .'css/lifedesk_stats.css');
+
+	  $header = array(
+	    array('data' => t('Site Title'), 'field' => 'n.title'),
+	    array('data' => t('Subdomain'), 'field' => 'ds.shortname'),
+	    array('data' => t('Created'), 'field' => 'n.created',  'sort' => 'asc'),
+	    array('data' => t('Stats'))
+	  );
+	  $sql = db_rewrite_sql("
+	    SELECT
+	      n.nid,
+	      n.title,
+	      ds.shortname,
+	      n.created,
+	      ds.stats
+	    FROM
+	      {node} n 
+	    INNER JOIN
+	      {drupal_site} ds ON (n.nid=ds.nid)");
+	  $sql .= tablesort_sql($header);
+	  $query_count = "
+	    SELECT
+	      COUNT(DISTINCT ds.nid)
+	    FROM
+	      {drupal_site} ds";
+	  $result = pager_query($sql, 25, 0, $query_count);
+	  $requests = array();
+	  while ($request = db_fetch_object($result)) {
+	    $form['title'][$request->nid] = array('#value' => check_plain($request->title));
+		$form['shortname'][$request->nid] = array('#value' => l(check_plain($request->shortname), 'http://' . check_plain($request->shortname) . '.' .  $conf['_lifedesks_domain'], array('absolute' => true, 'attributes' => array('target' => '_blank'))));
+		$form['created'][$request->nid] = array('#value' => gmdate(DATE_W3C, $request->created));
+		$form['stats'][$request->nid] = array('#value' => lifedesk_stats_render($request->stats));
+	    $form['pager'] = array('#value' => theme('pager', NULL, 50, 0));
+	  }
+	  return $form;
+	}
+
+function theme_lifedesk_stats_form($form) {
+	  $header = array(
+	    array('data' => t('Site Title'), 'field' => 'n.title'),
+		array('data' => t('Subdomain'), 'field' => 'ds.shortname'),
+	    array('data' => t('Created'), 'field' => 'n.created',  'sort' => 'asc'),
+	    array('data' => t('Statistics'))
+	  );
+
+	  if (isset($form['title']) && is_array($form['title'])) {
+	    foreach (element_children($form['title']) as $key) {
+	      $rows[] = array(
+	        drupal_render($form['title'][$key]),
+	        drupal_render($form['shortname'][$key]),
+	        drupal_render($form['created'][$key]),
+	        drupal_render($form['stats'][$key]),
+	      );
+	    }
+	  }
+	  else {
+	    $rows[] = array(array('data' => t('Sorry, there are no LifeDesks yet.'), 'colspan' => '4'));
+	  }
+
+      $output .= '<div id="lifedesk-stats-download-email">' . l(t('Download Email Addresses'), 'admin/reports/lifedesk-stats/emails') . '</div>';
+      $output .= '<div id="lifedesk-stats-download-stats">' . l(t('Download Statistics'), 'admin/reports/lifedesk-stats/stats') . '</div>';
+
+	  $output .= theme('table', $header, $rows);
+	  if ($form['pager']['#value']) {
+	    $output .= drupal_render($form['pager']);
+	  }
+
+	  $output .= drupal_render($form);
+
+	  return $output;
+	}
+
+function lifedesk_stats_render($stats) {
+	$result = array();
+	$data = unserialize($stats);
+    foreach($data as $key => $value) {
+	  switch($key) {
+		case 'site_owner':
+		  $result[0] = '<strong>' . t('Owner') . '</strong>: ' . $value['givenname'] . ' ' . $value['surname'];
+		break;
+		case 'users':
+		  $result[1] = '<strong>' . t('Members') . '</strong>: ' . $value['num_accounts'];
+		  $result[2] = '<strong>' . t('Last Accessed') . '</strong>: ' . gmdate(DATE_W3C, $value['last_accessed']);
+		break;
+	    case 'content_partner_file':
+	      $result[3] = '<strong>' . t('Content Partner') . '</strong>: ';
+	      $result[3] .= ($value==1) ? t('yes') : t('no');
+	    break;
+	    case 'count_names':
+	      $result[4] = '<strong>' . t('Names (Primary)') . '</strong>: ' . number_format($value);
+	    break;
+	    case 'media':
+	      $result[5] = '<strong>' . t('Data Objects') . '</strong>: ';
+	      $media = array();
+	      if(is_array($value)) {
+	          for($i==0;$i<count($value)-1;$i++) {
+			    $media[] = ($value[$i]['type'] && $value[$i]['count']) ? $value[$i]['type'] . ' (' . $value[$i]['count'] . ')' : t('none');
+	          }
+	      }
+	      else {
+		    $media[] = t('none');
+	      }
+          $result[5] .= implode(' ', $media);
+	    break;
+	  }
+    }
+    ksort($result);
+    return implode('<br>',$result);
+}
+
+function lifedesk_stats_emails() {
+	  global $conf;
+
+	  header('Content-Type: text/tab-separated-values');
+	  $domain = $conf['_lifedesks_domain'];
+	  $filename = 'lifedesk_emails_'.gmdate("Ymd_Gi").'.txt';
+
+      $output .= t('Site') . "\t";
+      $output .= t('URL') . "\t";
+	  $output .= t('Name') . "\t";
+	  $output .= t('Email') . "\t";
+      $output .= t('Role') . "\t";
+
+      $output .= "\n";
+
+	  $sql = db_query("SELECT ds.shortname, ds.stats FROM {drupal_site} ds");
+	
+	  $emails = array();
+	  while($result = db_fetch_object($sql)) {
+		$stats = unserialize($result->stats);
+		$site_name = $stats['site_title'];
+	    $switch_db = db_switch($result->shortname);
+	    $ld_support = db_switch_variable_get("lifedesk_support",0);
+	    $sql2 = db_query("
+	        SELECT
+	          u.givenname,
+	          u.surname,
+	          u.mail as email,
+	          r.name as role
+	        FROM
+	          {users} u 
+	        INNER JOIN 
+	          {users_roles} ur ON (u.uid=ur.uid) 
+	        INNER JOIN 
+	          {role} r ON (ur.rid=r.rid)
+	        WHERE
+	          u.status=1 AND u.uid != 1 AND u.uid != ".$ld_support."");
+	    while($result2 = db_fetch_object($sql2)) {
+		  $emails[] = array(
+			'site' => check_plain($site_name),
+		    'url' => 'http://' . $result->shortname . '.' . $domain,
+			'name' => $result2->surname . ', ' . $result2->givenname,
+			'email' => $result2->email,
+			'role' => $result2->role, 
+		  );
+	    }
+	
+	    $switch_db = db_switch();
+	  }
+
+	  foreach ($emails as $email) {
+	    $output .= $email['site'] . "\t";
+	    $output .= $email['url'] . "\t";
+	    $output .= $email['name'] . "\t";
+	    $output .= $email['email'] . "\t";
+	    $output .= $email['role'] . "\t";
+	    $output .= "\n";
+      }
+
+  header('Content-Disposition: attachment; filename='.$filename);
+  echo $output;
+}
+
+function lifedesk_stats_stats() {
+	  global $conf;
+
+	  header('Content-Type: text/tab-separated-values');
+	  $domain = $conf['_lifedesks_domain'];
+	  $filename = 'lifedesk_stats_'.gmdate("Ymd_Gi").'.txt';
+
+      header('Content-Disposition: attachment; filename='.$filename);
+      $data = _lifedesk_stats_get_data();
+      echo $data;
+}
+
+function lifedesk_stats_cron() {
+
+	global $conf;
+	$domain = $conf['_lifedesks_domain'];
+	$filename = 'lifedesk_stats.txt';
+	
+	$output  = t('Generated on the LifeDesks servers: ') . gmdate(DATE_W3C,time()) . "\n";
+	$output .= _lifedesk_stats_get_data();
+	
+	file_save_data($output, 'lifedesk_stats/'.$filename, FILE_EXISTS_REPLACE);
+
+}
+
+function _lifedesk_stats_get_data() {
+	$output .= t('nid') . "\t";
+    $output .= t('Site') . "\t";
+    $output .= t('URL') . "\t";
+    $output .= t('Created By') . "\t";
+    $output .= t('Members') . "\t";
+    $output .= t('Last Accessed') . "\t";
+    $output .= t('Content Partner') . "\t";
+    $output .= t('Names') . "\t";
+    $output .= t('Images') . "\t";
+    $output .= t('Taxon Description') . "\t";
+    $output .= t('Biblio') . "\t";
+    $output .= t('Shaded Map') . "\n";
+
+	  $sql = db_query("SELECT ds.nid, ds.shortname, ds.stats FROM {drupal_site} ds");
+
+	  while($result = db_fetch_object($sql)) {
+		$stats = unserialize($result->stats);
+		$output .= $result->nid . "\t";
+		$output .= $stats['site_title'] . "\t";
+		$output .= 'http://' . $result->shortname . '.' . $conf['_lifedesks_domain'] . "\t";
+		$output .= $stats['site_owner']['surname'] . ', ' . $stats['site_owner']['givenname'] . "\t";
+		$output .= $stats['users']['num_accounts'] . "\t";
+		$output .= gmdate(DATE_W3C, $stats['users']['last_accessed']) . "\t";
+		$output .= ($stats['content_partner_file']==1) ? t('yes') . "\t" : t('no') . "\t";
+		$output .= $stats['count_names'] . "\t";
+		
+		$image_count = '0';
+		$taxon_page_count = '0';
+		$biblio_count = '0';
+		$map_count = '0';
+		
+		if(is_array($stats['media'])) {
+			foreach($stats['media'] as $media) {
+			  switch ($media['type']) {
+				case 'Image':
+				  $image_count = $media['count'];
+				break;
+				case 'Taxon Page':
+				  $taxon_page_count = $media['count'];
+				break;
+		  		case 'Biblio':
+		          $biblio_count = $media['count'];
+				break;
+				case 'Shaded Map':
+				  $map_count = $media['count'];
+			  }
+			}	
+		}
+		
+		$output .= $image_count . "\t";
+		$output .= $taxon_page_count . "\t";
+		$output .= $biblio_count . "\t";
+		$output .= $map_count . "\n";
+		
+	  }
+	
+	return $output;
+}

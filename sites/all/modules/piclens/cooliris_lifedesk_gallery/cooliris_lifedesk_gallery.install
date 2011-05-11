@@ -1,0 +1,12 @@
+<?php
+// $Id: cooliris_lifedesk_gallery.install,v 1.1.4.3 2008/04/28 20:49:33 dshorthouse Exp $
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function cooliris_lifedesk_gallery_uninstall() {
+  variable_del('cooliris_lifedesk_gallery_content');
+  variable_del('cooliris_lifedesk_gallery_js');
+  variable_del('cooliris_lifedesk_gallery_link');
+  variable_del('cooliris_lifedesk_link_to');
+}

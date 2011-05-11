@@ -1,0 +1,107 @@
+<?php
+
+/**
+ * Implementation of hook_install()
+ */
+function simplemappr_install() {
+	drupal_install_schema('simplemappr');
+}
+
+function simplemappr_uninstall() {
+	drupal_uninstall_schema('simplemappr');
+	variable_del('simplemappr_default_path');
+	variable_del('simplemappr_sizes');
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function simplemappr_schema() {
+  $schema['simplemappr'] = array(
+    'description' => 'Stores map file information.',
+    'fields' => array(
+      'nid' => array(
+        'description' => 'Primary Key: The {node}.nid of the map node.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'fid' => array(
+        'description' => 'Index: The {files}.fid of the map file.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'map_size' => array(
+        'description' => 'Primary Key: The {files}.filename of the map file. For map module this indicates the file size.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+    ),
+    'primary key' => array('nid', 'map_size'),
+    'indexes' => array(
+      'fid' => array('fid'),
+    ),
+  );
+  $schema['simplemappr_data'] = array(
+	'description' => 'Stores user data for map files',
+	'fields' => array(
+		'nid' => array(
+			'description' => 'Primary key: The {node}.nid of the map node.',
+			'type' => 'int',
+			'unsigned' => TRUE,
+			'not null' => TRUE,
+			'default' => 0
+		),
+		'value' => array(
+			'description' =>  'Serialized user data to update map',
+			'type' => 'text',
+	        'not null' => TRUE,
+	        'size' => 'big'
+		),
+	),
+	'primary key' => array('nid'),
+  );
+  return $schema;
+}
+
+/**
+ * Implementation of hook_requirements().
+ */
+function simplemappr_requirements($phase) {
+  $requirements = array();
+
+  if ($phase == 'runtime') {
+
+    // File paths
+    $simplemappr_path = file_create_path(file_directory_path() . '/' . variable_get('simplemappr_default_path', 'simplemappr'));
+    $temp_path = $simplemappr_path . '/temp';
+    if (!file_check_directory($image_path, FILE_CREATE_DIRECTORY)) {
+      $requirements['simplemappr_dirs'] = array(
+        'value' => t('Missing directory.'),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => t("The SimpleMappr module's directory %simplemappr_dir is missing.", array('%simplemappr_dir' => $simplemappr_path)),
+      );
+    }
+    else if (!file_check_directory($temp_path, FILE_CREATE_DIRECTORY)) {
+      $requirements['simplemappr_dirs'] = array(
+        'value' => t('Missing temp directory.'),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => t("The SimpleMappr module's temp directory %temp_dir is missing.", array('%temp_dir' => $temp_path)),
+      );
+    }
+    else {
+      $requirements['simplemappr_dirs'] = array(
+        'value' => t('Exists (%path).', array('%path' => $simplemappr_path)),
+        'severity' => REQUIREMENT_OK,
+      );
+    }
+    $requirements['simplemappr_dirs']['title'] = t('SimpleMappr module directories');
+  }
+
+  return $requirements;
+}

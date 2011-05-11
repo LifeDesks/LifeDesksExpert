@@ -1,0 +1,60 @@
+.ocmf_links {
+	padding:0px;
+	margin:0px auto;
+	display:inline;
+}
+
+.ocmf_links li {
+	list-style:none;
+	background:none;
+	font-size:small;
+	display:inline;
+}
+
+.ocmf_links li a {
+	background:none;
+	display: block;
+	line-height: 20px;
+	height: 20px;
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	outline: none;
+	padding: 1px 5px;
+	padding-left: 24px;
+}
+
+.ocmf_links li.edit_default a { background-image: url(../images/page_white_edit.gif); }
+.ocmf_links li.edit_image a { background-image: url(../images/picture_edit.gif); }
+.ocmf_links li.edit_biblio a { background-image: url(../images/book_edit.gif); }
+.ocmf_links li.edit_taxon_description a { background-image: url(../images/bug_edit.gif); }
+.ocmf_links li.edit_forum a { background-image: url(../images/group_edit.gif); }
+.ocmf_links li.edit_poll a { background-image: url(../images/chart_bar_edit.gif); }
+.ocmf_links li.edit_simplemappr a { background-image: url(../images/map_edit.png); } 
+
+.ocmf_links li span {
+	background:none;
+	display: block;
+	line-height: 20px;
+	height: 20px;
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	outline: none;
+	padding: 1px 5px;
+	padding-left: 24px;
+}
+
+.ocmf_links li.taxon_page span { background-image: url(../images/bug.gif); }
+.ocmf_links li.image span { background-image: url(../images/picture.gif); }
+.ocmf_links li.page span { background-image: url(../images/page_white.png); }
+.ocmf_links li.biblio span { background-image: url(../images/book.gif); }
+.ocmf_links li.forum span { background-image: url(../images/group.gif); }
+.ocmf_links li.poll span { background-image: url(../images/chart_bar.gif); }
+.ocmf_links li.simplemappr span { background-image: url(../images/map.png); }
+
+span.ocmf_published {
+	color:#009900;
+}
+
+span.ocmf_draft {
+	color:#FF0000;
+}

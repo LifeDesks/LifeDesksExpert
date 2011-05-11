@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<drupal>
+<term>
+<name lang="sw" term="overview" type="header">Overview</name>
+<description>Sura ya msingi heading katika Encyclopedia ya Maisha.</description>
+<children>
+<term>
+<name lang="sw" term="description" type="chapter">Description</name>
+<description>A maelezo ya kina ya sifa za taxon ya. Kutumika hasa wakati wengi wa aina ya somo ni kutibiwa pamoja katika chombo kimoja, lakini kwa kirefu. ni Taxon baiolojia na kutumika kama muhtasari mfupi.</description>
+</term>
+<term>
+<name lang="sw" term="biology" type="chapter">Biolojia</name>
+<description>Akaunti ya baiolojia ya taxon ya. T.ex. tabia, uzazi, na kusambaa.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="sw" term="conservation" type="header">Uhifadhi</name>
+<description>Sura ya msingi heading katika Encyclopedia ya Maisha.</description>
+<children>
+<term>
+<name lang="sw" term="conservation" type="chapter">Uhifadhi</name>
+<description>Uhifadhi</description>
+</term>
+<term>
+<name lang="sw" term="conservationstatus" type="chapter">Hali ya uhifadhi</name>
+<description>A maelezo ya uwezekano wa aina ya kuwa haiko katika siku ya sasa au ya baadaye karibu. Idadi ya kawaida ni kutibiwa chini ya Idadi ya Watu Biolojia, na mwenendo wa ukubwa chini ya idadi ya watu ni kutibiwa Mwelekeo. Hata hivyo, hii ni kipengele preferred kama kifaa pamoja na mambo yote haya na maelezo kuhusu orodha ya hifadhi.</description>
+</term>
+<term>
+<name lang="sw" term="legislation" type="chapter">Sheria</name>
+<description>Kisheria kanuni au sheria zinazohusiana na taxon ya.</description>
+</term>
+<term>
+<name lang="sw" term="management" type="chapter">Usimamizi</name>
+<description>Inaeleza mbinu na malengo ya kutumika katika usimamizi wa jamii. Ni pamoja na usimamizi wa jamaa na kipande cha sheria, kwa mfano, orodha ya CITES.</description>
+</term>
+<term>
+<name lang="sw" term="procedures" type="chapter">Taratibu</name>
+<description>Inahusika na jinsi kwenda juu ya kusimamia taxon hii, je ni vitisho anajulikana kwa taxon hii?</description>
+</term>
+<term>
+<name lang="sw" term="threats" type="chapter">Vitisho</name>
+<description>Ya vitisho ambayo taxon hii ni somo.</description>
+</term>
+<term>
+<name lang="sw" term="trends" type="chapter">Mwelekeo</name>
+<description>Dalili ya idadi ya watu kama ni imara, au kuongeza au kupunguza.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="sw" term="description" type="header">Description</name>
+<description>Sura ya msingi heading katika Encyclopedia ya Maisha.</description>
+<children>
+<term>
+<name lang="sw" term="behaviour" type="chapter">Tabia</name>
+<description>Maelezo ya tabia na mifumo ya tabia ya viumbe, ikiwa ni pamoja na vitendo na athari ya viumbe katika uhusiano na mazingira yake ya vitu-hai na abiotic. Ni pamoja na mawasiliano, mtazamo lägen, na mifumo ya locomotion, pamoja na mikakati ya muda mrefu (isipokuwa mating na mikakati ya uzazi, kufunikwa chini ya uzazi).</description>
+</term>
+<term>
+<name lang="sw" term="cytology" type="chapter">Cytology</name>
+<description>Kiini baiolojia: malezi, muundo, organelles, na kazi ya seli.</description>
+</term>
+<term>
+<name lang="sw" term="diagnosticdescription" type="chapter">Diagnostiksamarbetet Description</name>
+<description>Orodha ya makala hii ili kutofautisha taxon kutoka kwa jamaa yake wa karibu. Mei ni pamoja lakini si vikwazo kwa synapomorphies.</description>
+</term>
+<term>
+<name lang="sw" term="genetics" type="chapter">Genetics</name>
+<description>Habari juu ya genetics ya taxon, ikiwa ni pamoja karyotypes, barcoding sasa, wote genome sequencing sasa, ploidy.</description>
+</term>
+<term>
+<name lang="sw" term="growth" type="chapter">Ukuaji</name>
+<description>Maelezo ya viwango vya ukuaji, allometries, vigezo vya habari kuwa predictive, morphometrics. Je, pia ni pamoja na hypotheses ya paedomorphy au neoteny, nk</description>
+</term>
+<term>
+<name lang="sw" term="lookalikes" type="chapter">Angalia Alikes</name>
+<description>Kiasi cha aina nyingine kwamba taxon hii inaweza kuwa na kuchanganyikiwa na. Muhimu kwa ajili ya utambulisho na ulinganifu. Kawaida katika jamii invaderande aina.</description>
+</term>
+<term>
+<name lang="sw" term="molecularbiology" type="chapter">Masi ya Biolojia</name>
+<description>Pamoja proteomic na biokemi (km sumu). habari Genomic ni kawaida kutibiwa chini ya genetics.</description>
+</term>
+<term>
+<name lang="sw" term="morphology" type="chapter">Morphology</name>
+<description>Maelezo ya kuonekana kwa taxon ya; mpango mfano mwili, umbo na rangi ya makala za nje, postures mfano. Inaweza kuwa inajulikana kama au ni pamoja na tabia, au anatomy.</description>
+</term>
+<term>
+<name lang="sw" term="physiology" type="chapter">Maisha</name>
+<description>Maelezo ya mchakato physiological. Pamoja na viwango metabolic, na mifumo kama vile mzunguko, kupumua, excretion, kinga neurophysiology.</description>
+</term>
+<term>
+<name lang="sw" term="size" type="chapter">Michezo</name>
+<description>Wastani wa kawaida, max, mbalimbali, aina ya kawaida (mzunguko, urefu, kiasi, uzito ...)</description>
+</term>
+<term>
+<name lang="sw" term="taxonbiology" type="chapter">Taxon Biolojia</name>
+<description>Muhtasari au picha ya masuala yote ya baiolojia ushirika wa.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="sw" term="ecologyanddistribution" type="header">Ikolojia na Distribution</name>
+<description>Sura ya msingi heading katika Encyclopedia ya Maisha.</description>
+<children>
+<term>
+<name lang="sw" term="associations" type="chapter">Vyama</name>
+<description>Maelezo na orodha ya kiasi cha aina hiyo kuingiliana na taxon ya somo. Pamoja na kumbukumbu wazi kwa aina ya mahusiano ya mazingira: Predator / mawindo; mwenyeji / vimelea, pollinators, symbiosis, mutualism, commensalism; hybridisation, ...</description>
+</term>
+<term>
+<name lang="sw" term="cyclicity" type="chapter">Cyclicity</name>
+<description>Maelezo ya biorhythms, iwe juu ya ukubwa wa sekunde, masaa, siku, au majira. Wale nchi au hali sifa ya marudio ya mara kwa mara kwa mara. Inawezekana pia cover fenomen kama vile viwango vya kutafuna. Maisha ni mzunguko kutibiwa katika muda wa mzunguko wa maisha. migration msimu na uzazi kwa kawaida kutibiwa tofauti.</description>
+</term>
+<term>
+<name lang="sw" term="dispersal" type="chapter">Kusambaa</name>
+<description>Maelezo ya mbinu, mazingira, na majira ya kusambaa (pamoja na wote kuzaa kusambaa na kusambaa interbreeding?)</description>
+</term>
+<term>
+<name lang="sw" term="distribution" type="chapter">Distribution</name>
+<description>Inashughulikia misafa, kwa mfano, mbalimbali ya kimataifa, au nyembamba moja inaweza kuwa na biogeographical, kisiasa au nyingine (kwa mfano, na kusimamiwa na maeneo kama conservencies), upekee; asili au kigeni, REF Darwin Core Geospatial ugani. Je, ni pamoja na usambazaji altitudinal.</description>
+</term>
+<term>
+<name lang="sw" term="ecology" type="chapter">Ecology</name>
+<description>Ecology</description>
+</term>
+<term>
+<name lang="sw" term="habitat" type="chapter">Habitat</name>
+<description>Pamoja na ulimwengu (km nk duniani) na taarifa ya hali ya hewa (mfano Boreal) na pia ni pamoja na mahitaji na tolerances, usawa na wima (altitudinal) distribution.</description>
+</term>
+<term>
+<name lang="sw" term="lifecycle" type="chapter">Mzunguko wa maisha</name>
+<description>Amefafanua na inaeleza Zaka maendeleo transformations. Pamoja metamorphosis instars,, gametophyte / embryophytes, Detsamma kutoka sessile kwa aina Mkono. Kujadili majira. Morphology kawaida ilivyoelezwa katika maelezo morphological.</description>
+</term>
+<term>
+<name lang="sw" term="lifeexpectancy" type="chapter">Kuishi</name>
+<description>Taarifa yoyote juu ya longevity, ikiwa ni pamoja na muda wa wastani wa viumbe na inaweza kuwa inatarajiwa kuishi.</description>
+</term>
+<term>
+<name lang="sw" term="migration" type="chapter">Migration</name>
+<description>Maelezo ya harakati ya upimaji wa viumbe kutoka eneo moja hadi nyingine kwa mfano, (, kwa ajili ya kuzaliana). Kawaida ni pamoja na eneo, majira, na lengo hypothesized.</description>
+</term>
+<term>
+<name lang="sw" term="trophicstrategy" type="chapter">Mkakati Trophic</name>
+<description>Maelezo mafupi ya jumla hali ya chakula mwingiliano. Kwa mfano, mode ya msingi ya användning madini (autotrophy, heterotrophy, coprophagy, saprophagy), nafasi katika chakula mtandao (predator juu, msingi uzalishaji, matumizi), chakula categorization (detritovore, omnivore, carnivore, herbivore). orodha maalum ya kiasi cha aina za dawa chini ya vyama (inayobainisha predators au mawindo).</description>
+</term>
+<term>
+<name lang="sw" term="populationbiology" type="chapter">Idadi ya Biolojia</name>
+<description>Pamoja na wingi wa habari (faili ya idadi ya watu, mvuke) na Uchumi (umri km stratification).</description>
+</term>
+<term>
+<name lang="sw" term="reproduction" type="chapter">Uzazi</name>
+<description>Maelezo ya maisha ya uzazi na tabia, ikiwa ni pamoja na mating na maisha variablerna historia. Pamoja na mikakati cues, restraints, viwango.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="sw" term="evolutionandsystematics" type="header">Evolution na Systematics</name>
+<description>Sura ya msingi heading katika Encyclopedia ya Maisha</description>
+<children>
+<term>
+<name lang="sw" term="evolution" type="chapter">Evolution</name>
+<description>Maelezo ya uendelezaji wa taxon ya.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="sw" term="relevance" type="header">Umuhimu</name>
+<description>Sura ya msingi heading katika Encyclopedia ya Maisha.</description>
+<children>
+<term>
+<name lang="sw" term="diseases" type="chapter">Magonjwa</name>
+<description>Maelezo ya magonjwa ambayo viumbe ni chini. Magonjwa na kusababisha viumbe anaweza pia kuwa hapa chini ya vyama.</description>
+</term>
+<term>
+<name lang="sw" term="riskstatement" type="chapter">Taarifa ya hatari</name>
+<description>Athari hasi juu ya binadamu, jamii. Hii inaweza pia ni pamoja na madhara katika mazingira lazima kushuka ya viumbe au `olewa.</description>
+</term>
+<term>
+<name lang="sw" term="uses" type="chapter">Matumizi</name>
+<description>Faida kwa binadamu ambayo ni pamoja na huduma za mazingira. Hata hivyo, faida kwa mazingira si maalum kwa binadamu ni bora kutibiwa chini ya Hatari taarifa (kile kinachotokea wakati viumbe ni kuondolewa)</description>
+</term>
+</children>
+</term>
+</drupal>

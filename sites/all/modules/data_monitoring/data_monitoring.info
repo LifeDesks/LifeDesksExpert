@@ -1,0 +1,6 @@
+; $Id$
+name = "Data monitoring"
+description = "Provides a framework to monitor, trigger response procedures and report on data."
+package = Administration
+version = 6.x-6002-alpha1
+core = 6.x

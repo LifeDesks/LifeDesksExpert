@@ -1,0 +1,21 @@
+.profile h3 {
+    width:65%;
+}
+
+.profile .picture {
+    float:right;
+    margin:2em 1em 1em 0;
+}
+
+#terms {
+    height:130px;
+    margin:0px auto;
+}
+#scrollTerms { 
+    height:125px; 
+    margin: 0 10px; 
+    overflow:auto 
+}
+#scrollTerms h3 { 
+    font-size: 14px;
+}

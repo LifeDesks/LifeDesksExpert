@@ -1,0 +1,10 @@
+name = Taxon Export
+description = "A configuration and export utility to produce a content partner XML document for consumption by the Encyclopedia of Life."
+package = "LifeDesk"
+project = "taxon_export"
+
+dependencies[] = taxon_description
+
+core = 6.x
+
+version = "6.x-6101"

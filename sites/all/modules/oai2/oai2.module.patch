@@ -1,0 +1,66 @@
+Index: oai2.module.patch
+===================================================================
+Index: oai2.module
+===================================================================
+--- oai2.module	(revision 4373)
++++ oai2.module	(working copy)
+@@ -29,6 +29,7 @@
+                 information stored by the Biblio module' );
+   }
+ }
++/*
+ function oai2_node_name($node) {
+   return t('oai2');
+ }
+@@ -47,11 +48,11 @@
+ 
+ function oai2_access($op, $node) {
+   global $user;
+-
+ }
+ 
+ function oai2_perm() {
+ }
++*/
+ function oai2_cron(){
+   // cleanup expired resumption tokens
+   $expiretime = date("Y-m-d G:i:s", time()-(25*3600));
+@@ -74,7 +75,7 @@
+  */
+ function oai2_parse_request(){
+   global $base_url;
+-  global $compress ;
++  global $compress;
+   global $error ;
+   $compress = true;
+   $error = null;
+@@ -603,7 +604,8 @@
+     $countrec++;
+  	  //$record = db_fetch_object($result);
+  	  $record->biblio_contributors = biblio_load_contributors($record->vid, $record->biblio_type);
+-    $record->biblio_keywords = biblio_load_keywords($record->vid);
++      $record->biblio_keywords = biblio_load_keywords($record->vid);
++      $record->classification_terms = taxonomy_node_get_terms_by_vocabulary($record, CLASSIFICATION_PRIMARY);
+  	  $identifier = $oaiprefix.$record->nid;
+  	  //    	$datestamp = date("Y-m-d\TH:i:s\Z",$record->changed);
+  	  $datestamp = gmstrftime('%Y-%m-%dT%TZ',$record->changed);
+@@ -718,6 +720,7 @@
+   if ($record = db_fetch_object($result)){
+     $record->biblio_contributors = biblio_load_contributors($record->vid, $record->biblio_type);
+     $record->biblio_keywords = biblio_load_keywords($record->vid);
++    $record->classification_terms = taxonomy_node_get_terms_by_vocabulary($record, CLASSIFICATION_PRIMARY); 
+   }else{
+     $error .= oai2_oai_error('idDoesNotExist', '', $identifier);
+     return false;
+@@ -790,6 +793,11 @@
+       $output .= oai2_xmlformat($kw, 'dc:subject', '', $indent);
+     }
+   }
++  if (!empty($record->classification_terms)) {
++    foreach($record->classification_terms as $ct) {
++      $output .= oai2_xmlformat($ct->name, 'dc:subject', '', $indent);
++    }
++  }
+   if ($record->biblio_abst_e)
+   $output .= oai2_xmlformat($record->biblio_abst_e, 'dc:description', '', $indent);
+   if ($record->biblio_publisher)

@@ -1,0 +1,790 @@
+<?php
+// $Id
+
+function taxon_description_install() {
+  if(!db_table_exists('taxon_description')) drupal_install_schema('taxon_description');
+  variable_set("creativecommons_lite_taxon_description", 1);
+  db_add_field($ret, 'term_data', 'language', array('type' => 'varchar', 'length' => 12, 'not null' => TRUE, 'default' => ''));
+  db_add_field($ret, 'term_data', 'trid', array('type' => 'int', 'not null' => TRUE, 'default' => 0));
+
+  taxon_description_xml_insert();
+}
+
+function taxon_description_uninstall() {
+  drupal_uninstall_schema('taxon_description');
+  $type = 'taxon_description';
+  $result = db_query(db_rewrite_sql("SELECT vid, name FROM {vocabulary} WHERE module = '%s'"), $type);
+  while ($voc = db_fetch_object($result)) {
+        $name = $voc->name;
+        if (($name == 'Taxon Description Chapters') || ($name == 'Orphan Chapters')) {
+            $vid = $voc->vid;
+            taxonomy_del_vocabulary($vid);
+        }
+  }
+  variable_del("creativecommons_lite_taxon_description");
+  db_query("DELETE FROM {node} WHERE type = 'taxon_description'");
+}
+
+function taxon_description_schema() {
+
+  $schema['taxon_description'] = array(
+    'description' => t('Stores atomized content for taxon page chapters.'),
+    'fields' => array(
+      'sid' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'description' => 'Taxon Description chapter identifier',
+      ),
+      'nid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => 'Node identifer',
+      ),
+      'vid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Version identifier',
+      ),
+      'tid_chapter' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => 'Linking identifier for chapter title in term_data table',
+      ),
+      'tid_taxon' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => 'Linking identifier for taxon in term_data table',
+      ),
+      'body' => array(
+        'type' => 'text',
+        'not null' => TRUE,
+        'default' => '',
+        'size' => 'big',
+        'description' => 'Textual content for the taxon description chapter',
+      ),
+    ),
+    'indexes' => array(
+      'tid_taxon_chapter' => array('tid_taxon','tid_chapter'),
+    ),
+    'primary key' => array('sid'),
+  );
+
+  $schema['taxon_description_contributor'] = array(
+    'description' => 'Relational table linking authors to taxon_description entries',
+    'fields' => array(
+      'nid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' =>'{taxon_description}.nid of the taxon description',
+      ),
+      'sid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' =>'{taxon_description}.sid of the taxon description',
+      ),
+      'cntr_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' =>'{taxon_description}.cid of the taxon description',
+      ),
+      'rank' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' =>'Position of the author name on the taxon description (first,second,third...)',
+      )
+    ),
+    'primary key' => array('sid', 'cntr_id', 'rank'),
+  );
+
+  $schema['taxon_description_contributor_data'] = array(
+    'description' =>'Contains Author information for each taxon description',
+    'fields' => array(
+      'cntr_id' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'description' =>'Primary Key: Author ID',
+      ),
+      'drupal_uid' => array(
+        'type' => 'int',
+        'not null' => FALSE,
+        'unsigned' => TRUE,
+        'description' =>'Drupal User ID',
+      ),
+      'lastname' => array(
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => TRUE,
+        'default' => '',
+        'description' =>'Author last name',
+      ),
+      'firstname' => array(
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => FALSE,
+        'default' => '',
+        'description' =>'Author first name',
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => TRUE,
+        'default' => '',
+        'description' =>'Author last name',
+      ),
+      'prefix' => array(
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => FALSE,
+        'default' => '',
+        'description' =>'Author first name',
+      ),
+      'suffix' => array(
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => FALSE,
+        'default' => '',
+        'description' =>'Author last name',
+      ),
+      'initials' => array(
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => FALSE,
+        'default' => '',
+        'description' =>'Author first name',
+      ),
+    ),
+    'primary key' => array('cntr_id'),
+    'indexes' => array(
+      'lastname' => array('lastname'),
+      'firstname' => array('firstname')
+    )
+  );
+
+  $schema['taxon_description_rightsholder'] = array(
+    'description' => 'Relational table linking rightsholder to taxon_description entries',
+    'fields' => array(
+      'nid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' =>'{taxon_description}.nid of the taxon description',
+      ),
+      'sid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' =>'{taxon_description}.sid of the taxon description',
+      ),
+      'rts_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' =>'{taxon_description}.cid of the taxon description',
+      ),
+      'rank' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' =>'Position of the rightsholder name on the taxon description (first,second,third...)',
+      )
+    ),
+    'primary key' => array('sid', 'rts_id', 'rank'),
+  );
+
+  $schema['taxon_description_rightsholder_data'] = array(
+    'description' =>'Contains rightsholder information for each taxon description',
+    'fields' => array(
+      'rts_id' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'description' =>'Primary Key: Rightsholder ID',
+      ),
+      'drupal_uid' => array(
+        'type' => 'int',
+        'not null' => FALSE,
+        'unsigned' => TRUE,
+        'description' =>'Drupal User ID',
+      ),
+      'lastname' => array(
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => TRUE,
+        'default' => '',
+        'description' =>'Author last name',
+      ),
+      'firstname' => array(
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => FALSE,
+        'default' => '',
+        'description' =>'Author first name',
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => TRUE,
+        'default' => '',
+        'description' =>'Author last name',
+      ),
+      'prefix' => array(
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => FALSE,
+        'default' => '',
+        'description' =>'Author first name',
+      ),
+      'suffix' => array(
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => FALSE,
+        'default' => '',
+        'description' =>'Author last name',
+      ),
+      'initials' => array(
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => FALSE,
+        'default' => '',
+        'description' =>'Author first name',
+      ),
+    ),
+    'primary key' => array('rts_id'),
+    'indexes' => array(
+      'lastname' => array('lastname'),
+      'firstname' => array('firstname')
+    )
+  );
+
+  return $schema;
+}
+
+function taxon_description_xml_insert() {
+   $vocab = array(
+       'name' => 'Taxon Description Chapters',
+       'hierarchy' => 1,
+       'module' => 'taxon_description',
+       'nodes' => array('taxon_description' => 1)
+   );
+   taxonomy_save_vocabulary($vocab);
+
+   $xml_file = drupal_get_path('module', 'taxon_description') .'/EOL_SPM.xml';
+   $xml = simplexml_load_file($xml_file);
+   taxon_description_arrayloop($xml,$vocab['vid']);
+   
+   $vocab = array(
+       'name' => 'Orphan Chapters',
+       'hierarchy' => 1,
+       'module' => 'taxon_description',
+       'nodes' => array('taxon_description' => 1)
+   );
+   taxonomy_save_vocabulary($vocab);
+}
+
+function taxon_description_arrayloop($parsed,$vid,$pid=false) {
+  foreach($parsed->term as $item) {
+    
+     if(!$pid) $pid = 0;
+
+     $name = (string)$item->name;
+     $description = (string)$item->description;
+     $attributes = $item->name->attributes();
+    
+     switch ((string)$attributes->term) {
+       case 'overview':
+          $weight = -1;
+          break;
+       default:
+          $weight = 0;
+     }
+    
+     $term = array(
+        'name' => $name,
+        'description' => $description,
+        'weight' => $weight,
+        'vid' => $vid,
+        'parent' => $pid,
+     );
+
+     taxonomy_save_term($term);
+
+     db_query("UPDATE {term_data} SET language = '%s', trid=%d WHERE tid=%d", (string)$attributes->lang, $term['tid'], $term['tid']);
+     
+     foreach($item->children as $child) {
+        taxon_description_arrayloop($child,$vid,$term['tid']);
+     }
+  }
+}
+
+function _taxon_description_install_chapter_language_loop($parsed,$code,$vid,$pid=false) {
+  foreach($parsed->term as $item) {
+    
+     if(!$pid) $pid = 0;
+
+     $name = (string)$item->name;
+     $description = (string)$item->description;
+     $attributes = $item->name->attributes();
+    
+     switch ((string)$attributes->term) {
+       case 'overview':
+          $weight = -1;
+          break;
+       default:
+          $weight = 0;
+     }
+    
+     $term = array(
+        'name' => $name,
+        'description' => $description,
+        'vid' => $vid,
+        'parent' => $pid,
+        'weight' => $weight,
+     );
+
+     taxonomy_save_term($term);
+
+     //get the english equivalent from the term attribute (NOTE: this will be intensive when there are a lot of terms in the term_data table)
+     $eng_tid = db_result(db_query("SELECT tid FROM {term_data} WHERE vid=%d AND LOWER(REPLACE(name,' ',''))='%s'", $vid, (string)$attributes->term));
+
+     if($eng_tid) {
+       db_query("UPDATE {term_data} SET language = '%s', trid=%d WHERE tid=%d", $code, $eng_tid, $term['tid']);
+     }
+     
+     foreach($item->children as $child) {
+        _taxon_description_install_chapter_language_loop($child,$code,$vid,$term['tid']);
+     }
+  }
+}
+
+function taxon_description_update_6100() {
+  $ret = array();
+
+  $vocab = array(
+       'name' => 'Orphan Chapters',
+       'hierarchy' => 1,
+       'module' => 'taxon_description',
+       'nodes' => array('taxon_description' => 1)
+  );
+
+  taxonomy_save_vocabulary($vocab);
+
+  return $ret;
+}
+
+function taxon_description_update_6101() {
+    $ret = array();
+    db_query("DELETE FROM {taxon_export_spm} WHERE infoitem='Phylogeny'");
+    return $ret;
+}
+
+function taxon_description_update_6102() {
+    $ret = array();
+    $ret[] = update_sql("DROP TABLE {taxon_description_status};");
+    $ret[] = update_sql("DELETE FROM {taxon_description} WHERE tid_taxon NOT IN (SELECT tn.tid FROM {term_node} tn INNER JOIN {node} n ON (tn.nid=n.nid) WHERE n.type='taxon_description');");
+    return $ret;
+}
+
+function taxon_description_update_6103() {
+    $ret = array();
+    $ret[] = update_sql("INSERT INTO {taxon_export_spm} (infoitem,definition) VALUES ('Conservation','Conservation');");
+    $ret[] = update_sql("UPDATE {taxon_export_spm} SET infoitem='Description' WHERE infoitem='General Description';");
+    return $ret;    
+}
+
+function taxon_description_update_6104() {
+  $ret = array();
+
+  if (!db_column_exists('taxon_description', 'vid')) {
+    $schema = array(
+        'description' => 'Version identifier',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+    );
+    db_add_field($ret, 'taxon_description', 'vid', $schema);
+  }
+
+  $schema = array();
+
+  $schema['taxon_description_contributor'] = array(
+  'description' => 'Relational table linking authors to taxon_description entries',
+  'fields' => array(
+      'nid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' =>'{taxon_description}.nid of the taxon description',
+      ),
+      'sid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' =>'{taxon_description}.sid of the taxon description',
+      ),
+      'cntr_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' =>'{taxon_description}.cid of the taxon description',
+      ),
+      'rank' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' =>'Position of the author name on the publication (first,second,third...)',
+      )
+    ),
+    'primary key' => array('sid', 'cntr_id', 'rank'),
+  );
+        $schema['taxon_description_contributor_data'] = array(
+        'description' =>'Contains Author information for each taxon description',
+        'fields' => array(
+          'cntr_id' => array(
+            'type' => 'serial',
+            'not null' => TRUE,
+            'unsigned' => TRUE,
+            'description' =>'Primary Key: Author ID',
+            ),
+          'drupal_uid' => array(
+            'type' => 'int',
+            'not null' => FALSE,
+            'unsigned' => TRUE,
+            'description' =>'Drupal User ID',
+            ),
+          'lastname' => array(
+            'type' => 'varchar',
+            'length' => '128',
+            'not null' => TRUE,
+            'default' => '',
+            'description' =>'Author last name',
+            ),
+          'firstname' => array(
+            'type' => 'varchar',
+            'length' => '128',
+            'not null' => FALSE,
+            'default' => '',
+            'description' =>'Author first name',
+            ),
+          'name' => array(
+            'type' => 'varchar',
+            'length' => '128',
+            'not null' => TRUE,
+            'default' => '',
+            'description' =>'Author last name',
+            ),
+          'prefix' => array(
+            'type' => 'varchar',
+            'length' => '128',
+            'not null' => FALSE,
+            'default' => '',
+            'description' =>'Author first name',
+            ),
+          'suffix' => array(
+            'type' => 'varchar',
+            'length' => '128',
+            'not null' => FALSE,
+            'default' => '',
+            'description' =>'Author last name',
+            ),
+          'initials' => array(
+            'type' => 'varchar',
+            'length' => '128',
+            'not null' => FALSE,
+            'default' => '',
+            'description' =>'Author first name',
+            ),
+          ),
+          'primary key' => array('cntr_id'),
+          'indexes' => array(
+              'lastname' => array('lastname'),
+              'firstname' => array('firstname')
+            )
+          );
+  foreach($schema as $name => $data) {
+    db_create_table($ret, $name, $data);
+  }
+
+  //populate the tables based on the user and node tables
+  //we cannot use $ret[] here because of vagaries of ordering
+  $support_account = db_result(db_query("SELECT uid FROM {users} WHERE name='ldsupport'"));
+  $support_account = ($support_account) ? $support_account : 0; 
+  db_query("INSERT INTO taxon_description_contributor_data (drupal_uid, lastname, firstname, name) SELECT u.uid, u.surname, u.givenname, CONCAT(u.surname, ', ', u.givenname) as name FROM users u WHERE u.status = 1 AND u.uid > 1 AND u.uid != ".$support_account);
+
+  //now update entries in the taxon_description_contributor table
+  $qry = db_query("
+    SELECT td.nid, td.sid, tdcd.cntr_id 
+    FROM 
+      taxon_description td 
+    INNER JOIN 
+      node n ON (td.nid = n.nid)
+    INNER JOIN
+      taxon_description_contributor_data tdcd ON (n.uid = tdcd.drupal_uid)
+    WHERE n.type='taxon_description'");
+  while($result = db_fetch_object($qry)) {
+    $ret[] = update_sql("INSERT INTO taxon_description_contributor (nid,sid,cntr_id,rank) VALUES ($result->nid,$result->sid,$result->cntr_id,0)");  
+  }
+
+  return $ret;
+}
+
+function taxon_description_update_6105() {
+  module_load_include('module','taxon_description');
+  $ret = array();
+  db_add_field($ret, 'term_data', 'language', array('type' => 'varchar', 'length' => 12, 'not null' => TRUE, 'default' => ''));
+  db_add_field($ret, 'term_data', 'trid', array('type' => 'int', 'not null' => TRUE, 'default' => 0));
+
+  $vid = db_result(db_query("SELECT vid FROM {vocabulary} WHERE name = 'Taxon Description Chapters'"));
+
+  //Give all headings and chapters language 'en' and set trid = tid
+  //Later, we'll have to adjust the taxon_description tid_chapter for content in other languages
+  $ret[] = update_sql("UPDATE {term_data} SET language='en', trid = tid WHERE vid=".$vid);
+
+  //import chapter titles for sites that have already enabled other languages
+  $enabled = array();
+
+  $qry = db_query("SELECT language, native FROM {languages} WHERE enabled = 1 and language != 'en'");
+  while($result = db_fetch_object($qry)) {
+    $enabled[$result->language] = $result->native;  
+  }
+
+  foreach($enabled as $code => $native) {
+    $terms = array();
+    $xml_file = drupal_get_path('module', 'taxon_description') .'/EOL_SPM_' . $code . '.xml';
+
+    if(file_exists($xml_file)) {
+      $xml = simplexml_load_file($xml_file);
+      foreach($xml as $item) {
+    
+        $attributes = $item->name->attributes();
+        $term = array(
+          'name' => (string)$item->name,
+          'description' => (string)$item->description,
+          'vid' => $vid,
+          'parent' => 0,
+          'weight' => 0,
+        );
+
+        //compare all the term_en to what already exists in English
+        $terms[(string)$attributes->term . "|0"] = $term;
+
+        foreach($item->children as $children) {
+          foreach($children as $child) {
+            $attributes = $child->name->attributes();
+            $term = array(
+              'name' => (string)$child->name,
+              'description' => (string)$child->description,
+              'vid' => $vid,
+              'weight' => 0,
+            );
+            $terms[(string)$attributes->term. "|1"] = $term;
+          }
+        }
+      }
+
+      $tree = taxon_description_taxonomy_get_tree($vid, 'en');
+      $parent = 0;
+
+      foreach($tree as $branch) { 
+        if(array_key_exists($branch->term_en . "|0", $terms) && $branch->parents[0] == 0) {
+          $term = array();
+          $terms[$branch->term_en . "|0"]['weight'] = $branch->weight;
+          $term = $terms[$branch->term_en . "|0"];
+          taxonomy_save_term($term);
+          db_query("UPDATE {term_data} SET language = '%s', trid = %d WHERE tid = %d", $code, $branch->tid, $term['tid']);
+          $parent = $term['tid'];
+        }
+        elseif(array_key_exists($branch->term_en . "|1", $terms) && $branch->parents[0] != 0) {       
+          $term = array();
+          $terms[$branch->term_en . "|1"]['weight'] = $branch->weight;
+          $terms[$branch->term_en . "|1"]['parent'] = $parent;
+          $term = $terms[$branch->term_en . "|1"];
+          taxonomy_save_term($term); 
+          db_query("UPDATE {term_data} SET language = '%s', trid = %d WHERE tid = %d", $code, $branch->tid, $term['tid']);        
+        }
+        else {
+          if($branch->parents[0]==0) {
+            $term = array(
+              'name' => t("Undefined"),
+              'description' => "",
+              'vid' => $vid,
+              'parent' => 0,
+              'weight' => $branch->weight,
+            );
+            taxonomy_save_term($term);
+            db_query("UPDATE {term_data} SET language = '%s', trid = %d WHERE tid = %d", $code, $branch->tid, $term['tid']);
+            $parent = $term['tid'];
+          }
+          else {
+            $term = array(
+              'name' => "Undefined",
+              'description' => "",
+              'vid' => $vid,
+              'parent' => $parent,
+              'weight' => $branch->weight,
+            );
+            taxonomy_save_term($term);
+            db_query("UPDATE {term_data} SET language = '%s', trid = %d WHERE tid = %d", $code, $branch->tid, $term['tid']);
+          }
+        }
+      }
+    }
+  }
+
+  //find all taxon_description content in languages other than english so we can update the tid_chapter to the new translated versions
+  foreach($enabled as $code => $native) {
+      $query = db_query("
+        SELECT 
+          tdesc.sid, td.tid as new_tid 
+        FROM 
+          {taxon_description} tdesc 
+        INNER JOIN 
+          {node} n ON (tdesc.nid = n.nid) 
+        INNER JOIN 
+          {term_data} td ON (tdesc.tid_chapter = td.trid) 
+        WHERE 
+          n.type='taxon_description' AND n.language = '".$code."' AND td.language = '".$code."'");
+      while($result = db_fetch_object($query)) {
+        $ret[] = update_sql("UPDATE {taxon_description} SET tid_chapter = ".$result->new_tid." WHERE sid = " . $result->sid);   
+      }
+  }
+
+
+  return $ret;
+}
+
+function taxon_description_update_6106() {
+  $ret = array();
+
+  $schema = array();
+
+  $schema['taxon_description_rightsholder'] = array(
+    'description' => 'Relational table linking rightsholder to taxon_description entries',
+    'fields' => array(
+      'nid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' =>'{taxon_description}.nid of the taxon description',
+      ),
+      'sid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' =>'{taxon_description}.sid of the taxon description',
+      ),
+      'rts_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' =>'{taxon_description}.cid of the taxon description',
+      ),
+      'rank' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' =>'Position of the rightsholder name on the taxon description (first,second,third...)',
+      )
+    ),
+    'primary key' => array('sid', 'rts_id', 'rank'),
+  );
+
+  $schema['taxon_description_rightsholder_data'] = array(
+    'description' =>'Contains rightsholder information for each taxon description',
+    'fields' => array(
+      'rts_id' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'description' =>'Primary Key: Rightsholder ID',
+      ),
+      'drupal_uid' => array(
+        'type' => 'int',
+        'not null' => FALSE,
+        'unsigned' => TRUE,
+        'description' =>'Drupal User ID',
+      ),
+      'lastname' => array(
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => TRUE,
+        'default' => '',
+        'description' =>'Author last name',
+      ),
+      'firstname' => array(
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => FALSE,
+        'default' => '',
+        'description' =>'Author first name',
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => TRUE,
+        'default' => '',
+        'description' =>'Author last name',
+      ),
+      'prefix' => array(
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => FALSE,
+        'default' => '',
+        'description' =>'Author first name',
+      ),
+      'suffix' => array(
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => FALSE,
+        'default' => '',
+        'description' =>'Author last name',
+      ),
+      'initials' => array(
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => FALSE,
+        'default' => '',
+        'description' =>'Author first name',
+      ),
+    ),
+    'primary key' => array('rts_id'),
+    'indexes' => array(
+      'lastname' => array('lastname'),
+      'firstname' => array('firstname')
+    )
+  );
+
+  foreach($schema as $name => $data) {
+    db_create_table($ret, $name, $data);
+  }
+
+  //populate the tables based on the user and node tables
+  //we cannot use $ret[] here because of vagaries of ordering
+  $support_account = db_result(db_query("SELECT uid FROM {users} WHERE name='ldsupport'"));
+  $support_account = ($support_account) ? $support_account : 0; 
+  db_query("INSERT INTO taxon_description_rightsholder_data (drupal_uid, lastname, firstname, name) SELECT u.uid, u.surname, u.givenname, CONCAT(u.surname, ', ', u.givenname) as name FROM users u WHERE u.status = 1 AND u.uid > 1 AND u.uid != ".$support_account);
+
+  return $ret;
+}

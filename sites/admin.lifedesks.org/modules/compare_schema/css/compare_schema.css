@@ -1,0 +1,29 @@
+.compare_schema_gallery {
+  background-image: url("../images/database_lightning.gif");
+  background-position: 6px center;
+  background-repeat: no-repeat;
+  padding-left: 25px;
+  font-size:small;
+  text-decoration: none;
+}
+
+#compare_schema_update_messages {
+	display:none;
+}
+
+#compare-schema-themelist-download {
+	text-align:right;
+	margin-bottom:10px;
+}
+
+#compare-schema-themelist-download a {
+	background:none;
+	line-height: 20px;
+	height: 20px;
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	outline: none;
+	padding: 1px 5px;
+	padding-left: 26px;
+	background-image: url(../images/disk.png);
+}

@@ -1,0 +1,17 @@
+; $Id: eol.info,v 1.0 2008/03/26 13:40:57 dshorthouse Exp $
+name = EOL: LifeDesk
+description = LifeDesk default theme.
+version = VERSION
+core = 6.x
+engine = phptemplate
+
+regions[left] = Left sidebar
+regions[right] = Right sidebar
+regions[content] = Content
+regions[header] = Header
+regions[footer] = Footer
+
+stylesheets[all][] = style.css
+stylesheets[screen][] = icons.css
+scripts[] = js/eol.js
+

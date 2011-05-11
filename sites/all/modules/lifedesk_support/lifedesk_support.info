@@ -1,0 +1,10 @@
+name = LifeDesk Support
+description = "Make a hidden account to provide support"
+package = "LifeDesk"
+project = "lifedesk_support"
+
+dependencies[] = path_redirect
+
+core = 6.x
+
+version = "6.x-1.0"

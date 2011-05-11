@@ -1,0 +1,11 @@
+name = Taxon Search
+description = "Search taxon names in LifeDesks using Solr"
+package = "LifeDesk"
+project = "taxon_search"
+
+dependencies[] = search
+dependencies[] = apachesolr
+
+core = "6.x"
+
+version = "6.x-1.0"

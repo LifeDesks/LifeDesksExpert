@@ -1,0 +1,65 @@
+<?php
+
+/**
+ * Implementation of hook_install
+ */
+function ajax_logo_preview_install() {
+
+  $path = file_directory_path() .'/'. variable_get('ajax_logo_path', 'ajax_logos');
+  file_check_directory($path, FILE_CREATE_DIRECTORY);
+  $path = $path .'/tmp';
+  file_check_directory($path, FILE_CREATE_DIRECTORY);
+
+}
+
+/**
+ * Implementation of hook_uninstall
+ */
+function ajax_logo_preview_uninstall() {
+	variable_del("ajax_logo_path");
+	variable_del("ajax_logo_dimensions");
+}
+
+/**
+ * Implementation of hook_requirements().
+ */
+function ajax_logo_preview_requirements($phase) {
+    $requirements = array();
+
+    if ($phase == 'runtime' || $phase == 'install') {
+
+    // File paths
+    $ajax_logo_path = file_create_path('ajax_logos');
+    $ajax_logo_tmp = rtrim($ajax_logo_path, '/') .'/tmp';
+
+    if (!file_check_directory($ajax_logo_path, FILE_CREATE_DIRECTORY)) {
+      $requirements['ajax_logo_path'] = array(
+        'value' => t('Missing directory'),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => t("AJAX logo's directory %ajax-logo-path is missing.", array('%ajax-logo-path' => $ajax_logo_path)),
+      );
+    }
+    elseif (!file_check_directory($ajax_logo_tmp, FILE_CREATE_DIRECTORY)) {
+      $requirements['ajax_logo_tmp'] = array(
+        'value' => t('Missing directory'),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => t("AJAX logo's temp directory %ajax-logo-tmp is missing.", array('%ajax-logo-tmp' => $ajax_logo_tmp)),
+      );
+    }
+    else {
+      $requirements['ajax_logo_path'] = array(
+        'value' => t('Exists (%path)', array('%path' => $ajax_logo_path)),
+        'severity' => REQUIREMENT_OK,
+      );
+      $requirements['ajax_logo_tmp'] = array(
+        'value' => t('Exists (%path)', array('%path' => $ajax_logo_tmp)),
+        'severity' => REQUIREMENT_OK,
+      );
+    }
+
+    $requirements['ajax_logo_path']['title'] = t('AJAX Preview Logo module directory');
+    $requirements['ajax_logo_tmp']['title'] = t('AJAX Preview Logo module (temp) directory');
+  }
+
+  return $requirements;
+}

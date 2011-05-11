@@ -1,0 +1,12 @@
+name = Reset Superadmin Password
+description = "Helper module to reset password of the superadmin account across all sites."
+package = "LifeDesk"
+project = "reset_superadmin_pass"
+
+dependencies[] = multisite_manager
+dependencies[] = trigger
+dependencies[] = db_switch
+
+core = 6.x
+
+version = "6.x-1.0"

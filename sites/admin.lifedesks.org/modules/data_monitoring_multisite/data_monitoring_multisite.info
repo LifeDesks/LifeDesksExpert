@@ -1,0 +1,6 @@
+; $Id$
+name = "Data monitoring multisite"
+description = "Companion module for data monitoring module, allowing aggregation of reports from multiple sites."
+package = Administration
+version = 6.x-6001-alpha1
+core = 6.x

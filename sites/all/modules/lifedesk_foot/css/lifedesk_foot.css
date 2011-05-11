@@ -1,0 +1,17 @@
+.block-lifedesk_foot .content{
+  width:300px;
+  margin:0px auto;
+  text-transform:uppercase;
+  text-align:center;
+}
+
+.block-lifedesk_foot .content a:link, .block-lifedesk_foot .content a:visited {
+  color:#000000;
+  font-weight:bold;
+  text-decoration:none;
+}
+
+.block-lifedesk_foot .content a:hover {
+  text-decoration:underline;
+  color:#149ACC;
+}

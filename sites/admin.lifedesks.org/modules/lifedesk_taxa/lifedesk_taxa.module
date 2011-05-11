@@ -1,0 +1,214 @@
+<?php
+
+/**
+ * Implementation of hook_menu
+ */
+function lifedesk_taxa_menu() {
+  $items['admin/settings/lifedesk-taxa'] = array(
+    'title' => 'LifeDesk Taxa configuration',
+    'description' => 'Adjust the settings for the LifeDesk taxa table look-ups',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('lifedesk_taxa_settings'),
+    'access arguments' => array('administer site configuration'),
+  );
+  $items['lifedesk-taxa-search'] = array(
+    'page callback' => 'lifedesk_taxa_search',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['lifedesk-taxa-rebuild'] = array(
+    'page callback' => 'lifedesk_taxa_rebuild',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+function lifedesk_taxa_settings() {
+
+  $options = array(
+    '1' => t('Every day'),
+    '2' => t('Every second day'),
+    '7' => t('Once a week'),
+  );
+  $form['webservice'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('EOL Web Service settings'),
+    '#description' => t('Configure the EOL search web service'),
+  );
+
+  $form['webservice']['classification_checker_service_baseurl'] = array(
+    '#type' => 'textfield',
+    '#title' => t('EOL web service URL'),
+    '#default_value' => variable_get('classification_checker_service_baseurl', 'http://services.eol.org/lifedesk/'),
+    '#description' => t('Set the URL for the EOL search web service'),
+    '#required' => true,
+  );
+
+  $form['webservice']['classification_checker_service_params'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Additional parameters'),
+    '#description' => t('Note: Catalogue of Life 2010 has hierarchy_id 529'),
+    '#default_value' => variable_get('classification_checker_service_params', 'service.php?function=search&hierarchy_id=529&search='),
+    '#required' => true,
+  );
+  
+  $form['lifedesk_taxa_rebuild_freq'] = array(
+    '#type' => 'radios',
+    '#title' => t('Rebuild frequency'),
+    '#default_value' => variable_get('lifedesk_taxa_rebuild_freq', 7),
+    '#options' => $options,
+    '#description' => t('Adjust how often the lifedesk_taxa table should be rebuilt'),
+  );
+  
+
+  return system_settings_form($form);
+}
+
+/**
+ * Callback to search through treepath
+ */
+function lifedesk_taxa_search($fullstring='') {
+
+  global $conf;
+
+  $matches['sites'] = array();
+
+  $stringArr = preg_split("/[\s,;]+/",$fullstring);
+
+  if(count($stringArr) > 4) {
+	$rand_keys = array_rand($stringArr, 4);
+    $newArr[] = $stringArr[$rand_keys[0]];
+    $newArr[] = $stringArr[$rand_keys[1]];
+    $newArr[] = $stringArr[$rand_keys[2]];
+    $newArr[] = $stringArr[$rand_keys[3]];
+    $stringArr = $newArr;
+  }
+
+  foreach($stringArr as $string) {
+	  if (strlen(trim($string)) >= 4 ) {
+
+		$result = db_query("SELECT DISTINCT lt.shortname, ds.stats FROM {lifedesk_taxa} lt INNER JOIN {drupal_site} ds ON (lt.shortname = ds.shortname) WHERE ds.display = 1 AND LOWER(lt.treepath) LIKE LOWER('%%%s%%') LIMIT 15", trim($string));
+
+	    while ($site = db_fetch_object($result)) {
+	     $matches['sites'][$site->shortname] = array(
+		   'subdomain' => check_plain($site->shortname),
+		   'url' => 'http://' . $site->shortname . '.' . $conf['_lifedesks_domain'],
+		   'stats' => unserialize($site->stats),
+		 );
+	    }
+	  }	
+  }
+
+  $matches['sites'] = array_values($matches['sites']);
+
+  $matches['total'] = count($matches['sites']);
+
+  arsort($matches, true);
+
+  drupal_json($matches);
+
+}
+
+function _lifedesk_taxa_do_request($url) {
+  $output = '';
+  $context = stream_context_create(array(
+    'http' => array(
+    'method'  => 'GET',
+    'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
+    'timeout' => 5,
+    ),
+  ));
+  $output = file_get_contents($url, NULL, $context); 
+  return $output;
+}
+
+function lifedesk_taxa_rebuild() {
+	
+	set_time_limit(1800);
+	
+	// continue running once client disconnects
+	ignore_user_abort(true);
+	session_write_close();
+
+    $response = t("Execution is underway...");
+
+	// tell the client the request has finished processing
+	header('Connection: close');
+	header("Content-Length: " . mb_strlen($response));
+    echo $response;
+	flush();
+	
+	module_load_include('php', 'lifedesk_taxa', 'classification_functions.class');
+	
+	$names = new Names;
+	
+	$base = variable_get('classification_checker_service_baseurl', 'http://services.eol.org/lifedesk/');
+	$params = variable_get('classification_checker_service_params', 'service.php?function=search&hierarchy_id=529&search=');
+	
+	$name_exists = array();
+	
+    $qry = db_query("SELECT lt.id, lt.name as name, ltc.treepath as treepath FROM {lifedesk_taxa} lt LEFT JOIN {lifedesk_taxa_cache} ltc ON (lt.name = ltc.name) WHERE lt.scientific = 1");
+    while($data = db_fetch_object($qry)) {
+	  if(!$data->treepath && !$name_exists[$data->name]) {
+		  $name = urlencode($names->canonical_form($data->name));
+
+		  $response = drupal_http_request($base . $params . $name);
+
+		  if(!$response->code == 200) {
+			$message = t('Web service request failed for !name', array('!name' => $name));
+			watchdog('lifedesk_taxa', $message, array(), WATCHDOG_NOTICE);
+		  }
+		  else {	
+			$status = "ok";
+			$result = simplexml_load_string($response->data);
+			if($result->value) {
+			  $services = _lifedesk_taxa_tcs_object_to_array($result);
+		      if($services['value'][0]['name']) {
+			    //just take the first hit
+				$treepath = $services['value'][0]['ancestry'];
+		      }
+		      else {
+			    $treepath = $services['value']['ancestry'];
+		      }
+		      db_query("UPDATE {lifedesk_taxa} SET treepath = '%s' WHERE id = %d AND name = '%s'", $treepath . '|' . $names->canonical_form($data->name), $data->id, $data->name);
+		      db_query("INSERT INTO {lifedesk_taxa_cache} (name,treepath) VALUES ('%s','%s')", $data->name, $treepath . '|' . $names->canonical_form($data->name));
+		      $name_exists[$data->name] = $treepath . '|' . $names->canonical_form($data->name);
+			}
+		 	else {
+	 			//copy the name into the treepath column since not found in Catalogue of Life
+	  			db_query("UPDATE {lifedesk_taxa} SET treepath = '%s' WHERE id = %d AND name = '%s'", $names->canonical_form($data->name), $data->id, $data->name);
+			}
+		  }
+	  	
+	  }
+	  elseif(!$data->treepath && $name_exists[$data->name]) {
+	    db_query("UPDATE {lifedesk_taxa} SET treepath = '%s' WHERE id=%d", $data->id, $name_exists[$data->name]);	
+	  }
+	  else {
+	    db_query("UPDATE {lifedesk_taxa} SET treepath = '%s' WHERE id=%d", $data->id, $data->treepath);	
+	  }
+    }
+
+    //sanity check to clean table some more
+    db_query("UPDATE {lifedesk_data} SET treepath = name WHERE treepath = ''");
+    db_query("DELETE FROM {lifedesk_taxa} WHERE name = ''");
+
+    variable_set('lifedesk_taxa_last_rebuild', time());
+}
+
+/**
+ * Helper function to recursively convert objects (e.g. like that from simplexml_load_string) to array
+ */
+function _lifedesk_taxa_tcs_object_to_array($mixed) {
+    if(is_object($mixed)) $mixed = (array) $mixed;
+    if(is_array($mixed)) {
+        $new = array();
+        foreach($mixed as $key => $val) {
+            $key = preg_replace("/^\\0(.*)\\0/","",$key);
+            $new[$key] = _lifedesk_taxa_tcs_object_to_array($val);
+        }
+    }
+    else $new = $mixed;
+    return $new;       
+}

@@ -1,0 +1,10 @@
+name = "LifeDesk Stats"
+description = "Produce some statistics about each LifeDesk"
+package = "LifeDesk"
+project = "lifedesk_stats"
+
+dependencies[] = "db_switch"
+
+core = 6.x
+
+version = "6.x-1.0"

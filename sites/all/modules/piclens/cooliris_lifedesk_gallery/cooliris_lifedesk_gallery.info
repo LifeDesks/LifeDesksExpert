@@ -1,0 +1,12 @@
+name = Cooliris LifeDesk Gallery
+description = Provides Cooliris support for Image Galleries in LifeDesk.
+package = LifeDesk
+project = cooliris_lifedesk_gallery
+
+dependencies[] = piclens
+dependencies[] = classification
+
+core = 6.x
+
+version = 6.x-1.0
+

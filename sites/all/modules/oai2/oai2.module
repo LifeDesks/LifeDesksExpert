@@ -1,0 +1,964 @@
+<?php
+// $Id: oai2.module,v 1.9.2.4.2.5 2009/06/22 13:21:34 rjerome Exp $
+/**
+ *   oai2.module for Drupal
+ *
+ *   Copyright (C) 2006  Ron Jerome
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License along
+ *   with this program; if not, write to the Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ */
+
+function oai2_help($section) {
+  switch ($section) {
+    case 'admin/modules#description':
+      // This description is shown in the listing at admin/modules.
+      return t('This module provides Open Archives 2 protocol access to the
+                information stored by the Biblio module' );
+  }
+}
+/*
+function oai2_node_name($node) {
+  return t('oai2');
+}
+
+function oai2_node_info() {
+  return array(
+    'oai2' => array(
+      'name' => t('OAI2 provider'),
+      'module' => 'oai2',
+      'description' => t('This module provides Open Archives 2 protocol access to the
+                information stored by the Biblio module')
+  )
+  );
+
+}
+
+function oai2_access($op, $node) {
+  global $user;
+}
+
+function oai2_perm() {
+}
+*/
+function oai2_cron(){
+  // cleanup expired resumption tokens
+  $expiretime = date("Y-m-d G:i:s", time()-(25*3600));
+  db_query("DELETE FROM {oai2_tokens} WHERE timestamp < '%s'",$expiretime);
+}
+function oai2_menu() {
+  $items['oai'] = array(
+      'title' => '',
+      'page callback' => 'oai2_parse_request',
+      'access callback' => 'user_access',
+       'access arguments' => array('access content'),
+      'type' => MENU_CALLBACK);
+
+
+  return $items;
+}
+/**
+ * Parses the URL and calls the appropriate function to handle the request
+ *
+ */
+function oai2_parse_request(){
+  global $base_url;
+  global $compress;
+  global $error ;
+  $compress = true;
+  $error = null;
+
+  $xml = '<?xml version="1.0" encoding="UTF-8"?>
+              <OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/
+              http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">'."\n";
+
+  $responseDate = gmstrftime('%Y-%m-%dT%TZ');
+  // $responseDate = $datetime .'Z';
+  $xml .= ' <responseDate>'.$responseDate."</responseDate>\n";
+
+  if (!empty($_GET)) {
+    $args = $_GET;
+    $getarr = explode('&', $_SERVER['QUERY_STRING']);
+    if (count($getarr) != count($args)) {
+      $error .= oai2_oai_error( 'sameArgument');
+    }
+  }
+  if (!empty($_POST)) {
+    $args = $_POST;
+  }
+  if (!count($args)) {
+    $error .= oai2_oai_error( 'badRequestMethod', $_SERVER['REQUEST_METHOD']);
+  }
+
+  unset($args['q']); // get rid of the Drupal q
+
+
+  if (is_array($args)) {
+    foreach ($args as $key => $val) {
+      $reqattr .= ' '.$key.'="'.htmlspecialchars(stripslashes($val)).'"';
+    }
+  }
+  //$xml .= ' <request'. $reqattr.'>'.$base_url.'/'.$_GET['q']."</request>\n";
+  if (isset($args['verb']) && !$error) {
+    switch ($args['verb']) {
+
+    		case 'GetRecord':
+    		  $xml .= ' <request  verb="'.$args['verb'].'">'.$base_url.'/'.$_GET['q']."</request>\n";
+    		  unset($args['verb']);
+    		  $xml .= oai2_get_record($args);
+    		  break;
+    		case 'Identify':
+    		  $compress = false;
+ 			    $xml .= ' <request  verb="'.$args['verb'].'">'.$base_url.'/'.$_GET['q']."</request>\n";
+ 			    unset($args['verb']);
+ 			    $xml .= oai2_identify( $args);
+ 			    break;
+    		case "ListIdentifiers":
+    		  $xml .= ' <request  verb="'.$args['verb'].'">'.$base_url.'/'.$_GET['q']."</request>\n";
+    		  unset($args['verb']);
+    		  $xml .= oai2_list_id_rec($args);
+    		  break;
+    		case 'ListMetadataFormats':
+ 			    $xml .= ' <request  verb="'.$args['verb'].'">'.$base_url.'/'.$_GET['q']."</request>\n";
+ 			    unset($args['verb']);
+    		  $xml .= oai2_list_metadata_formats($args);
+    		  break;
+    		case 'ListRecords':
+ 			    $xml .= ' <request  verb="'.$args['verb'].'">'.$base_url.'/'.$_GET['q']."</request>\n";
+    		  unset($args['verb']);
+    		  $xml .= oai2_list_id_rec($args, true);
+    		  break;
+    		case 'ListSets':
+ 			    $xml .= ' <request  verb="'.$args['verb'].'">'.$base_url.'/'.$_GET['q']."</request>\n";
+    		  unset($args['verb']);
+    		  $xml .= oai2_list_sets( $args);
+    		  break;
+    		default:
+    		  // we never use compression with errors
+    		  $compress = false;
+    		  $xml .= ' <request>'.$base_url.'/'.$_GET['q']."</request>\n";
+    		  $error .= oai2_oai_error( 'badVerb', $args['verb']);
+
+    } /*switch */
+
+  } elseif (!$error) {
+    $error .= oai2_oai_error('noVerb');
+  } elseif ($error) {
+    $xml .= ' <request>'.$base_url.'/'.$_GET['q']."</request>\n";
+
+  }
+
+  if ($compress && !$error) {
+    ob_start('ob_gzhandler');
+  }
+
+  header('Content-Type: application/xml');
+  echo $xml;
+  if ($error) echo $error;
+  echo "</OAI-PMH>\n";
+  if ($compress && !$error) {
+  		ob_end_flush();
+  }
+
+}
+/**
+ * Provides the repository identity information
+ *
+ * @param $args
+ *   the arguments passed with the oai verb
+ *
+ */
+function oai2_identify( $args){
+  global $base_url;
+  global $error;
+
+  if (!$errors && (count($args) > 0)){
+    foreach ($args as $key=>$val) {
+      $error .= oai2_oai_error('badArgument', $key, $val);
+    }
+  }
+
+  // break and clean up on error
+  if ($error) {
+    return false;
+  }
+
+  $result = db_query("SELECT min(changed) as date FROM {node} as n  where n.type='biblio' ");
+  $datestamp = db_fetch_object($result);
+  $earliestDatestamp = gmstrftime('%Y-%m-%dT%TZ',$datestamp->date);
+
+  $indent = 2;
+
+  $output .= " <Identify>\n";
+  $output .= oai2_xmlformat(variable_get('site_name','Biblio OAI'), 'repositoryName', '', $indent);
+  $output .= oai2_xmlformat($base_url.'/'.$_GET['q'], 'baseURL', '', $indent);
+  $output .= oai2_xmlformat('2.0', 'protocolVersion', '', $indent);
+  $output .= oai2_xmlformat(variable_get('site_mail', ini_get('sendmail_from')), 'adminEmail', '', $indent);
+  $output .= oai2_xmlformat($earliestDatestamp, 'earliestDatestamp', '', $indent);
+  $output .= oai2_xmlformat('no','deletedRecord', '', $indent);
+  $output .= oai2_xmlformat('YYYY-MM-DDThh:mm:ssZ', 'granularity', '', $indent);
+  $output .= oai2_xmlformat('yes', 'compression', '', $indent);
+
+  // A description MAY be included.
+  // Use this if you choose to comply with a specific format of unique identifiers
+  // for items.
+  // See http://www.openarchives.org/OAI/2.0/guidelines-oai-identifier.htm
+  // for details
+
+  if ($show_identifier && $repositoryIdentifier && $delimiter && $sampleIdentifier) {
+    $output .=
+'  <description>
+   <oai-identifier xmlns="http://www.openarchives.org/OAI/2.0/oai-identifier"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai-identifier
+                   http://www.openarchives.org/OAI/2.0/oai-identifier.xsd">
+    <scheme>oai</scheme>
+    <repositoryIdentifier>'.$repositoryIdentifier.'</repositoryIdentifier>
+    <delimiter>'.$delimiter.'</delimiter>
+    <sampleIdentifier>'.$sampleIdentifier.'</sampleIdentifier>
+   </oai-identifier>
+  </description>'."\n";
+  }
+
+  // A description MAY be included.
+  // This example from arXiv.org is used by the e-prints community, please adjust
+  // see http://www.openarchives.org/OAI/2.0/guidelines-eprints.htm for details
+
+  // To include, change 'false' to 'true'.
+  if (false) {
+    $output .=
+'  <description>
+   <eprints xmlns="http://www.openarchives.org/OAI/1.1/eprints"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://www.openarchives.org/OAI/1.1/eprints
+            http://www.openarchives.org/OAI/1.1/eprints.xsd">
+    <content>
+     <text>Author self-archived e-prints</text>
+    </content>
+    <metadataPolicy />
+    <dataPolicy />
+    <submissionPolicy />
+   </eprints>
+  </description>'."\n";
+  }
+
+  // If you want to point harvesters to other repositories, you can list their
+  // base URLs. Usage of friends container is RECOMMENDED.
+  // see http://www.openarchives.org/OAI/2.0/guidelines-friends.htm
+  // for details
+
+  // To include, change 'false' to 'true'.
+  if (false) {
+    $output .=
+'  <description>
+   <friends xmlns="http://www.openarchives.org/OAI/2.0/friends/"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/friends/
+            http://www.openarchives.org/OAI/2.0/friends.xsd">
+    <baseURL>http://naca.larc.nasa.gov/oai2.0/</baseURL>
+    <baseURL>http://techreports.larc.nasa.gov/ltrs/oai2.0/</baseURL>
+    <baseURL>http://physnet.uni-oldenburg.de/oai/oai2.php</baseURL>
+    <baseURL>http://cogprints.soton.ac.uk/perl/oai</baseURL>
+    <baseURL>http://ub.uni-duisburg.de:8080/cgi-oai/oai.pl</baseURL>
+    <baseURL>http://rocky.dlib.vt.edu/~jcdlpix/cgi-bin/OAI1.1/jcdlpix.pl</baseURL>
+   </friends>
+  </description>'."\n";
+  }
+
+  // If you want to provide branding information, adjust accordingly.
+  // Usage of friends container is OPTIONAL.
+  // see http://www.openarchives.org/OAI/2.0/guidelines-branding.htm
+  // for details
+
+  // To include, change 'false' to 'true'.
+  if (false) {
+    $output .=
+'  <description>
+   <branding xmlns="http://www.openarchives.org/OAI/2.0/branding/"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/branding/
+             http://www.openarchives.org/OAI/2.0/branding.xsd">
+    <collectionIcon>
+     <url>http://my.site/icon.png</url>
+     <link>http://my.site/homepage.html</link>
+     <title>MySite(tm)</title>
+     <width>88</width>
+     <height>31</height>
+    </collectionIcon>
+    <metadataRendering
+     metadataNamespace="http://www.openarchives.org/OAI/2.0/oai_dc/"
+     mimeType="text/xsl">http://some.where/DCrender.xsl</metadataRendering>
+    <metadataRendering
+     metadataNamespace="http://another.place/MARC"
+     mimeType="text/css">http://another.place/MARCrender.css</metadataRendering>
+   </branding>
+  </description>'."\n";
+  }
+
+  // End Identify
+  $output .= " </Identify>\n";
+  return $output;
+}
+
+/**
+ * Lists sets available from the repository
+ *
+ * @param $args
+ *   the arguments passed with the oai verb
+ *
+ */
+function oai2_list_sets( $args){
+  global $error;
+  $output = NULL;
+  foreach($args as $key => $val) {
+
+    switch ($key) {
+      case 'resumptionToken':
+        $resumptionToken = $val;
+        $error .= oai2_oai_error('badResumptionToken', $key, $val);
+        return false;
+        break;
+
+      default:
+        $error .= oai2_oai_error('badArgument', $key, $val);
+        return false;
+    }
+  }
+
+  $result = db_query('SELECT t.* FROM {biblio_types} as t WHERE t.tid > 0');
+
+ 	while ($row = db_fetch_object($result)) {
+  		$output .= "   <set>\n";
+  		$row->name;
+  		$setspec = str_replace(" ","_",strtolower($row->name));
+  		$output .= oai2_xmlformat($setspec, 'setSpec', '', 4);
+  		$output .= oai2_xmlformat($row->name, 'setName', '', 4);
+  		if (isset($val['setDescription']) && $val['setDescription'] != '') {
+  		  $output .= "    <setDescription>\n";
+  		  $prefix = 'oai_dc';
+  		  $output .= metadataHeader($prefix);
+  		  $output .= xmlrecord($val['setDescription'], 'dc:description', '', 7);
+  		  $output .=
+    			'     </'.$prefix;
+  		  if (isset($METADATAFORMATS[$prefix]['record_prefix'])) {
+    				$output .= ':'.$METADATAFORMATS[$prefix]['record_prefix'];
+  		  }
+  		  $output .= ">\n";
+  		  $output .= "    </setDescription>\n";
+  		}
+  		$output .= "   </set>\n";
+ 	}
+ 	if(strlen($output)){
+ 	  return "  <ListSets>\n" . $output . "  </ListSets>\n";
+ 	}else{
+    $error .= oai2_oai_error( 'noSetHierarchy', $key, $val);
+    return false;
+ 	}
+}
+
+/**
+ * Lists metadata formats available from the repository
+ *
+ * @param $args
+ *   the arguments passed with the oai verb
+ *
+ */
+function oai2_list_metadata_formats($args){
+  global $error;
+
+  foreach($args as $key => $val) {
+
+    switch ($key) {
+      case 'identifier':
+        if (db_result(db_query("SELECT count(nid) FROM {node} n WHERE n.nid=%d",$val))){
+          $identifier = $val;
+        }else{
+          $error .= oai2_oai_error('idDoesNotExist', 'identifier', $identifier);
+          return false;
+        }
+        break;
+      case 'metadataPrefix':
+        if (db_result(db_query("SELECT count(*) FROM {oai2_metadata_formats} WHERE metadata_prefix='%s' ",$val))) {
+          $metadataPrefix = $val;
+        } else {
+          $error .= oai2_oai_error( 'cannotDisseminateFormat', $key, $val);
+          return false;
+        }
+        break;
+      default:
+        $error .= oai2_oai_error( 'badArgument', $key, $val);
+        return false;
+    }
+  }
+
+  $result = db_query("SELECT * FROM {oai2_metadata_formats}  ");
+  while ($fmt = db_fetch_object($result)){
+    $output .= " <metadataFormat>\n";
+    $output .= oai2_xmlformat($fmt->metadata_prefix, 'metadataPrefix', '', 3);
+    $output .= oai2_xmlformat($fmt->schema, 'schema', '', 3);
+    $output .= oai2_xmlformat($fmt->metadata_namespace, 'metadataNamespace', '', 3);
+    $output .= "  </metadataFormat>\n";
+  }
+  if(strlen($output)){
+    $output = " <ListMetadataFormats>\n".$output." </ListMetadataFormats>\n";
+  }else{
+    $error .= oai2_oai_error( 'noMetadataFormats');
+    return false;
+  }
+
+  return $output;
+}
+/**
+ * Lists Identifiers or Records based on the value of listrec
+ *
+ * @param $args
+ *   the arguments passed with the oai verb
+ *
+ * @param $listrec
+ *   if false (or not supplied) function will list identifiers
+ *   if true function will list records
+ *
+ */
+function oai2_list_id_rec( $args, $listrec=false){
+  global $error;
+
+  $query_args = array();
+  $MAXIDS = 20;
+  $tokenValid = 24*3600;
+  $expirationdatetime = gmstrftime('%Y-%m-%dT%TZ', time()+$tokenValid);
+  foreach($args as $key => $val) {
+    switch ($key) {
+      case 'from':
+        if (!isset($from)) {
+          $from = $val;
+        } else {
+          $error .= oai2_oai_error( 'badArgument', $key, $val);
+          return false;
+        }
+        break;
+      case 'until':
+        if (!isset($until)) {
+          $until = $val;
+        } else {
+          $error .= oai2_oai_error('badArgument', $key, $val);
+          return false;
+        }
+        break;
+      case 'set':
+        if (!isset($set)) {
+          $set = $val;
+        } else {
+          $error .=  oai2_oai_error('badArgument', $key, $val);
+          return false;
+        }
+        break;
+      case 'metadataPrefix':
+        if (!isset($metadataPrefix)){
+          $result = db_query("SELECT * FROM {oai2_metadata_formats} WHERE metadata_prefix='%s' ",$val);
+          if (db_result($result) && !isset($metadataPrefix) ){
+            $metadataPrefix = $val;
+          } else {
+            $error .=  oai2_oai_error( 'cannotDisseminateFormat', $key, $val);
+            return false;
+          }
+        }else{
+          $error .=  oai2_oai_error('badArgument', $key, $val);
+          return false;
+        }
+        break;
+      case 'resumptionToken':
+        if (!isset($resumptionToken)) {
+          $resumptionToken = $val;
+        } else {
+          $error .= oai2_oai_error('badArgument', $key, $val);
+          return false;
+        }
+        break;
+      default:
+        $error .= oai2_oai_error('badArgument', $key, $val);
+        return false;
+    }
+  }
+  // Resume previous session?
+  if (isset($args['resumptionToken'])) {
+    if (count($args) > 1) {
+      // overwrite all other errors
+      $error .=  oai2_oai_error( 'exclusiveArgument');
+      return false;
+    } else {
+      $result = db_query("SELECT * FROM {oai2_tokens} WHERE id='%s' ",$resumptionToken);
+      if ($token = db_fetch_object($result)) {
+        $deliveredrecords = $token->deliveredrecords;
+        $extquery = $token->extquery;
+        $metadataPrefix = $token->metadata_prefix;
+  		  } else {
+  		    $error .=  oai2_oai_error('badResumptionToken', '', $resumptionToken);
+  		    return false;
+  		  }
+    }
+  }
+  // no, new session
+  else {
+    $deliveredrecords = 0;
+    $extquery = '';
+
+    if (!isset($args['metadataPrefix'])) {
+      $error .=  oai2_oai_error('missingArgument', 'metadataPrefix');
+      return false;
+    }
+
+    if (isset($args['from'])) {
+      if (!$fromgran = _checkDateFormat($from)) {
+        $error .= oai2_oai_error('badGranularity', 'from', $from);
+        return false;
+      }
+      $extquery .= ' AND changed >= %d';
+      $query_args[] = strtotime($from);
+    }
+
+    if (isset($args['until'])) {
+      if (!$untilgran = _checkDateFormat($until)) {
+        $error .= oai2_oai_error('badGranularity', 'until', $until);
+        return false;
+      }
+      $extquery .= ' AND changed <= %d';
+      $query_args[] = strtotime($until);
+    }
+
+    if (isset($args['set'])) {
+      $extquery .= " AND name LIKE '%s'";
+      $query_args[] = $set;
+    }
+  }
+  if((isset($fromgran) && isset($untilgran)) && ($fromgran != $untilgran) ) {
+    $error .= oai2_oai_error('badGranularity', 'mismatched Granularity', $until);
+    return false;
+  }
+  if ($listrec){ // list records...
+    $query = "SELECT * FROM {node} n
+                left join {biblio} b  on n.vid=b.vid
+                left join {biblio_types} t on b.biblio_type=t.tid
+                WHERE n.type='biblio'  ";
+
+  }else{  // list identifiers...
+    $query = "SELECT n.nid, n.changed, t.name  FROM {node} n
+                left join {biblio} b  on n.vid=b.vid
+                left join {biblio_types} t on b.biblio_type=t.tid
+                WHERE n.type='biblio'  ";
+  }
+  $query_count = "SELECT COUNT(*) FROM {node} n
+                 left join {biblio} b  on n.vid=b.vid
+                 left join {biblio_types} t on b.biblio_type=t.tid
+                 WHERE n.type='biblio'  ";
+
+  $query .= $extquery;
+ 	$query_count .= $extquery;
+ 	$maxresult = db_query($query_count, $query_args);
+ 	$num_rows = array_pop(db_fetch_array($maxresult));
+ 	$db_result = db_query_range($query, $query_args, $deliveredrecords, $MAXIDS);
+  //if (db_num_rows($result)) {
+ 	$output .= ($listrec)?" <ListRecords>\n":" <ListIdentifiers>\n";
+
+ 	// Will we need a ResumptionToken?
+ 	if ($num_rows - $deliveredrecords > $MAXIDS) {
+ 	  $token = _get_token();
+ 	  $qargs = implode("#",$query_args);
+ 	  $thendeliveredrecords = (int)$deliveredrecords + $MAXIDS;
+ 	  $query = "INSERT INTO {oai2_tokens} (id,deliveredrecords,extquery,queryargs)
+                       VALUES ('%s',%d,'%s','%s')";
+ 	  db_query($query,$token,$thendeliveredrecords,$extquery,$qargs);
+
+ 	  $restoken .= '<resumptionToken expirationDate="'.$expirationdatetime.'" '.
+                                    ' completeListSize="'.$num_rows.'" '.
+                                     'cursor="'.$deliveredrecords.'" >'. $token;
+ 	  $restoken .= "</resumptionToken>\n";
+ 	}
+ 	// Last delivery, return empty ResumptionToken
+ 	else  {
+
+ 	  $restoken .= '<resumptionToken completeListSize="'.$num_rows.'" '.
+                                  'cursor="'.$deliveredrecords.'" >';
+ 	  $restoken .= "</resumptionToken>\n";
+ 	}
+
+ 	$maxrec = min($num_rows - $deliveredrecords, $MAXIDS);
+
+ 	$countrec = 0;
+  require_once(drupal_get_path('module', 'biblio') .'/biblio.contributors.inc');
+  require_once(drupal_get_path('module', 'biblio') .'/biblio.keywords.inc');
+  while (($record = db_fetch_object($db_result)) && $countrec < $maxrec) {
+    $countrec++;
+ 	  //$record = db_fetch_object($result);
+ 	  $record->biblio_contributors = biblio_load_contributors($record->vid, $record->biblio_type);
+      $record->biblio_keywords = biblio_load_keywords($record->vid);
+      $record->classification_terms = taxonomy_node_get_terms_by_vocabulary($record, CLASSIFICATION_PRIMARY);
+ 	  $identifier = $oaiprefix.$record->nid;
+ 	  //    	$datestamp = date("Y-m-d\TH:i:s\Z",$record->changed);
+ 	  $datestamp = gmstrftime('%Y-%m-%dT%TZ',$record->changed);
+
+ 	  //    	if (isset($record[$SQL['deleted']]) && ($record[$SQL['deleted']] == 'true') &&
+ 	  //    		($deletedRecord == 'transient' || $deletedRecord == 'persistent')) {
+ 	  //    		$status_deleted = TRUE;
+ 	  //    	} else {
+ 	  $status_deleted = FALSE;
+ 	  //    	}
+ 	  if ($listrec){ // list records...
+ 	    $output .= '  <record>'."\n";
+ 	  }
+ 	  $output .= '   <header>'."\n";
+ 	  $output .= oai2_xmlformat($identifier, 'identifier', '', 4);
+ 	  $output .= oai2_xmlformat($datestamp, 'datestamp', '', 4);
+ 	  $setspec = str_replace(" ","_",strtolower($record->name));
+ 	  $output .= oai2_xmlformat($setspec, 'setSpec', '', 4);
+ 	  $output .= '   </header>'."\n";
+ 	  if ($listrec){  // list records...
+ 	    $output .= '   <metadata>'."\n";
+ 	    $prefix = 'oai_dc';
+ 	    $result2 = db_query("SELECT * FROM {oai2_metadata_formats} WHERE name='%s' ",$prefix);
+ 	    while ($format = db_fetch_object($result2)) {
+ 	      $output .= " <$prefix";
+ 	      if ($format->record_prefix){
+ 	        $output .= ":$format->record_prefix ";
+ 	      }
+ 	      $output .= ' xmlns:'.$prefix.'="'.$format->metadata_namespace.'"';
+ 	      if ($format->record_prefix && $format->record_namespace) {
+ 	        $output .= ' xmlns:'.$format->record_prefix.'="'.$format->record_namespace.'"';
+ 	      }
+ 	      $output .= ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"';
+ 	      $output .= ' xsi:schemaLocation="'.$format->metadata_namespace."\n". $format->schema.'" >';
+
+ 	      $output .= _get_record_oai_dc($record );
+
+ 	      $output .= " </$prefix";
+ 	      if ($format->record_prefix){
+ 	        $output .= ":$format->record_prefix ";
+ 	      }
+ 	      $output .= ">\n";
+ 	      $output .= "</metadata>\n";
+ 	    }
+ 	  }
+ 	  if ($listrec) $output .= '  </record>'."\n";
+
+ 	}
+ 	if (isset($restoken)) {
+ 	  $output .= $restoken;
+ 	}
+ 	$output .= ($listrec)?" </ListRecords>\n":" </ListIdentifiers>\n";
+
+  if(!$countrec){
+    $error .=  oai2_oai_error('noRecordsMatch');
+    return false;
+  }
+
+
+  return $output;
+
+}
+
+function oai2_get_record( $args){
+  global $error;
+
+  foreach($args as $key => $val) {
+    switch ($key) {
+      case 'identifier':
+        $identifier = $val;
+        break;
+      case  'metadataPrefix':
+        $count = db_query("SELECT COUNT(*) FROM {oai2_metadata_formats} WHERE metadata_prefix='%s' ",$val);
+        if (db_result($count)) {
+          $metadataPrefix = $val;
+        } else {
+          $error .= oai2_oai_error('cannotDisseminateFormat', $key, $val);
+          return false;
+        }
+        break;
+      default:
+        $error .= oai2_oai_error('badArgument', $key, $val);
+        return false;
+
+    }
+  }
+
+  if (!isset($args['identifier'])) {
+    $error .=  oai2_oai_error('missingArgument', 'identifier');
+    return false;
+  }
+  if (!isset($args['metadataPrefix'])) {
+    $error .= oai2_oai_error('missingArgument', 'metadataPrefix');
+    return false;
+  }
+
+  // remove the OAI part to get the identifier
+  $id = str_replace($oaiprefix, '', $identifier);
+  if ($id == '') {
+    $error .= oai2_oai_error('idDoesNotExist', '', $identifier);
+    return false;
+  }
+
+  $query = "SELECT * FROM {node} n
+                left join {biblio} b  on n.vid=b.vid
+                left join {biblio_types} t on b.biblio_type=t.tid
+                WHERE n.nid=%d ";
+  $result = db_query($query,$id);
+  require_once(drupal_get_path('module', 'biblio') .'/biblio.contributors.inc');
+  require_once(drupal_get_path('module', 'biblio') .'/biblio.keywords.inc');
+
+  if ($record = db_fetch_object($result)){
+    $record->biblio_contributors = biblio_load_contributors($record->vid, $record->biblio_type);
+    $record->biblio_keywords = biblio_load_keywords($record->vid);
+    $record->classification_terms = taxonomy_node_get_terms_by_vocabulary($record, CLASSIFICATION_PRIMARY); 
+  }else{
+    $error .= oai2_oai_error('idDoesNotExist', '', $identifier);
+    return false;
+  }
+
+  $output .= "  <GetRecord>\n";
+  $identifier = $oaiprefix.$record->nid;
+  $datestamp = gmstrftime('%Y-%m-%dT%TZ',$record->changed);
+  $status_deleted = FALSE;
+
+  $output .= '  <record>'."\n";
+  $output .= '  <header';
+  if ($status_deleted) {
+    $output .= ' status="deleted"';
+  }
+  $output .='>'."\n";
+  $output .= oai2_xmlformat($identifier, 'identifier', '', 4);
+  $output .= oai2_xmlformat($datestamp, 'datestamp', '', 4);
+  $setspec = str_replace(" ","_",strtolower($record->name));
+  $output .= oai2_xmlformat($setspec, 'setSpec', '', 4);
+  $output .= '   </header>'."\n";
+
+  $output .= '   <metadata>'."\n";
+  $prefix = 'oai_dc';
+  $result = db_query("SELECT * FROM {oai2_metadata_formats} WHERE name='%s' ",$prefix);
+  while ($format = db_fetch_object($result)) {
+
+    $output .= " <$prefix";
+    if ($format->record_prefix){
+      $output .= ":$format->record_prefix ";
+    }
+    $output .= 'xmlns:'.$prefix.'="'.$format->metadata_namespace.'"';
+    if ($format->record_prefix && $format->record_namespace) {
+      $output .= ' xmlns:'.$format->record_prefix.'="'.$format->record_namespace.'" ';
+    }
+    $output .= ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ';
+    $output .= ' xsi:schemaLocation="'.$format->metadata_namespace."\n". $format->schema.'" >';
+
+    $output .= _get_record_oai_dc($record );
+
+    $output .= " </$prefix";
+    if ($format->record_prefix){
+      $output .= ":$format->record_prefix ";
+    }
+    $output .= ">\n";
+    $output .= "</metadata>\n";
+  }
+  $output .= "</record>";
+  $output .= ' </GetRecord>'."\n";
+
+  return $output;
+
+}
+
+function _get_record_oai_dc($record ){
+  global $base_url;
+
+  $indent = 6;
+  $output .= oai2_xmlformat($record->title, 'dc:title', '', $indent);
+  if (count($record->biblio_contributors[1])){
+    foreach($record->biblio_contributors[1] as $auth) {
+      $output .= oai2_xmlformat(trim($auth['name']), 'dc:creator', '', $indent);
+    }
+  }
+  $output .= oai2_xmlformat($record->biblio_year, 'dc:date', '', $indent);
+  $output .= oai2_xmlformat("Text", 'dc:type', '', $indent);
+  $output .= oai2_xmlformat($record->biblio_lang, 'dc:language', '', $indent);
+  if (!empty($record->biblio_keywords)) {
+    foreach($record->biblio_keywords as $kw) {
+      $output .= oai2_xmlformat($kw, 'dc:subject', '', $indent);
+    }
+  }
+  if (!empty($record->classification_terms)) {
+    foreach($record->classification_terms as $ct) {
+      $output .= oai2_xmlformat($ct->name, 'dc:subject', '', $indent);
+    }
+  }
+  if ($record->biblio_abst_e)
+  $output .= oai2_xmlformat($record->biblio_abst_e, 'dc:description', '', $indent);
+  if ($record->biblio_publisher)
+  $output .= oai2_xmlformat($record->biblio_publisher, 'dc:publisher', '', $indent);
+  if ($record->biblio_url)
+  $output .= oai2_xmlformat($record->biblio_url, 'dc:identifier', '', $indent);
+  if ($record->biblio_isbn){
+    $output .= oai2_xmlformat($record->isbn, 'dc:identifier', '', $indent);
+  }else{
+    $output .= oai2_xmlformat($base_url."/node/".$record->nid, 'dc:identifier', '', $indent);
+  }
+  if ($record->biblio_corp_author)
+  $output .= oai2_xmlformat($record->biblio_corp_author, 'dc:contributor', '', $indent);
+
+  /*  The following dc elements are currently not published...
+
+  $output .= xmlrecord($record['dc_format'], 'dc:format', '', $indent);
+  $output .= xmlrecord($record['dc_source'], 'dc:source', '', $indent);
+  $output .= xmlrecord($record['dc_relation'], 'dc:relation', '', $indent);
+  $output .= xmlrecord($record['dc_coverage'], 'dc:coverage', '', $indent);
+  $output .= xmlrecord($record['dc_rights'], 'dc:rights', '', $indent);
+  */
+
+  return $output;
+}
+
+function _get_token() {
+  //list($usec, $sec) = explode(" ", microtime());
+  return  md5(uniqid()); //(int)$sec + floor($usec*1000);//+ ;floor($usec*10000)
+}
+
+function _checkDateFormat($date) {
+
+  //	global $granularity;
+  global $message;
+  // $granularity = variable_get('granularity', 'YYYY-MM-DDThh:mm:ssZ');
+  //  if ($granularity == 'YYYY-MM-DDThh:mm:ssZ') {
+  $checkstr1 = '([0-9]{4})-([0-9]{1,2})-([0-9]{1,2})T([0-9]{2}):([0-9]{2}):([0-9]{2})Z$';
+  //	} else {
+  $checkstr2 = '([0-9]{4})-([0-9]{1,2})-([0-9]{1,2}$)';
+  //	}
+  if (ereg($checkstr1, $date, $regs)) {
+    if (checkdate($regs[2], $regs[3], $regs[1])) {
+      return 1;
+    }
+  } elseif (ereg($checkstr2, $date, $regs)) {
+    if (checkdate($regs[2], $regs[3], $regs[1])) {
+      return 2;
+    }
+  }	else {
+    $message = "Invalid Date: $date is not a valid date.";
+    return 0;
+  }
+  //    else {
+  //	    $message = "Invalid Date Format: $date does not comply to the date format $granularity.";
+  //	    return 0;
+  //   }
+}
+
+
+function oai2_oai_error($code, $argument='', $value='')
+{
+  global $compress;
+
+  switch ($code) {
+    case 'badArgument' :
+      $text = t("The argument @argument (value=@value) included in the request is not valid.",array('@value' => $value, '@argument' =>$argument));
+      break;
+    case 'badGranularity' :
+      $text = t("The value @value of the argument '@argument' is not valid.",array('@value' => $value, '@argument' =>$argument));
+      $code = 'badArgument';
+      break;
+    case 'badResumptionToken' :
+      $text = t("The resumptionToken @value does not exist or has already expired.",array('@value' => $value));
+      break;
+    case 'badRequestMethod' :
+      $text = t("The request method @argument is unknown.",array('@argument' =>$argument));
+      $code = 'badVerb';
+      break;
+    case 'badVerb' :
+      $text = t("The verb @argument provided in the request is illegal.",array('@argument' =>$argument));
+      break;
+    case 'cannotDisseminateFormat' :
+      $text = t("The metadata format @value given by @argument is not supported by this repository.",array('@value' => $value, '@argument' =>$argument));
+      break;
+    case 'exclusiveArgument' :
+      $text = t('The usage of resumptionToken as an argument allows no other arguments.');
+      $code = 'badArgument';
+      break;
+    case 'idDoesNotExist' :
+      $text = t("The value @value of the identifier is illegal for this repository.",array('@value' => $value));
+      break;
+    case 'missingArgument' :
+      $text = t("The required argument @argument is missing in the request.",array('@argument' =>$argument));
+      $code = 'badArgument';
+      break;
+    case 'noRecordsMatch' :
+      $text = t('The combination of the given values results in an empty list.');
+      break;
+    case 'noMetadataFormats' :
+      $text = t('There are no metadata formats available for the specified item.');
+      break;
+    case 'noVerb' :
+      $text = t('The request does not provide any verb.');
+      $code = 'badVerb';
+      break;
+    case 'noSetHierarchy' :
+      $text = t('This repository does not support sets.');
+      break;
+    case 'sameArgument' :
+      $text = t('Do not use them same argument more than once.');
+      $code = 'badArgument';
+      break;
+    case 'sameVerb' :
+      $text = t('Do not use verb more than once.');
+      $code = 'badVerb';
+      break;
+    default:
+      $text = t("Unknown error: code: @code, argument: @argument, value: @value",array('@value' => $value, '@argument' =>$argument,'@code' => $code));
+      $code = 'badArgument';
+  }
+
+  $error = ' <error code="'.oai2_xmlstr($code, 'iso8859-1', false).'">'.oai2_xmlstr($text, 'iso8859-1', false)."</error>\n";
+  return $error;
+}
+function oai2_xmlstr($string, $charset = 'iso8859-1', $xmlescaped = 'false')
+{
+  $xmlstr = stripslashes(trim($string));
+  // just remove invalid characters
+  $pattern ="/[\x-\x8\xb-\xc\xe-\x1f]/";
+  $xmlstr = preg_replace($pattern, '', $xmlstr);
+
+  // escape only if string is not escaped
+  if (!$xmlescaped) {
+    $xmlstr = htmlspecialchars($xmlstr, ENT_QUOTES);
+  }
+
+  //	if ($charset != "utf-8") {
+  //		$xmlstr = utf8_encode($xmlstr);
+  //	}
+
+  return $xmlstr;
+}
+function oai2_xmlformat($record, $element, $attr = '', $indent = 0)
+{
+  global $charset;
+  global $xmlescaped;
+
+  if ($attr != '') {
+    $attr = ' '.$attr;
+  }
+
+  $str = '';
+  if (is_array($record)) {
+    foreach  ($record as $val) {
+      $str .= str_pad('', $indent).'<'.$element.$attr.'>'.oai2_xmlstr($val, $charset, $xmlescaped).'</'.$element.">\n";
+    }
+    return $str;
+  } elseif ($record != '') {
+    return str_pad('', $indent).'<'.$element.$attr.'>'.oai2_xmlstr($record, $charset, $xmlescaped).'</'.$element.">\n";
+  } else {
+    return '';
+  }
+}

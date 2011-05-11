@@ -1,0 +1,45 @@
+body {
+  text-align: center;
+  font-size: 80%;
+}
+
+#header-region, #wrapper #container {
+  text-align: left;
+}
+
+#wrapper #container #center {
+  overflow: hidden;
+}
+
+#wrapper #container #center .right-corner .left-corner {
+  height: 400px;
+}
+
+fieldset {
+  background: none;
+}
+
+ul.primary {
+  position: relative;
+}
+
+html.js fieldset.collapsible {
+  position: relative;
+  top: -1em;
+}
+html.js fieldset.collapsed {
+  top: 0;
+  margin-bottom: 1em;
+}
+
+td.menu-disabled {
+  filter: alpha(opacity=50);
+}
+
+#header-region {
+  height: 1em;
+}
+
+#attach-hide label, #uploadprogress div.message {
+  background-color: #ffffff;
+}

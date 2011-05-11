@@ -1,0 +1,84 @@
+#search_button {
+	position:relative;
+}
+#search_status {
+	display:none;
+	height:20px;
+	width:20px;
+	position:absolute;
+	top:3px;
+	left:75px;
+	background:transparent url(../images/throbber.gif) top left no-repeat;
+}
+span.search_ancestry {
+  display:block;
+  margin-left:20px;
+}
+
+span.search_num_children {
+  display:block;
+  margin-left:20px;
+  font-weight:bold;
+}
+
+ul.import_parse_message {
+  list-style: none;
+  margin: 0px !important;
+  padding:0 !important;	
+}
+
+ul.import_parse_message li.stats {
+  font-weight:bold;
+}
+
+ul.import_parse_message li.success {
+  color:#008800;
+}
+
+ul.import_parse_message li.failed {
+  color:#FF0000;
+}
+
+ul.import_parse_message li.samplerows {
+  margin-bottom:5px;
+}
+
+ul.import_parse_message span.formatstatus {
+    line-height: 20px;
+    height: 20px;
+    background-position: 6px center;
+    background-repeat: no-repeat;
+    outline: none;
+	padding:1px 5px 1px 24px;
+}
+ul.import_parse_message li li {
+  list-style: none;
+}
+ul.import_parse_message li li.cell {
+  display: inline-block;
+}
+ul.import_parse_message span.success,
+ul.import_parse_message li li.success {
+  background-image: url(../images/accept.png);
+}
+
+ul.import_parse_message span.failed,
+ul.import_parse_message li li.failed {
+  background-image: url(../images/exclamation.png);
+}
+
+ul.import_parse_message span.cell,
+ul.import_parse_message li li.cell {
+  border:1px solid #959595;
+  padding:1px;
+  margin:1px;
+}
+ul.import_parse_message li li.cell.empty {
+  color: #959595;
+}
+
+ul.import_parse_message span.error,
+ul.import_parse_message li li.error {
+  color:#FF0000;
+  font-weight:bold;
+}

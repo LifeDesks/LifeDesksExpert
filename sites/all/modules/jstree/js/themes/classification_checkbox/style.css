@@ -1,0 +1,21 @@
+.tree-classification_checkbox li a, .tree-classification_checkbox li span { background-image:none; }
+.tree-classification_checkbox li a.loading { background-image:none; }
+.tree-classification_checkbox li a, .tree-classification_checkbox li a.unchecked { background-image:url("check_0.png"); }
+.tree-classification_checkbox li a.undetermined { background-image:url("check_1.png"); }
+.tree-classification_checkbox li a.checked { background-image:url("check_2.png"); }
+.tree-classification_checkbox li a.clicked, .tree-checkbox li span.clicked { background-color:transparent; border-color:transparent; color:black; }
+
+/* OPEN or CLOSED */
+.tree-classification_checkbox li.open { background:url("minus.gif") 2px 5px no-repeat; }
+.tree-classification_checkbox li.closed, #jstree-dragged.tree-classification li li.open { background:url("plus.gif") 2px 5px no-repeat; }
+
+/* COLORS FOR NAME VARIANTS */
+.tree-classification_checkbox li.vernacular a { color:#228B22;font-style:normal;}
+.tree-classification_checkbox li.synonym a { color: #FF0000;font-style:normal;}
+.tree-classification_checkbox li.usage a { color: #FF0000;font-style:normal;}
+.tree-classification_checkbox li.lexical a { color: #FF0000;font-style:normal;}
+.tree-classification_checkbox li.disputed a { color: #FF0000;font-style:normal;}
+.tree-classification_checkbox li.replaced a { color: #FF0000;font-style:normal;}
+.tree-classification_checkbox li.basionym a { font-weight: bold;}
+.tree-classification_checkbox li.homonym a { color: #FF0000;font-weight: bold;}
+.tree-classification_checkbox li.spelling a { background: transparent url("underline.gif") repeat-x scroll center bottom ;-moz-background-clip: -moz-initial;-moz-background-origin: -moz-initial;-moz-background-inline-policy: -moz-initial;font-style:normal;}

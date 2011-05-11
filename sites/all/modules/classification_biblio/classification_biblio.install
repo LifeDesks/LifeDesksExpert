@@ -1,0 +1,37 @@
+<?php
+
+/**
+ * Implementation of hook_install()
+ * Create the taxonomy enhancer citation field
+ */
+function classification_biblio_install() {
+  db_query("INSERT INTO {taxonomy_enhancer_fields} (vid,fid,title,module,type,weight) VALUES (%d,'%s','%s','%s','%s',%d)",0,'field_biblio_citation_original','Citation','classification_biblio','nodereference',0);
+}
+
+/**
+ * Implementation of hook_uninstall()
+ */
+function classification_biblio_uninstall() {
+ 
+ $fid = 'field_biblio_citation_original';
+ 
+ if (db_table_exists(taxonomy_enhancer_fields))
+	{
+	db_query("DELETE FROM {taxonomy_enhancer_fields} WHERE fid = '%s'", $fid);
+	}
+  
+}
+
+function classification_biblio_update_6100() {
+	$ret = array();
+	
+	$record = db_result(db_query("SELECT fid FROM {taxonomy_enhancer_fields} WHERE fid='field_biblio_citation_original'"));
+	if(!$record) {
+      $ret[] = update_sql("INSERT INTO {taxonomy_enhancer_fields} (vid,fid,title,module,type,weight) VALUES (0,'field_biblio_citation_original','Citation','classification_biblio','nodereference',0);");		
+	}
+	
+	return $ret;
+}
+
+
+

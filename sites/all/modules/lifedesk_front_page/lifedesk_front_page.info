@@ -1,0 +1,10 @@
+name = LifeDesk Frontpage
+description = "Allows customization of the LifeDesk Frontpage."
+package = "LifeDesk"
+project = "lifedesk_front_page"
+
+dependencies[] = front_page
+
+core = 6.x
+
+version = "6.x-1"

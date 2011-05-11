@@ -1,0 +1,42 @@
+<?php
+
+/**
+ * Implementation of hook_action_info().
+ */
+function reset_superadmin_pass_action_info() {
+  $info['reset_superadmin_pass_action'] = array(
+    'type' => 'user',
+    'description' => t('Reset LD Superadmin password'),
+    'configurable' => FALSE,
+    'hooks' => array(
+      'user' => array('update'),
+    ),
+  );
+
+  return $info;
+}
+
+/**
+ * Simulate a reset_superadmin_pass. A Drupal action.
+ */
+function reset_superadmin_pass_action() {
+  global $user;
+
+  if($user->uid == 1){
+    $form = array(
+      '#post' => $_POST,
+    );
+    $new_pass = $_REQUEST['pass'];
+
+    if($new_pass['pass1'] && ($new_pass['pass1'] == $new_pass['pass2'])) {
+      $new_pass_md5 = md5($new_pass['pass1']); //convert the password into md5 hash format
+      $result = db_query('SELECT shortname FROM {drupal_site}');
+      while ($shortname = db_result($result)) {
+        $switch_db = db_switch($shortname); //switch the connection to the child site
+        db_query("UPDATE {users} SET pass = '%s' WHERE uid = 1", $new_pass_md5); //replace password in child site with the new one.
+        $switch_db = db_switch(); //switch the connection back
+      }
+      watchdog('Password reset', 'LD Superadmin has changed the password across all the sites.');
+    }
+  }
+}

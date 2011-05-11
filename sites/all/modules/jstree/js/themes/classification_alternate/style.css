@@ -1,0 +1,49 @@
+/** CLEAN-UP DRUPAL STUFF **/
+li.leaf { list-style-type:none;background:none; }
+li.open { list-style-type:none;background:none; }
+/** DEFAULT THEME PART **/
+.tree-classification_alternate li { min-height:18px; line-height:18px; margin:0 0 0 0; padding:0 0 0 10px; list-style:none; list-style-image:none; background-position:7px 8px; background-repeat:no-repeat; background-image:url("li.gif");}
+.tree-classification_alternate li a, .tree-classification_alternate li span { background-image:none; margin: 0px 0px 0px 2px; padding:1px 4px 1px 4px; line-height:16px; height:16px; background-position:4px 1px;}
+.tree-classification_alternate li a.loading { background-image:none; }
+.tree-classification_alternate .ltr li a, .tree-classification_alternate .rtl li a { background-image:none; padding:0 4px; }
+.tree-classification_alternate li a.hover, .tree-classification_alternate li a:hover { text-decoration:none; background-color:#BEEBFF; background-position:3px 0; border:1px solid #99DEFD; padding:0 3px; }
+.tree-classification_alternate li a.clicked, .tree-classification_alternate li a.clicked:hover, .tree-classification_alternate li span.clicked { text-decoration:none; background-color:#E6E6E6; background-position:3px 0; border:1px solid #6E6E6E; padding:0 3px; }
+.tree-classification_alternate ul { background-position:6px 1px; background-repeat:repeat-y; background-image:url("dot.gif"); }
+.tree-classification_alternate li.last { background-position:5px top; background-repeat:no-repeat; background-image:url("lastli.gif"); }
+/* DOTS - RIGHT TO LEFT */
+.tree-classification_alternate .rtl, .tree-classification_alternate .rtl ul { background-position:right 1px; }
+.tree-classification_alternate .rtl li { background-position:right 8px; }
+.tree-classification_alternate .rtl li.last { background-image:url("lastli_rtl.gif"); background-position:right top; }
+/* NO DOTS */
+.tree-classification_alternate .no_dots, .tree-classification_alternate .no_dots ul { background:transparent; }
+.tree-classification_alternate .no_dots li.leaf { background-image:none; background-color:transparent; }
+/* OPEN or CLOSED */
+.tree-classification_alternate li.open { background:url("minus.gif") 2px 5px no-repeat; }
+.tree-classification_alternate li.closed, #jstree-dragged.tree-classification_alternate li li.open { background:url("plus.gif") 2px 5px no-repeat; }
+/* RIGHT TO LEFT */
+.tree-classification_alternate .rtl li { margin-right:1px; }
+.tree-classification_alternate .rtl li.last { margin-right:0; padding-right:16px; }
+.tree-classification_alternate .rtl li.open { background:url("minus.gif") right 6px no-repeat; margin-right:0; padding-right:16px; }
+.tree-classification_alternate .rtl li.closed, #jstree-dragged.tree-classification_alternate .rtl li li.open { background:url("plus.gif") right 4px no-repeat; margin-right:0; padding-right:16px; }
+
+/* INPUT FORM */
+.tree-classification_alternate li span.clicked input { background:white none repeat scroll 0 0; border:0px;display:inline-block;font-family:Arial;font-size:12px;height:12px !important;margin:0;padding:0px;width:225px;}
+
+/* COLORS FOR NAME VARIANTS */
+.tree-classification_alternate li.vernacular a { color:#228B22;font-style:normal;}
+.tree-classification_alternate li.synonym a { color: #FF0000;font-style:normal;}
+.tree-classification_alternate li.usage a { color: #FF0000;font-style:normal;}
+.tree-classification_alternate li.lexical a { color: #FF0000;font-style:normal;}
+.tree-classification_alternate li.disputed a { color: #FF0000;font-style:normal;}
+.tree-classification_alternate li.replaced a { color: #FF0000;font-style:normal;}
+.tree-classification_alternate li.basionym a { font-weight: bold;}
+.tree-classification_alternate li.homonym a { color: #FF0000;font-weight: bold;}
+.tree-classification_alternate li.spelling a { background: transparent url("underline.gif") repeat-x scroll center bottom ;-moz-background-clip: -moz-initial;-moz-background-origin: -moz-initial;-moz-background-inline-policy: -moz-initial;font-style:normal;}
+.tree-classification_alternate li.hascontent a { font-weight:bold; background-color:#FFFF00;}
+.tree-classification_alternate li.nocontent a { font-weight:normal; background-color:transparent;}
+.tree-classification_alternate li.nocontent a.clicked, .tree-classification_alternate li.nocontent a.clicked:hover { font-weight:normal; background-color:#E6E6E6; }
+.tree-classification_alternate li.nocontent a.hover, .tree-classification_alternate li.nocontent a:hover { font-weight:normal; background-color:#BEEBFF; }
+
+/* CONTEXT MENU */
+.tree-classification_alternate-context { z-index: 5;}
+.tree-classification_alternate-context a:hover { background-color:#BEEBFF; }

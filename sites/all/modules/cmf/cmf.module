@@ -1,0 +1,977 @@
+<?php
+// $Id: cmf.module,v 1.2.2.3 2008/12/03 18:43:45 nunoveloso18 Exp $
+
+/**
+ * @file
+ * @brief Content management filter module file
+ * 
+ * This file contains all the common functions used by the module.
+ *
+ * @attention Copyright (C) 2008 Nuno Veloso <nunoveloso18 (at) gmail (dot) com>
+ * @author Nuno André Veloso Matias (http://www.nunoveloso.org)
+ *
+ * @warning For more information on licensing, read the LICENCE.txt file.
+ */
+
+/**
+ * Implementation of hook_help().
+ */
+function cmf_help($path, $arg) {
+
+  $output = '';
+
+  switch ($section) {
+
+    case "admin/help#cmf":
+
+      $output .= '<p>'.  t('This module adds an easier way for administrators to filter the 
+        content on a Drupal site for administration purposes.') .'</p>';
+
+      $output .= '<p>'.  t('It\'s an improvement over the content page in the administration area 
+        of Drupal. It can show on the same page nodes and comments and adds new filters like role 
+        and author.') .'</p>';
+
+      break;
+  }
+  return $output;
+} 
+
+
+/**
+ * Implementation of hook_perm().
+ */
+function cmf_perm() {
+  return array('admin cmf module', 'filter and manage site content', 'view user content list');
+}
+
+
+/**
+ * Implementation of hook_menu().
+ */
+function cmf_menu() {
+  $items = array();
+  
+    $items['admin/content/filter'] = array(
+        'title' => 'Manage Content',
+        'description' => 'All-in-one advanced filter and management of your site content.',
+        'page callback' => 'cmf_admin_content_page',
+        'access arguments' => array('filter and manage site content'),
+    );
+
+    $items['user/%user/cmf'] = array(
+        'title' => 'Submissions',
+      'title callback' => 'cmf_title_callback',
+    'title arguments' => array(1),
+        'description' => 'User-specific content management filter',
+        'page callback' => 'cmf_admin_content_page',
+        'access callback' => '_cmf_userspace_perms',
+        'access arguments' => array('filter and manage site content', 'view user content list'),
+        'type' => MENU_LOCAL_TASK,
+    );
+
+  return $items;
+}
+
+function cmf_title_callback($account) {
+  global $user;
+  if($user->uid == $account->uid) {
+    $title = t('My Submissions');
+  } else {
+    $title = t('Submissions');
+    //$title = $account->givenname."'s Submissions"; //use this or other object items to display account name on Submissions label
+  }
+  return $title;
+}
+
+/** 
+ * Called when user goes to example.com/admin/content/filter
+ *
+ * @return the HTML generated from the $form data structure
+ */ 
+function cmf_admin_content_page() {
+  
+  if (!isset($_SESSION['cmf_content_kind'])) {
+    $_SESSION['cmf_content_kind'] = 'node';
+  }
+  
+  if (arg(0) == 'user' && is_numeric(arg(1)) && arg(1) > 0) {
+    $true = TRUE;
+    $fullname = db_fetch_object(db_query("SELECT givenname, surname from {users} where uid = %d", arg(1)));
+    drupal_set_title($fullname->givenname . ' ' . $fullname->surname);
+  }
+
+  $output = drupal_get_form('cmf_filter_form', $true);
+
+  // Call the form first, to allow for the form_values array to be populated.
+  switch ($_SESSION['cmf_content_kind']) {
+    case 'node':
+      if ($_POST['operation'] == 'delete' && $_POST['nodes']) {
+        $form_state = array();
+        $form_state['submitted'] = 1;
+        $form_state['values']['nodes'] = $_POST['nodes'];
+        return drupal_get_form('cmf_admin_content_confirm',$form_state);
+      }
+      else {
+        $output .= drupal_get_form('cmf_admin_nodes_form');    
+      }
+      break;
+
+    case 'comment':
+      if ($_POST['operation'] == 'delete' && $_POST['comments']) {
+        $form_state = array();
+        $form_state['submitted'] = 1;
+        $form_state['values']['comments'] = $_POST['comments'];
+        return drupal_get_form('cmf_admin_comments_confirm',$form_state);
+      }
+      else {
+        $output .= drupal_get_form('cmf_admin_comments_form');
+      }
+      break;
+    case 'both':
+      if($_POST['operation'] == 'delete') {
+        $form_state = array();
+        $form_state['submitted'] = 1;
+        $form_state['values']['objects'] = $_POST['objects'];
+        return drupal_get_form('cmf_admin_both_confirm',$form_state);
+      }
+      $output .= drupal_get_form('cmf_admin_both_form');
+  }
+
+  return $output;
+}
+
+/*
+ * Confirmation of node deletion
+ */
+function cmf_admin_content_confirm(&$form_state) {
+  $nodes = $form_state['post']['nodes'];
+  $form['nodes'] = array('#prefix' => '<ul>', '#suffix' => '</ul>', '#tree' => TRUE);
+  // array_filter returns only elements with TRUE values
+  foreach ($nodes as $nid) {
+    $title = db_result(db_query('SELECT title FROM {node} WHERE nid = %d', $nid));
+    $form['nodes'][$nid] = array(
+      '#type' => 'hidden',
+      '#value' => $nid,
+      '#prefix' => '<li>',
+      '#suffix' => check_plain($title) ."</li>\n",
+    );
+  }
+  $form['operation'] = array('#type' => 'hidden', '#value' => 'delete');
+  $form['#submit'][] = 'cmf_admin_content_confirm_submit';
+  if(arg(0) == 'user' && is_numeric(arg(1)) && arg(1) > 0) {
+    $cancel = 'user/' . arg(1) . '/cmf';
+  }
+  else {
+    $cancel = '';
+  }
+  return confirm_form($form,
+                      t('Are you sure you want to delete these items?'),
+                      $cancel, t('This action cannot be undone.'),
+                      t('Delete all'), t('Cancel'));
+}
+
+/*
+ * Submit node deletion
+ */
+function cmf_admin_content_confirm_submit($form, &$form_state) {
+  if ($form_state['values']['confirm']) {
+    foreach ($form_state['values']['nodes'] as $nid => $value) {
+      node_delete($nid);
+      db_query("DELETE FROM {term_node} WHERE nid = %d",$nid);
+    }
+    drupal_set_message(t('The items have been deleted.'));
+  }
+  if(arg(0) == 'user' && is_numeric(arg(1)) && arg(1) > 0) {
+    $form_state['redirect'] = 'user/' . arg(1) . '/cmf';
+  }
+  else {
+    $form_state['redirect'] = '';
+  }
+  return;
+}
+
+/*
+ * Confirmation of comment deletion
+ */
+function cmf_admin_comments_confirm(&$form_state) {
+  $edit = $form_state['post'];
+
+  $form['comments'] = array('#prefix' => '<ul>', '#suffix' => '</ul>', '#tree' => TRUE);
+  $comment_counter = 0;
+  foreach (array_filter($edit['comments']) as $cid => $value) {
+    $comment = _comment_load($cid);
+    if (is_object($comment) && is_numeric($comment->cid)) {
+      $subject = db_result(db_query('SELECT subject FROM {comments} WHERE cid = %d', $cid));
+      $form['comments'][$cid] = array('#type' => 'hidden', '#value' => $cid, '#prefix' => '<li>', '#suffix' => check_plain($subject) .'</li>');
+      $comment_counter++;
+    }
+  }
+  $form['operation'] = array('#type' => 'hidden', '#value' => 'delete');
+  $form['#submit'][] = 'cmf_admin_comments_confirm_submit';
+  if(arg(0) == 'user' && is_numeric(arg(1)) && arg(1) > 0) {
+    $cancel = 'user/' . arg(1) . '/cmf';
+  }
+  else {
+    $cancel = '';
+  }
+  return confirm_form($form,
+                      t('Are you sure you want to delete these comments and all their children?'),
+                      $cancel, t('This action cannot be undone.'),
+                      t('Delete comments'), t('Cancel'));
+}
+
+/*
+ * Submit comment deletion
+ */
+function cmf_admin_comments_confirm_submit($form, &$form_state) {
+  if ($form_state['values']['confirm']) {
+    foreach ($form_state['values']['comments'] as $cid => $value) {
+      $comment = _comment_load($cid);
+      _cmf_comment_delete_thread($comment);
+      _cmf_comment_update_node_statistics($comment->nid);
+    }
+    cache_clear_all();
+    drupal_set_message(t('The comments have been deleted.'));
+  }
+  if(arg(0) == 'user' && is_numeric(arg(1)) && arg(1) > 0) {
+    $form_state['redirect'] = 'user/' . arg(1) . '/cmf';
+  }
+  else {
+    $form_state['redirect'] = '';
+  }
+  return;
+}
+
+function _cmf_comment_delete_thread($comment) {
+  if (!is_object($comment) || !is_numeric($comment->cid)) {
+    watchdog('content', 'Cannot delete non-existent comment.', array(), WATCHDOG_WARNING);
+    return;
+  }
+
+  // Delete the comment:
+  db_query('DELETE FROM {comments} WHERE cid = %d', $comment->cid);
+  watchdog('content', 'Comment: deleted %subject.', array('%subject' => $comment->subject));
+
+  comment_invoke_comment($comment, 'delete');
+
+  // Delete the comment's replies
+  $result = db_query('SELECT c.*, u.name AS registered_name, u.uid FROM {comments} c INNER JOIN {users} u ON u.uid = c.uid WHERE pid = %d', $comment->cid);
+  while ($comment = db_fetch_object($result)) {
+    $comment->name = $comment->uid ? $comment->registered_name : $comment->name;
+    _cmf_comment_delete_thread($comment);
+  }
+}
+
+function _cmf_comment_update_node_statistics($nid) {
+  $count = db_result(db_query('SELECT COUNT(cid) FROM {comments} WHERE nid = %d AND status = %d', $nid, COMMENT_PUBLISHED));
+
+  // comments exist
+  if ($count > 0) {
+    $last_reply = db_fetch_object(db_query_range('SELECT cid, name, timestamp, uid FROM {comments} WHERE nid = %d AND status = %d ORDER BY cid DESC', $nid, COMMENT_PUBLISHED, 0, 1));
+    db_query("UPDATE {node_comment_statistics} SET comment_count = %d, last_comment_timestamp = %d, last_comment_name = '%s', last_comment_uid = %d WHERE nid = %d", $count, $last_reply->timestamp, $last_reply->uid ? '' : $last_reply->name, $last_reply->uid, $nid);
+  }
+
+  // no comments
+  else {
+    $node = db_fetch_object(db_query("SELECT uid, created FROM {node} WHERE nid = %d", $nid));
+    db_query("UPDATE {node_comment_statistics} SET comment_count = 0, last_comment_timestamp = %d, last_comment_name = '', last_comment_uid = %d WHERE nid = %d", $node->created, $node->uid, $nid);
+  }
+}
+
+/*
+ * Confirmation of node and/or comment deletion
+ */
+function cmf_admin_both_confirm(&$form_state) {
+  $edit = $form_state['post'];
+  $form['objects'] = array('#prefix' => '<ul>', '#suffix' => '</ul>', '#tree' => TRUE);
+  foreach ($edit['objects'] as $flag) {
+    if ($flag) {
+      $object = explode('-', $flag);
+      $kind   = $object[0];
+      $value  = $object[1];
+    }
+    switch($kind) {
+      case 'n':
+        $title = db_result(db_query('SELECT title FROM {node} WHERE nid = %d', $value));
+        $form['objects']['nodes'][$value] = array(
+          '#type' => 'hidden',
+          '#value' => $value,
+          '#prefix' => '<li>',
+          '#suffix' => t('Data Object: ') . check_plain($title) ."</li>\n",
+        );
+      break;
+      case 'c':
+        $comment = _comment_load($value);
+        if (is_object($comment) && is_numeric($comment->cid)) {
+          $subject = db_result(db_query('SELECT subject FROM {comments} WHERE cid = %d', $value));
+          $form['objects']['comments'][$value] = array('#type' => 'hidden', '#value' => $value, '#prefix' => '<li>', '#suffix' => t('Comment: ') . check_plain($subject) .'</li>');
+        }
+      break;
+    }
+  }
+  $form['operation'] = array('#type' => 'hidden', '#value' => 'delete');
+  $form['#submit'][] = 'cmf_admin_both_confirm_submit';
+  if(arg(0) == 'user' && is_numeric(arg(1)) && arg(1) > 0) {
+    $cancel = 'user/' . arg(1) . '/cmf';
+  }
+  else {
+    $cancel = '';
+  }
+  return confirm_form($form,
+                      t('Are you sure you want to delete these items?'),
+                      $cancel, t('This action cannot be undone.'),
+                      t('Delete all'), t('Cancel'));    
+}
+
+/*
+ * Submit node and/or comment deletion
+ */
+function cmf_admin_both_confirm_submit($form,&$form_state) {
+  if ($form_state['values']['confirm']) {
+    if(!empty($form['#post']['objects']['comments'])) {
+      foreach ($form['#post']['objects']['comments'] as $cid => $value) {
+        $comment = _comment_load($cid);
+        _cmf_comment_delete_thread($comment);
+        _cmf_comment_update_node_statistics($comment->nid);
+      }
+    }
+    if(!empty($form['#post']['objects']['nodes'])) {
+      foreach ($form['#post']['objects']['nodes'] as $nid => $value) {
+        node_delete($nid);
+        db_query("DELETE FROM {term_node} WHERE nid = %d",$nid);
+      }
+    }
+    cache_clear_all();
+    drupal_set_message(t('The items have been deleted.'));
+  }
+  if(arg(0) == 'user' && is_numeric(arg(1)) && arg(1) > 0) {
+    $form_state['redirect'] = 'user/' . arg(1) . '/cmf';
+  }
+  else {
+    $form_state['redirect'] = '';
+  }
+  return;
+}
+
+/**********************
+*  FILTERS            *
+**********************/ 
+
+/**
+ * Defines the form for content administration filters.
+ *
+ * @ingroup forms
+ * @see cmf_filter_form_submit()
+ * 
+ * @return array with forms properties 
+ */
+function cmf_filter_form(&$form_state) {
+  $session = &$_SESSION['cmf_overview_filter'];
+  $session = is_array($session) ? $session : array();
+  $filters = cmf_filters();
+
+  // general settings display (max rows & content kind)
+  $form['general'] = array('#type' => 'fieldset',
+    '#title' => t('General Settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  ); 
+  $form['general']['max-rows'] = array(
+    '#type' => 'textfield', 
+    '#title' => t('Max rows'),
+    '#size' => 5,
+    '#default_value' => isset($_SESSION['cmf_max_rows']) ? $_SESSION['cmf_max_rows'] : 50,
+    '#prefix' => '<div class="container-inline">',
+    '#suffix' => '</div>',
+  );
+  $form['general']['kind'] = array(
+    '#type' => 'select', 
+    '#title' => t('Content'),
+    '#options' => array('node' => t('content'), 'comment' => t('comment'), 'both' => t('both')),
+    '#default_value' => isset($_SESSION['cmf_content_kind']) ? $_SESSION['cmf_content_kind'] : 
+                        'both',
+    '#prefix' => '<div class="container-inline">',
+  );
+  $form['general']['buttons']['apply'] = array(
+    '#type' => 'submit', 
+     '#value' => t('Apply'),
+    '#suffix' => '</div>',
+  );
+
+  $i = 0;
+  $form['filters'] = array('#type' => 'fieldset',
+    '#title' => t('Show only items where'),
+    '#theme' => 'node_filters',
+  );
+  foreach ($session as $filter) {
+    list($type, $value) = $filter;
+    $value = $filters[$type]['options'][$value];
+    $string = ($i++ ? '<em>and</em> where <strong>%a</strong> is <strong>%b</strong>' : 
+        '<strong>%a</strong> is <strong>%b</strong>');
+    $form['filters']['current'][] = array('#value' => t($string, 
+        array('%a' => $filters[$type]['title'] , '%b' => $value)));
+    // those ifs remove the respective option if it is already being filtered on.
+    if ($type == 'type') {
+      unset($filters['type']);
+    }
+  }
+
+  // preparing select boxes
+  foreach ($filters as $key => $filter) {
+    $names[$key] = $filter['title'];
+    $form['filters']['status'][$key] = array(
+      '#type'    => 'select', 
+      '#options' => $filter['options'],
+     );
+  }
+  // building radio buttons
+  $keyz = array_keys($names);
+  $form['filters']['filter'] = array(
+    '#type'          => 'radios',
+    '#options'       => $names,
+    '#default_value' => $keyz[0],
+  );
+  // building buttons depending on the filter state
+  $form['filters']['buttons']['submit'] = array(
+    '#type'  => 'submit', 
+    '#value' => (count($session) ? t('Refine') : t('Filter')),
+  );
+  if (count($session)) {
+    $form['filters']['buttons']['undo'] = array(
+      '#type'  => 'submit', 
+      '#value' => t('Undo'),
+    );
+    $form['filters']['buttons']['reset'] = array(
+      '#type'  => 'submit', 
+      '#value' => t('Reset'),
+    );
+  }
+
+  return $form;
+}
+
+
+/** 
+ * Handle post-validation form submission.
+ *
+ * @ingroup forms
+ * @see cmf_filter_form($form_state, )
+ *
+ * @param the ID of the passed form
+ * @param array with the form properties values
+ */ 
+function cmf_filter_form_submit($form, &$form_state) {
+  global $user;
+
+  $filters = cmf_filters();
+/* TODO The 'op' element in the form values is deprecated.
+   Each button can have #validate and #submit functions associated with it.
+   Thus, there should be one button that submits the form and which invokes
+   the normal form_id_validate and form_id_submit handlers. Any additional
+   buttons which need to invoke different validate or submit functionality
+   should have button-specific functions. */
+  switch ($form_state['values']['op']) {
+    case t('Filter'):
+    case t('Refine'):
+    
+      if (isset($form_state['values']['filter'])) {
+        $filter = $form_state['values']['filter'];
+
+        // convert AJAX search value to select box value
+        if ($filter == 'users') {
+          $users = cmf_get_users('name');
+          
+          $uid = db_result(db_query('
+            SELECT uid
+            FROM {users}
+            WHERE name = "%s"',
+            $form_state['values']['users']
+          ));
+
+          $form_state['values']['user'] = $uid;
+          
+          $filter = 'user';
+        }
+
+        // Flatten the options array to accommodate hierarchical/nested options.
+        $flat_options = form_options_flatten($filters[$filter]['options']);
+
+        if (isset($flat_options[$form_state['values'][$filter]])) {
+          $_SESSION['cmf_overview_filter'][] = array($filter, $form_state['values'][$filter]);
+        }
+      }
+      break;
+    case t('Undo'):
+      array_pop($_SESSION['cmf_overview_filter']);
+      break;
+    case t('Reset'):
+      $_SESSION['cmf_overview_filter'] = array();
+      break;
+    case t('Apply'):
+      $_SESSION['cmf_max_rows'] = $form_state['values']['max-rows'];
+      $_SESSION['cmf_content_kind'] = $form_state['values']['kind'];
+      
+      if (arg(0) == 'user' && is_numeric(arg(1)) && arg(1) > 0) {
+        $form_state['redirect'] = 'user/'. arg(1) .'/cmf';
+      }
+      else {
+        $form_state['redirect'] = '';
+      }
+      break;
+  }
+
+  if($user->uid == 0) cache_clear_all();
+
+}
+
+/**
+ * Theme cmf administration filter form.
+ *
+ * @themable
+ */
+function theme_cmf_filter_form($form) {
+  $output .= '<div id="cmf_header">';
+  $output .= drupal_render($form['general']);
+  $output .= '</div>';
+  $output .= '<div id="node-admin-filter">';
+  $output .= drupal_render($form['filters']);
+  $output .= '</div>';
+  $output .= drupal_render($form);
+  return $output;
+}
+
+
+/**
+ * List node administration filters that can be applied.
+ *
+ * @param (optional) true if the filter to be built serves the user profile page
+ * @return array with filter properties
+ */
+function cmf_filters() {
+  // Regular filters
+  $filters['status'] = array('title' => t('status'),
+    'options' => array('status-1'   => t('published'),     'status-0' => t('unpublished')));
+  $options = node_get_types('names');
+  $filters['type'] = array('title' => t('type'), 'options' => $options);
+  return $filters;
+}
+
+
+/**********************
+*  QUERIES            *
+**********************/
+
+/** 
+ * Build the variable parts of the query to be performed regarding the filter status.
+ *
+ * @return associative array with WHERE JOIN qury parts and respective arguments
+ */ 
+function cmf_build_filter_query() {
+  $filters = cmf_filters();
+
+  // Build query
+  $where = $args = array();
+  $join = '';
+  foreach ($_SESSION['cmf_overview_filter'] as $index => $filter) {
+    list($key, $value) = $filter;
+    switch ($key) {
+      case 'status':
+        // Note: no exploitable hole as $key/$value have already been checked when submitted
+        list($key, $value) = explode('-', $value, 2);
+        $where[] = 'n.'. $key .' = %d';
+        break;
+      case 'category':
+        $table = "tn$index";
+        $where[] = "$table.tid = %d";
+        $join .= "INNER JOIN {term_node} $table ON n.nid = $table.nid ";
+        break;
+      case 'type':
+        $where[] = "n.type = '%s'";
+        break;
+      case 'user':
+        $where[] = "u.uid = %d"; 
+        break;
+      case 'role':
+        $where[] = "u.uid = ur.uid AND ur.rid = %d"; 
+        $join .= "INNER JOIN {users_roles} ur ON u.uid = ur.uid ";
+        break;
+      case 'users':
+        $where[] = "u.name = '%s'"; 
+        break;
+      case 'blocked':
+        $where[] = "u.status = %d AND u.uid != 0";
+        break;
+    }
+    $args[] = $value;
+  }
+  $where = count($where) ? 'WHERE '. implode(' AND ', $where) : '';
+
+  return array('where' => $where, 'join' => $join, 'args' => $args);
+}
+
+
+/** 
+ * Build the header of the result table.
+ *
+ * @return array respecting tablesort_sql()
+ */ 
+function cmf_build_header() {
+  global $user;
+  $header = array();
+
+  if (user_access('filter and manage site content')) {
+    $header[] = theme('table_select_header_cell');
+  }
+  
+  switch ($_SESSION['cmf_content_kind']) {
+    case 'node':
+      $header[] = array('data' => t('Kind'));
+      $header[] = array('data' => t('Title'), 'field' => 'title');
+      $header[] = array('data' => t('Type'), 'field' => 'type');
+      $header[] = array('data' => t('Language'), 'field' => 'language');
+      if (!(arg(0) == 'user' && is_numeric(arg(1)) && arg(1) > 0)) {
+        $header[] = array('data' => t('Author'), 'field' => 'username');
+      }
+      $header[] = array('data' => t('Status'), 'field' => 'status');
+      $header[] = array('data' => t('Time'), 'field' => 'created', 'sort' => 'desc');
+      break;
+    case 'comment':
+      $header[] = array('data' => t('Kind'));
+      $header[] = array('data' => t('Subject'), 'field' => 'subject');
+      $header[] = array('data' => t('Type'), 'field' => 'type');
+      if (!(arg(0) == 'user' && is_numeric(arg(1)) && arg(1) > 0)) {
+        $header[] = array('data' => t('Author'), 'field' => 'username');
+      }
+      $header[] = array('data' => t('Status'), 'field' => 'status');
+      $header[] = array('data' => t('Time'), 'field' => 'created', 'sort' => 'desc');
+      break;
+    case 'both':
+      $header[] = array('data' => t('Kind'));
+      $header[] = array('data' => t('Title') .'/'. t('Subject'), 'field' => 'title');
+      $header[] = array('data' => t('Type'), 'field' => 'type');
+      if (!(arg(0) == 'user' && is_numeric(arg(1)) && arg(1) > 0)) {
+        $header[] = array('data' => t('Author'), 'field' => 'username');
+      }
+      $header[] = array('data' => t('Status'), 'field' => 'status');
+      $header[] = array('data' => t('Time'), 'field' => 'created', 'sort' => 'desc');
+      break;
+  }
+  if (user_access('filter and manage site content') || $user->uid) {
+    $header[] = array('data' => t('Operations'));
+  }
+  
+  return $header;
+}
+
+
+/** 
+ * Permform adjusted query.
+ *
+ * @param array respecting tablesort_sql()
+ * @return result of permormed query
+ */ 
+function cmf_perform_query($header, $kind = NULL) {
+
+  $filter = cmf_build_filter_query();  
+
+  if (is_null($kind)) {
+    $kind = $_SESSION['cmf_content_kind'];
+  }
+  
+  if (arg(0) == 'user' && is_numeric(arg(1)) && arg(1) > 0) {
+    $filter['where'] .= ' AND u.uid = '. arg(1);
+  }
+
+  switch ($kind) {
+    case 'node':
+      $qrycount = 'SELECT COUNT(n.nid) FROM {node} n INNER JOIN {users} u ON n.uid = u.uid ' . $filter['join'] . $filter['where'];
+      return pager_query('
+        SELECT n.nid, n.title, n.type, concat(u.surname,u.givenname) AS username, u.uid, n.status, n.created, n.changed, n.language
+        FROM {node} n INNER JOIN {users} u ON n.uid = u.uid '. $filter['join'] . 
+        $filter['where'] . 
+        tablesort_sql($header), 
+        isset($_SESSION['cmf_max_rows']) ? $_SESSION['cmf_max_rows'] : 50, 0, $qrycount, $filter['args']
+      );
+      break;
+    case 'comment':
+      $qrycount = 'SELECT COUNT(c.nid) FROM {comments} c INNER JOIN {node} n ON c.nid = n.nid INNER JOIN {users} u ON c.uid = u.uid ' . $filter['join'] . $filter['where'];
+      return pager_query('
+        SELECT c.cid, c.subject, c.nid, c.comment, c.timestamp AS created, c.status, c.name, 
+          c.homepage, concat(u.surname,u.givenname) AS username, u.uid, n.type
+        FROM {comments} c INNER JOIN {node} n ON c.nid = n.nid INNER JOIN {users} u ON u.uid = c.uid 
+          '. $filter['join'] . 
+        $filter['where'] . 
+        tablesort_sql($header), 
+        isset($_SESSION['cmf_max_rows']) ? $_SESSION['cmf_max_rows'] : 50, 0, $qrycount, $filter['args']
+      );
+      break;
+    case 'both':
+      $args = array_merge($filter['args'], $filter['args']);
+      $qrycount = 'SELECT ((SELECT COUNT(n.nid) as count FROM {node} n INNER JOIN {users} u ON n.uid = u.uid ' . $filter['join'] . $filter['where'] . ') + (SELECT COUNT(c.nid) as count FROM {comments} c INNER JOIN {node} n ON c.nid = n.nid INNER JOIN {users} u ON c.uid = u.uid ' . $filter['join'] . $filter['where'] . ')) AS total';
+      return pager_query('
+        SELECT 0 AS cid, n.nid, n.title, NULL AS comment, n.type, concat(u.surname,u.givenname) AS username, u.uid, 
+          n.status, n.created, n.changed
+        FROM {node} n INNER JOIN {users} u ON n.uid = u.uid '. $filter['join'] . 
+        $filter['where'] .' 
+        UNION
+        SELECT c.cid, c.nid, c.subject AS title, c.comment, n.type, concat(u.surname,u.givenname) AS username, u.uid, 
+          c.status, c.timestamp AS created, 0 AS changed
+        FROM {comments} c INNER JOIN {node} n ON c.nid = n.nid INNER JOIN {users} u ON u.uid = c.uid 
+          '. $filter['join'] .
+        $filter['where'] . 
+        tablesort_sql($header), 
+        isset($_SESSION['cmf_max_rows']) ? $_SESSION['cmf_max_rows'] : 50, 0, $qrycount, $args
+      );
+      break;
+  }
+}
+
+
+/**********************
+*  RESULTS            *
+**********************/
+
+module_load_include('inc', 'cmf', '/node');
+
+module_load_include('inc', 'cmf', '/comment');
+
+module_load_include('inc', 'cmf', '/both');
+
+
+/**********************
+*  AUX                *
+**********************/
+
+/**
+ * Builds a list of available users
+ *
+ * @param the format in which to return the list
+ * @return array of all available users
+ */
+function cmf_get_users($op) {
+
+  switch ($op) {
+    case 'names':
+      $result = db_query('
+        SELECT uid, name, surname
+        FROM {users}
+        WHERE uid != 0
+        ORDER BY name'
+      );
+
+      break;
+  }
+  
+  $users    = array();
+  $users[0] = variable_get('anonymous', NULL);
+
+  while ($user = db_fetch_object($result)) {
+    $users[$user->uid] = $user->name;
+  }
+  
+  return $users;
+}
+
+
+/**
+ * Builds a list of available roles
+ *
+ * @param the format in which to return the list
+ * @return array of all available roles
+ */
+function cmf_get_roles($op) {
+
+  switch ($op) {
+    case 'names':
+      $result = db_query('
+        SELECT *
+        FROM {role}
+        ORDER BY name'
+      );
+
+      break;
+  }
+
+  $roles = array();
+
+  while ($role = db_fetch_object($result)) {
+    $roles[$role->rid] = $role->name;
+  }
+  
+  return $roles;
+}
+
+
+/**
+ * Get the html code of an image
+ *
+ * @param the pretended image
+ * @return html tag img
+ */
+function _cmf_get_img($action, $title) {
+
+  $path =  base_path() . drupal_get_path('module', 'cmf') .'/images/'. $action .'.png';
+
+  if ($title == NULL) {
+    $html = '<img src="'. $path .'" alt="untitled image" />';
+  }
+  else {
+    $html = '<img src="'. $path .'" title="'. $title .'" alt="'. $title .'" />';
+  }
+
+  return $html;
+}
+
+
+/** 
+ * Theme (node) type cell on table result.
+ *
+ * @ingroup themable
+ *
+ * @param 0 or node type key
+ * @return formated (node) type
+ */ 
+function theme_cmf_type($type) { 
+
+  $result = db_query('
+    SELECT name
+    FROM {node_type}
+    WHERE type = "%s"',
+    $type
+  );
+  
+  $content_type = db_fetch_object($result);
+  
+  switch($content_type->name) {
+    case 'Page':
+      $cmf_class = 'page';
+     break;
+    case 'Image':
+      $cmf_class = 'image';
+     break;
+    case 'Taxon Page':
+      $cmf_class = 'taxon_page';
+      $content_type->name = t('Taxon');
+     break;
+    case 'Biblio':
+      $cmf_class = 'biblio';
+     break;
+    case 'Forum':
+      $cmf_class = 'forum';
+     break;
+    case 'Shaded Map':
+      $cmf_class = 'simplemappr';
+      $content_type->name = t('Map');
+     break;
+    case 'Poll':
+      $cmf_class = 'poll';
+     break;
+    default:
+      $cmf_class = 'default';
+  }
+  
+  $output = '<ul class="cmf_links"><li class="' . $cmf_class . '"><span>' . $content_type->name . '</span></li></ul>';
+  
+  return $output;
+
+} 
+
+
+/** 
+ * Implementation of hook_theme().
+ *
+ * @ingroup themable
+ */ 
+function cmf_theme() { 
+  return array(
+    'cmf_filter_form' => array(
+      'arguments' => array('form' => NULL)
+    ),
+    'cmf_user' => array(
+      'arguments' => array('uid' => NULL)
+    ),
+    'cmf_type' => array(
+      'arguments' => array('type' => NULL)
+    ),
+    'cmf_admin_nodes_form' => array(
+      'file' => 'node.inc',
+      'arguments' => array('form' => NULL)
+    ),
+    'cmf_admin_comments_form' => array(
+      'file' => 'comment.inc',
+      'arguments' => array('form' => NULL)
+    ),
+    'cmf_admin_both_form' => array(
+      'file' => 'both.inc',
+      'arguments' => array('form' => NULL)
+    ),
+  );
+}
+
+
+/** 
+ * Theme user cell on table result.
+ *
+ * @ingroup themable
+ *
+ * @param user ID
+ * @return clickable username with status
+ */ 
+function theme_cmf_user($uid) { 
+
+  if ($uid == 0) {
+    return variable_get('anonymous', NULL);
+  }
+
+  $result = db_query('
+    SELECT name, status, givenname, surname
+    FROM {users}
+    WHERE uid = %d',
+    $uid
+  );
+
+  $user = db_fetch_array($result);
+
+  $url_alias = _cmf_get_user_path($uid);
+  
+  $url = $url_alias ? $url_alias : 'user/'. $uid;
+
+  if ($user['status']) {
+    $output .= l($user['surname'] . ', ' . $user['givenname'], $url, array());
+  }
+  else {
+    $output .= l(_cmf_get_img('blocked', t('blocked')) .' '. $user['surname'] . ', ' .$user['givenname'], $url, array(),
+      NULL, NULL, FALSE, TRUE);  
+  }
+
+  return $output; 
+} 
+
+
+/** 
+ * Get the alias path to a user profile
+ *
+ * @param user ID
+ * @return the relative URL of the user profile
+ */
+function _cmf_get_user_path($uid) {
+
+  return db_result(db_query('
+    SELECT dst
+    FROM {url_alias}
+    WHERE src = "%s";',
+    'user/'. $uid
+  ));
+}
+
+
+/** 
+ * Check user permissions to see menu itme under example.com/user/UID/cmf
+ *
+ * @param access strings
+ * @param access strings
+ * @return boolean
+ */
+function _cmf_userspace_perms($manage_access, $view_access) {
+  return (user_access($manage_access) || user_access($view_access));
+}

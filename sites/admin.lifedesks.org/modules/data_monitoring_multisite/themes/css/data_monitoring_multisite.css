@@ -1,0 +1,53 @@
+body {
+  font-size: 100%;
+}
+h3 {
+}
+h1 {
+  font-size: 1em;
+  line-height: normal;
+}
+/** Monitors **/
+table.data-monitoring-multisite {
+  border-collapse: collapse;
+}
+table.data-monitoring-multisite th,
+table.data-monitoring-multisite td {
+  padding: 3px 6px;
+}
+table.data-monitoring-multisite th a {
+  text-decoration: none;
+}
+table.data-monitoring-multisite td {
+  vertical-align: top;
+}
+table.data-monitoring-multisite .monitor-name {
+  font-weight: bold;
+  display: block;
+}
+table.data-monitoring-multisite .monitor-description {
+  display: block;
+}
+table.data-monitoring-multisite .hidden {
+  display: none;
+}
+div#interactive_chart, img#chart {
+  margin: 20px 0 50px;
+}
+
+form.data-monitoring-multisite fieldset#monitor-filter {
+  border: 1px solid #ccc;
+}
+form.data-monitoring-multisite fieldset#monitor-filter.collapsed {
+  border-width: 1px 0 0 0;
+}
+form.data-monitoring-multisite fieldset#monitor-filter
+form.data-monitoring-multisite fieldset#monitor-filter select,
+form.data-monitoring-multisite fieldset#monitor-filter input,
+form.data-monitoring-multisite fieldset#monitor-filter div {
+  float: left;
+  margin: 5px;
+}
+form.data-monitoring-multisite ul.pager {
+  text-align: right;
+}

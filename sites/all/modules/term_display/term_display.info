@@ -1,0 +1,11 @@
+; $Id: term_display.info,v 1.4 2009/02/18 10:43:18 joachim Exp $
+name = Term Display
+description = Provides options to control the display of term information on content pages.
+dependencies[] = taxonomy
+core = 6.x
+; Information added by drupal.org packaging script on 2009-02-26
+version = "6.x-1.1"
+core = "6.x"
+project = "term_display"
+datestamp = "1235682976"
+

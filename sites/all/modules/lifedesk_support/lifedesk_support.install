@@ -1,0 +1,41 @@
+<?php
+
+/**
+ * Implementation of hook_install().
+ */
+function lifedesk_support_install() {
+
+    module_load_include('php', 'lifedesk_support', 'SecurePass.class');
+
+    $pwd = new pwdGen();
+    $pwd->pattern = 'CCx0x*VVCC'; //optional
+    $pass = $pwd->newPwd();
+
+    $admin_role = db_result(db_query("SELECT rid FROM role WHERE name='administrator'"));
+
+    $details = array(
+      'name' => 'ldsupport',
+      'givenname' => 'LifeDesk',
+      'surname' => 'Support',
+      'pass' => $pass,
+      'mail' => 'support@lifedesks.org',
+      'access' => 1,
+      'status' => 1,
+      'roles' => array($admin_role => 'administrator'),
+    );
+    $lduser = user_save(null, $details);
+    variable_set('lifedesk_support', $lduser->uid);
+
+    //adjust the path redirect
+    db_query("INSERT INTO path_redirect (source,redirect,language) VALUES ('%s', 'members', '')", 'user/' . $lduser->uid);
+}
+
+function lifedesk_support_uninstall() {
+  $lduser = variable_get('lifedesk_support','');
+  if($lduser) {
+    user_delete(array(), $lduser);	
+  }
+  variable_del('lifedesk_support');
+
+  db_query("DELETE FROM path_redirect WHERE path='user/" . $lduser . "'");
+}

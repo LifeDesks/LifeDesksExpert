@@ -1,0 +1,12 @@
+name = LifeDesk Image
+description = Extends the image module with a custom table for metadata.
+package = "LifeDesk"
+project = "image_lifedesk"
+
+dependencies[] = image
+dependencies[] = image_gallery
+dependencies[] = creativecommons_lite
+
+version = "6.x-1.0"
+
+core = "6.x"

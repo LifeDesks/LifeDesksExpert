@@ -1,0 +1,190 @@
+<?php
+// $Id: term_display.module,v 1.10 2009/02/26 20:55:48 joachim Exp $
+
+define('TERM_DISPLAY_DEFAULT', 'default');
+define('TERM_DISPLAY_LIST', 'list');
+define('TERM_DISPLAY_CUSTOM', 'custom');
+define('TERM_DISPLAY_NONE', 'none');
+define('TERM_DISPLAY_LOAD', 'load');
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function term_display_form_taxonomy_form_vocabulary_alter(&$form, &$form_state) {
+  $term_display_data = term_display_data($form['vid']['#value']);
+  
+  // Lighten the identification fieldset so it's above ours.
+  $form['identification']['#weight'] = -1;
+
+  $form['term_display'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Display options'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#description' => t('Set display options on content view for terms in this vocabulary.'),
+    '#weight' => -0.5,
+  );
+
+  $options = array(
+    TERM_DISPLAY_DEFAULT => t('Default'),
+    TERM_DISPLAY_LIST => t('List'),
+    TERM_DISPLAY_CUSTOM => t('Custom (defaults to comma separated)'),
+    TERM_DISPLAY_LOAD => t('Load into $node object'),    
+    TERM_DISPLAY_NONE => t('None (hidden)'),
+  );
+
+  $form['term_display']['term_display_style'] = array(
+    '#type' => 'select',
+    '#title' => t('Display style'),
+    '#options' => $options,
+    '#default_value' => $term_display_data['style'],
+    '#description' => t('Select if and how you wish terms to appear on content (node) display.'),
+  );
+
+  $form['term_display']['term_display_weight'] = array(
+    '#type' => 'weight',
+    '#title' => t('Display weight'),
+    '#default_value' => $term_display_data['weight'],
+    '#description' => t('Set a weight for term display to control where terms appear in the content body. Set a low weight to move terms to the top of the content or a high one to move them to the bottom. Applies only when display style is set to "list" or "custom". This option is for advanced usage only; usually it\'s best to leave this at 0.'),
+  );
+
+}
+
+function term_display_theme() {
+  return array(
+    'term_display_list' => array(
+      'file' => 'term_display.module',
+      'arguments' => array(
+        'vocabulary' => NULL,
+        'terms' => NULL,
+      ),
+    ),
+    'term_display_custom' => array(
+      'file' => 'term_display.module',
+      'arguments' => array(
+        'vocabulary' => NULL,
+        'terms' => NULL,
+      ),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_taxonomy().
+ */
+function term_display_taxonomy($op, $type, $object = NULL) {
+  if ($type == 'vocabulary') {
+    if (isset($object['term_display_style']) && isset($object['term_display_weight'])) {
+      switch ($op) {
+        case 'update':
+          // First, try an update.
+          db_query("UPDATE {term_display} SET style = '%s', weight = %d WHERE vid = %d", $object['term_display_style'], $object['term_display_weight'], $object['vid']);
+          // There will be no rows if this we are editing for the first time a term that was created before
+          // term_display was enabled. In that case, we need an insert.
+          if (db_affected_rows()) {
+            break;
+          }
+          // Fall through.
+        case 'insert':
+          db_query("INSERT INTO {term_display} (vid, style, weight) VALUES (%d, '%s', %d)", $object['vid'], $object['term_display_style'], $object['term_display_weight']);
+          break;
+      }
+    }
+    if ($op == 'delete') {
+      db_query('DELETE FROM {term_display} WHERE vid = %d', $object['vid']);
+    }
+  }
+}
+
+/**
+ * Fetch term display data for a vocabulary or defaults if there are no registered data.
+ */
+function term_display_data($vid) {
+  static $term_display_data;
+
+  if (empty($term_display_data)) {
+    $result = db_query('SELECT vid, style, weight FROM {term_display}');
+    while ($vocabulary = db_fetch_array($result)) {
+      $term_display_data[$vocabulary['vid']] = $vocabulary;
+    }
+  }
+  if (isset($term_display_data[$vid])) {
+    return $term_display_data[$vid];
+  }
+  else {
+    return array(
+      'style' => TERM_DISPLAY_DEFAULT,
+      'weight' => 0,
+    );
+  }
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function term_display_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  switch ($op) {
+    case 'view':
+      if (isset($node->taxonomy)) {
+
+        $vocabularies = taxonomy_get_vocabularies($node->type);
+        foreach ($vocabularies as $vocabulary) {
+          $term_display_data = term_display_data($vocabulary->vid);
+          if ($term_display_data['style'] == TERM_DISPLAY_DEFAULT) {
+            continue;
+          }
+          $terms = array();
+          foreach ($node->taxonomy as $tid => $term) {
+            if ($term->vid == $vocabulary->vid) {
+              switch ($term_display_data['style']) {
+                case TERM_DISPLAY_LIST:
+                case TERM_DISPLAY_LOAD:
+                case TERM_DISPLAY_CUSTOM:
+                  $terms[$tid] = $term;
+                  // Fall through.
+                case TERM_DISPLAY_NONE:
+                  unset($node->taxonomy[$tid]);
+                  break;
+              }
+            }
+          }
+          if (!empty($terms)) {
+            if ($term_display_data['style'] != TERM_DISPLAY_LOAD) {
+              $node->content['term_display_'. $vocabulary->vid] = array(
+                '#weight' => $term_display_data['weight'],
+                '#value' => theme('term_display_'. $term_display_data['style'], $vocabulary, $terms),
+              );
+            }
+            else {
+              $node->term_display[$vocabulary->vid]['vocabulary_name'] = check_plain($vocabulary->name);
+              $node->term_display[$vocabulary->vid]['terms'] = $terms;
+            }
+          }
+        }
+      }
+      break;
+  }
+}
+
+/**
+ * Theme terms as a list.
+ */
+function theme_term_display_list($vocabulary, $terms) {
+  foreach($terms as $term) {
+    $term_links[] = l($term->name, taxonomy_term_path($term));
+  }
+ 
+  return theme('item_list', $term_links, check_plain($vocabulary->name), 'ul', array('class' => 'vocabulary-list'));    
+}
+
+/**
+ * Theme terms as a comma-separated list.
+ */
+function theme_term_display_custom($vocabulary, $terms) {
+  $links = array();
+  foreach($terms as $term) {
+    $links[] = l($term->name, taxonomy_term_path($term));
+  }
+  return '<h3 class="title">' . check_plain($vocabulary->name) .': '. implode(', ', $links) .'</h3>';
+
+}

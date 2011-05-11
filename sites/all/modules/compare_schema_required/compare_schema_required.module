@@ -1,0 +1,28 @@
+<?php
+
+/*
+ * Implementation of hook_menu for a callback to clear caches
+ */
+function compare_schema_required_menu(){
+  $items['flush_caches'] = array(
+    'page callback' => 'compare_schema_required_callback',
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('access content'),
+  );
+  return $items;
+}
+
+function compare_schema_required_callback() {
+  drupal_set_header('Content-Type: text/plain; charset=utf-8');
+  drupal_set_header('Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0');
+  drupal_set_header('Pragma: no-cache');
+  drupal_set_header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
+
+  $start = time();
+  drupal_flush_all_caches();
+  db_query("TRUNCATE TABLE {menu_router}");
+  menu_router_build(true);
+  $end = time();
+
+  echo t('Caches flushed for !site in !time seconds.', array('!site' => $_SERVER['HTTP_HOST'], '!time' => gmdate('s',$end-$start)));
+}

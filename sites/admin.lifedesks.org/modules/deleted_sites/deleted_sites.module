@@ -1,0 +1,114 @@
+<?php
+// $Id: deleted_sites.module,v 1.0 2009/05/04 12:50 vkudal Exp $
+
+ /**
+ * Menu items
+ */
+function deleted_sites_menu() {
+  $items['deleted_sites'] = array(
+    'title' => t('Deleted Sites'),
+    'page callback' => drupal_get_form,
+    'page arguments' => array('deleted_sites_form'),
+    'access arguments' => array('view deleted sites'),
+    'type' => MENU_NORMAL_ITEM,
+    'weight' => -20,
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm
+ */
+function deleted_sites_perm() {
+  return array(
+    'view deleted sites'
+  );
+}
+
+/**
+ * Implementation of hook_theme
+*/
+function deleted_sites_theme() {
+  return array(
+    'deleted_sites_form' => array(
+      'arguments' => array('form' => NULL),
+    ),
+  );
+}
+
+function deleted_sites_form(&$form_state) {
+  $module_path = drupal_get_path('module', 'deleted_sites') .'/';
+  drupal_add_css($module_path .'deleted_sites.css');
+
+  $header = array(
+    array('data' => t('Name'), 'field' => 'e.name'),
+    array('data' => t('Site Title'), 'field' => 'e.title'),
+    array('data' => t('Shortname'), 'field' => 'e.shortname'),
+    array('data' => t('Deleted on'), 'field' => 'e.deleted', 'sort' => 'desc'),
+    array('data' => t('Feedback'), 'field' => 'e.message')
+  );
+  $sql = db_rewrite_sql("
+    SELECT
+      e.id,
+      e.name,
+      e.email,
+      e.title,
+      e.shortname,
+      e.message,
+      e.deleted
+    FROM
+      {deleted_sites} e");
+  $sql .= tablesort_sql($header);
+  $query_count = "
+    SELECT
+      COUNT(DISTINCT e.id)
+    FROM
+      {deleted_sites} e";
+  $result = pager_query($sql, 25, 0, $query_count);
+  $requests = array();
+  while ($request = db_fetch_object($result)) {
+    $form['name'][$request->id] = array('#value' => l(check_plain($request->name),'mailto:' . check_plain($request->email), array('absolute' => TRUE)));
+    $form['title'][$request->id] = array('#value' => check_plain($request->title));
+	$form['shortname'][$request->id] = array('#value' => check_plain($request->shortname));
+    $form['deleted'][$request->id] = array('#value' => t(format_date($request->deleted, 'small')));
+    $form['feedback'][$request->id] = array('#value' => $request->message);
+    $form['pager'] = array('#value' => theme('pager', NULL, 50, 0));
+  }
+  return $form;
+}
+
+function theme_deleted_sites_form($form) {
+  $header = array(
+    array('data' => t('Name'), 'field' => 'e.name'),
+    array('data' => t('Site Title'), 'field' => 'e.title'),
+	array('data' => t('Shortname'), 'field' => 'e.shortname'),
+    array('data' => t('Deleted on'), 'field' => 'e.deleted', 'sort' => 'desc'),
+    array('data' => t('Message'), 'field' => 'e.message'),
+  );
+
+  if (isset($form['name']) && is_array($form['name'])) {
+    foreach (element_children($form['name']) as $key) {
+      $rows[] = array(
+        drupal_render($form['name'][$key]),
+        drupal_render($form['title'][$key]),
+        drupal_render($form['shortname'][$key]),
+        drupal_render($form['deleted'][$key]),
+        drupal_render($form['feedback'][$key]),
+      );
+    }
+  }
+  else {
+    $rows[] = array(array('data' => t('No one has deleted their LifeDesk yet.'), 'colspan' => '6'));
+  }
+
+  $output .= '<h2>LifeDesk: Deleted Sites</h2>';
+
+  $output .= theme('table', $header, $rows);
+  if ($form['pager']['#value']) {
+    $output .= drupal_render($form['pager']);
+  }
+
+  $output .= drupal_render($form);
+
+  return $output;
+}

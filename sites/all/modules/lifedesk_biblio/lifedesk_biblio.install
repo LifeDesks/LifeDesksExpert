@@ -1,0 +1,39 @@
+<?php
+
+function lifedesk_biblio_install() {
+}
+
+function lifedesk_biblio_uninstall() {
+}
+
+function lifedesk_biblio_update_6001() {
+  $result = array();
+  $dbresult = db_query('SELECT p.* FROM {permission} p');
+  while ($role = db_fetch_object($dbresult)) {
+    if (!strstr($role->perm, 'access biblio content')) {
+      $role->perm = 'access biblio content, ' . $role->perm;
+      $result[] = update_sql("UPDATE {permission} SET perm = '$role->perm' WHERE rid = $role->rid");
+    }
+  }
+  return $result;
+}
+
+function lifedesk_biblio_update_6002() {
+	$ret = array();
+	variable_set('biblio_style','apa');
+	variable_set('biblio_rss', 1);
+	return $ret;
+}
+
+function lifedesk_biblio_update_6003() {
+	$ret = array();
+	$ret[] = update_sql("UPDATE {system} SET weight = 98 WHERE name = 'lifedesk_biblio' and type = 'module'");
+	return $ret;
+}
+
+function lifedesk_biblio_update_6004() {
+	$ret = array();
+	variable_set('biblio_style','apa');
+	variable_set('biblio_rss', 1);
+	return $ret;
+}

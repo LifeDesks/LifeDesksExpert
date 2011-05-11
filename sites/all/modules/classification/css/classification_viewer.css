@@ -1,0 +1,30 @@
+.classification_tree_search {
+  margin: 5px;
+  position:absolute;
+  top:2px;
+  right:5px;
+  background:white;
+  text-align:left;
+  z-index:1001;
+}
+
+.classification_tree_search img {
+	vertical-align: middle;
+}
+
+/* IE 6 and 7 hacks to show search input and submit in classification browser block*/
+*:first-child+html .classification_tree_search { 
+  position: relative;
+  float: right;
+}
+* html .classification_tree_search {
+  position: relative;
+  float: right;
+  margin-right: -1px;
+}
+*:first-child+html .classification_tree_search img { 
+  margin: 0 0 2px 3px;
+}
+* html .classification_tree_search img {
+ margin: 0 0 2px 3px;
+}

@@ -1,0 +1,23 @@
+name = LifeDesk Alter
+description = "Adjusts forms and other elements from core and contributed modules"
+package = "LifeDesk"
+project = "lifedesk_alter"
+
+core = 6.x
+
+dependencies[] = biblio
+dependencies[] = classification
+dependencies[] = cmf
+dependencies[] = comment
+dependencies[] = creativecommons_lite
+dependencies[] = ctm
+dependencies[] = image
+dependencies[] = image_gallery
+dependencies[] = menu_admin_per_menu
+dependencies[] = php
+dependencies[] = piclens
+dependencies[] = taxon_description 
+dependencies[] = term_display
+dependencies[] = views
+
+version = "6.x-6221"

@@ -1,0 +1,10 @@
+name = LifeDesk Biblio
+description = "Modifications to the biblio module for presentation on LifeDesk"
+package = "LifeDesk"
+project = "lifedesk_biblio"
+
+dependencies[] = biblio
+
+core = 6.x
+
+version = "6.x-6004"

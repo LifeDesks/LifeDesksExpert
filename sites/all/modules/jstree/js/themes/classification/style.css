@@ -1,0 +1,50 @@
+/** CLEAN-UP DRUPAL STUFF **/
+li.leaf { list-style-type:none;background:none; }
+li.open { list-style-type:none;background:none; }
+/** DEFAULT THEME PART **/
+.tree-classification li { min-height:18px; line-height:18px; margin:0 0 0 0; padding:0 0 0 10px; list-style:none; list-style-image:none; background-position:7px 8px; background-repeat:no-repeat; background-image:url("li.gif");}
+.tree-classification li a, .tree-classification li span { background-image:none; margin: 0px 0px 0px 2px; padding:1px 4px 1px 4px; line-height:16px; height:16px; background-position:4px 1px;}
+.tree-classification .ltr li a, .tree-classification .rtl li a { background-image:none; padding:0 4px; }
+.tree-classification li a.hover, .tree-classification li a:hover { text-decoration:none; background-color:#BEEBFF; background-position:3px 0; border:1px solid #99DEFD; padding:0 3px; }
+.tree-classification li a.clicked, .tree-classification li a.clicked:hover, .tree-classification li span.clicked { text-decoration:none; background-color:#CCFFCC; background-position:3px 0; border:1px solid #008800; padding:0 3px; }
+.tree-classification li a.loading { background-image: none; }
+.tree-classification ul { background-position:6px 1px; background-repeat:repeat-y; background-image:url("dot.gif"); }
+.tree-classification li.last { background-position:5px top; background-repeat:no-repeat; background-image:url("lastli.gif"); }
+/* DOTS - RIGHT TO LEFT */
+.tree-classification .rtl, .tree-classification .rtl ul { background-position:right 1px; }
+.tree-classification .rtl li { background-position:right 8px; }
+.tree-classification .rtl li.last { background-image:url("lastli_rtl.gif"); background-position:right top; }
+/* NO DOTS */
+.tree-classification .no_dots, .tree-classification .no_dots ul { background:transparent; }
+.tree-classification .no_dots li.leaf { background-image:none; background-color:transparent; }
+/* OPEN or CLOSED */
+.tree-classification li.open { background:url("minus.gif") 2px 5px no-repeat; }
+.tree-classification li.closed, #jstree-dragged.tree-classification li li.open { background:url("plus.gif") 2px 5px no-repeat; }
+/* RIGHT TO LEFT */
+.tree-classification .rtl li { margin-right:1px; }
+.tree-classification .rtl li.last { margin-right:0; padding-right:16px; }
+.tree-classification .rtl li.open { background:url("minus.gif") right 6px no-repeat; margin-right:0; padding-right:16px; }
+.tree-classification .rtl li.closed, #jstree-dragged.tree-classification .rtl li li.open { background:url("plus.gif") right 4px no-repeat; margin-right:0; padding-right:16px; }
+
+/* INPUT FORM */
+.tree-classification li span.clicked input { background:white none repeat scroll 0 0; border:0px;display:inline-block;font-family:Arial;font-size:12px;height:12px !important;margin:0;padding:0px;width:225px;}
+
+/* COLORS FOR NAME VARIANTS */
+.tree-classification li.vernacular a { color:#228B22;font-style:normal;}
+.tree-classification li.synonym a { color: #FF0000;font-style:normal;}
+.tree-classification li.usage a { color: #FF0000;font-style:normal;}
+.tree-classification li.lexical a { color: #FF0000;font-style:normal;}
+.tree-classification li.disputed a { color: #FF0000;font-style:normal;}
+.tree-classification li.replaced a { color: #FF0000;font-style:normal;}
+.tree-classification li.basionym a { font-weight: bold;}
+.tree-classification li.homonym a { color: #FF0000;font-weight: bold;}
+.tree-classification li.spelling a { background: transparent url("underline.gif") repeat-x scroll center bottom ;-moz-background-clip: -moz-initial;-moz-background-origin: -moz-initial;-moz-background-inline-policy: -moz-initial;font-style:normal;}
+.tree-classification li.hascontent a { font-weight:bold; background-color:#FFFF00;}
+.tree-classification li.nocontent a { font-weight:normal; background-color:transparent; }
+.tree-classification li.nocontent a:hover { background-color:#BEEBFF; }
+
+/* CONTEXT MENU */
+.tree-classification-context { z-index: 5;}
+.tree-classification-context a:hover { background-color:#BEEBFF; }
+
+#jstree-dragged { font-size: 12px; }

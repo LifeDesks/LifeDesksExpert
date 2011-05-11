@@ -1,0 +1,220 @@
+<?php
+/* $Id:$ */
+
+/** 
+ * @file taxon_export.module
+ * This module is a configuration and export utility to produce the Encyclopedia of Life export transfer schema document
+ */
+
+/**
+ * Implementation of hook_help
+ */
+function taxon_export_help($path, $arg) {
+  switch($path) {
+   case 'help#taxon_export':
+     $output = t('The Taxon Export module produces a content partner export for consumption by the Encyclopedia of Life as is done for all content partners.');
+     return $output;
+  }
+}
+
+/**
+ * Implementation of hook_perm
+ */
+function taxon_export_perm() {
+  return array(
+    'export taxon content',
+  );
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function taxon_export_theme() {
+  return array(
+    'taxon_export_settings_form' => array(
+      'arguments' => array('form' => NULL),
+    ),
+    'taxon_export_biblio_entry' => array(
+      'file' => 'taxon_export.export.inc',
+      'arguments' => array(
+      'node',
+      'base' => 'biblio',
+      'style_name' => 'apa',
+      'inline' => FALSE),
+    ),
+  );
+}
+
+ /**
+ * Menu items
+ */
+function taxon_export_menu() {
+  $items['admin/export/taxon_export'] = array(
+    'title' => t('EOL Partnership'),
+    'description' => t('Become a content partner to the Encyclopedia of Life.'),
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'taxon_export_block_page',
+    'access arguments' => array('export taxon content'),
+    'file' => 'taxon_export.default.inc',
+  );
+
+  $items['admin/export/taxon_export/chapters'] = array(
+    'title' => t('Chapter Definitions'),
+    'description' => t('Read definitions for chapters according to the Species Profile Model, a standard under development by ') . l('Biodiversity Information Standards (TDWG)','http://www.tdwg.org/', array('absolute' => TRUE)) . '.',
+    'page callback' => 'taxon_export_chapters',
+    'access arguments' => array('export taxon content'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'taxon_export.chapters.inc',
+    'weight' => 1,
+  );
+  $items['admin/export/taxon_export/settings'] = array(
+    'title' => t('Map Chapters'),
+    'description' => t('Map your chapter headings to the Species Profile Model.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('taxon_export_settings_form'),
+    'access arguments' => array('export taxon content'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'taxon_export.settings.inc',
+    'weight' => 2,
+  );
+  $items['admin/export/taxon_export/export'] = array(
+    'title' => t('Make Endpoint'),
+    'description' => t('Produce your site\'s content partner endpoint for harvesting by the Encyclopedia of Life. You may also download past versions of this file.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('taxon_export_export_form'),
+    'access arguments' => array('export taxon content'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'taxon_export.export.inc',
+    'weight' => 3,
+  );
+  $items['admin/export/taxon_export/schedule'] = array(
+    'title' => t('Schedule'),
+    'description' => t('Set it and forget it: Enable and schedule automatic production of your site\'s content partner endpoint for harvesting by the Encyclopedia of Life.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('taxon_export_schedule'),
+    'access arguments' => array('export taxon content'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'taxon_export.schedule.inc',
+    'weight' => 4,
+  );
+  $items['eol-partnership.xml.gz'] = array(
+    'title' => 'image',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+    'page callback' => 'taxon_export_fetch',
+  );
+       
+  return $items;
+
+}
+
+/**
+ * Implementation of hook_requirements().
+ */
+function taxon_export_requirements($phase) {
+  $requirements = array();
+
+  if ($phase == 'runtime') {
+
+    // File paths
+    $taxon_export_path = file_create_path(rtrim(variable_get('taxon_export_default_path', 'taxon_export')));
+    $temp_path = rtrim($taxon_export_path, '/') .'/temp';
+    if (!file_check_directory($taxon_export_path, FILE_CREATE_DIRECTORY)) {
+      $requirements['taxon_export_dir'] = array(
+        'value' => t('Missing directory'),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => t("The taxon export module's directory %taxon_export-dir is missing.", array('%taxon_export-dir' => $taxon_export_path)),
+      );
+    }
+    else if (!file_check_directory($temp_path, FILE_CREATE_DIRECTORY)) {
+      $requirements['taxon_export_dir'] = array(
+        'value' => t('Missing temp directory'),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => t("The taxon export module's temp directory %temp-dir is missing.", array('%temp-dir' => $temp_path)),
+      );
+    }
+    else {
+      $requirements['taxon_export_dir'] = array(
+        'value' => t('Exists (%path)', array('%path' => $taxion_export_path)),
+        'severity' => REQUIREMENT_OK,
+      );
+    }
+    $requirements['taxon_export_dir']['title'] = t('Taxon export module directory');
+  }
+
+  return $requirements;
+}
+
+/**
+ * Implementation of hook_cron()
+ */
+function taxon_export_cron() {
+  if (variable_get('taxon_export_cron_enable', 0) == 1) {
+	// Calculate when the next taxon_export_cron run is due
+	$lastrun = variable_get('taxon_export_cron_lastrun', 0);
+	$interval = variable_get('taxon_export_cron_interval', 7);
+	$nextrun = $lastrun + (24 * 60 * 60 * $interval); // days
+
+	// If the configured time has passed, start the next taxon_export_cron run
+	if (time() > $nextrun) {
+		variable_set('taxon_export_cron_lastrun', time());
+		module_load_include('inc', 'taxon_export', 'taxon_export.export');
+		if(taxon_export_unmapped_chapter_check()) {
+	      return;	
+	    }
+	    else {
+		    $out = taxon_export_eol_export();	
+		    taxon_export_make_file($out,false);
+	    }
+	}
+  }
+
+  //delete old, unnecessary files from server
+  $xml_files_array = file_scan_directory(file_create_path('taxon_export'), '.gz');
+
+  //add the created date to the object so we delete the old ones and not the new ones
+  foreach($xml_files_array as $file) {
+	$file->created = filemtime($file->filename);
+  }
+
+  uasort($xml_files_array, '_taxon_export_sort_created');
+
+  $max_files = variable_get('taxon_export_max_files',10);
+  $max_files++;
+
+  $file_chunks = array_chunk($xml_files_array,$max_files,true);
+  if($file_chunks[1]) {
+    foreach($file_chunks[1] as $file) {
+      if(!preg_match('/last/',$file->filename)) {
+        file_delete($file->filename);
+      }
+    }
+  }
+
+}
+
+/**
+ * Helper function to sort the array of taxon export files
+ */
+function _taxon_export_sort_created($a,$b) {
+  return $b->created-$a->created;
+}
+
+function taxon_export_fetch() {
+
+  $export_path = file_create_path('taxon_export');
+  $file_name = variable_get('shortname','LifeDesk') . '_last_taxonexport.xml.gz';
+  $file_path = rtrim($export_path, '/') .'/' . $file_name;
+
+  $headers = array(
+    'Content-Type: application/x-gzip'
+     );
+
+  if(file_exists($file_path)) {
+	  file_transfer($file_path, $headers);
+  }
+  else {
+    drupal_not_found();
+  }
+
+}

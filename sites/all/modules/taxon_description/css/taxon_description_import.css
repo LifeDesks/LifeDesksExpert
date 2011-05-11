@@ -1,0 +1,42 @@
+.messages .display {
+  border: 1px solid #F0F0F0;
+  background-color:#E0E0E0;
+}
+
+div.taxon-description-content {
+	border-bottom:2px solid #959595;
+	margin-bottom:15px;
+	padding-bottom:5px;
+}
+
+h4.taxon-description-chapter-heading {
+	margin:2px 0px 3px 10px;
+}
+
+div.taxon-description-chapter-content {
+	margin-left:20px;
+}
+
+div.taxon-description-chapter-authors {
+	text-align:right;
+}
+
+div.taxon-description-chapter-content p {
+	margin-top:0px;
+}
+
+div.taxon-description-chapter-extra {
+	text-align:right;
+}
+
+div.taxon-description-chapter-extra span {
+	margin-left:10px;
+}
+
+div.taxon-description-chapter-extra span.Published {
+  color:green;	
+}
+
+div.taxon-description-chapter-extra span.Draft {
+  color:red;	
+}

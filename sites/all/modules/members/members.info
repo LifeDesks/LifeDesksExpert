@@ -1,0 +1,10 @@
+name = Members List
+description = "A list and an image gallery of members."
+package = "LifeDesk"
+project = "members"
+
+dependencies[] = modify_account
+
+core = 6.x
+
+version = "6.x-1.0"

@@ -1,0 +1,32 @@
+#lifedesk-stats-download-email {
+  text-align:right;
+}
+
+#lifedesk-stats-download-email a {
+	background:none;
+	line-height: 20px;
+	height: 20px;
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	outline: none;
+	padding: 1px 5px;
+	padding-left: 26px;
+	background-image: url(../images/email_go.png);
+}
+
+#lifedesk-stats-download-stats {
+  margin-bottom: 10px;
+  text-align:right;
+}
+
+#lifedesk-stats-download-stats a {
+	background:none;
+	line-height: 20px;
+	height: 20px;
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	outline: none;
+	padding: 1px 5px;
+	padding-left: 26px;
+	background-image: url(../images/chart_curve_go.png);
+}

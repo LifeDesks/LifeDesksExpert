@@ -1,0 +1,1614 @@
+<?php
+
+include_once('includes/locale.inc');
+
+/**
+ * Implementation of hook_perm
+ */
+function compare_schema_perm() {
+  return array(
+    'adjust schema',
+    'receive support password',
+    'add languages'
+  );
+}
+
+/**
+ * Implementation of hook_menu
+ */
+function compare_schema_menu() {
+  $items['supportpass'] = array(
+    'title' => t('Support Password'),
+    'description' => t('Receive the LifeDesk support password via email'),
+    'weight' => -5,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('compare_schema_supportpass_form'),
+    'access arguments' => array('receive support password'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $items['admin/multisite'] = array(
+    'title' => t('Multisite Management'),
+    'description' => t('Set sites offline, adjust their schema, and set sites back online'),
+    'weight' => -20,
+    'page callback' => 'compare_schema_block_page',
+    'access arguments' => array('adjust schema')
+  );
+  $items['admin/multisite/sitelist'] = array(
+    'title' => t('Site status'),
+    'description' => t('View active sessions, module status, and configure listing in gallery'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('compare_schema_sitelist_form'),
+    'access arguments' => array('adjust schema'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['admin/multisite/themelist'] = array(
+    'title' => t('Theme status'),
+    'description' => t('View sites that have made adjustment to their theme'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('compare_schema_themelist_form'),
+    'access arguments' => array('adjust schema'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['admin/multisite/themelist_download'] = array(
+    'page callback' => 'compare_schema_themelist_download',
+    'access arguments' => array('adjust schema'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['admin/settings/drupal_site_theme'] = array(
+    'title' => 'LifeDesk Theme Selection',
+    'description' => 'Choose the theme each LifeDesk site is set to',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('compare_schema_themelist_settings'),
+    'access arguments' => array('adjust schema'),
+  );
+  $items['admin/multisite/update_gallery'] = array(
+    'page callback' => 'compare_schema_update_gallery',
+    'access arguments' => array('adjust schema'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['admin/multisite/updatesites'] = array(
+    'title' => t('Update All Sites'),
+    'description' => t('Compare schema across all sites and update all of them.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('compare_schema_updatesites_form',2),
+    'access arguments' => array('adjust schema'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $items['admin/multisite/supportpass'] = array(
+    'title' => t('Change Support Password'),
+    'description' => t('Change the support password across all LifeDesk sites.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('compare_schema_supportpass_admin_form'),
+    'access arguments' => array('adjust schema'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $items['admin/multisite/variables'] = array(
+    'title' => t('Set & Delete Variables'),
+    'description' => t('Set and delete variables across all sites as needed outside the context of an update.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('compare_schema_variable_set_form'),
+    'access arguments' => array('adjust schema'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $items['admin/multisite/variables/setvariable'] = array(
+    'title' => t('Set variable'),
+    'description' => t('Set a variable across all sites'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => 0
+  );
+
+  $items['admin/multisite/variables/deletevariable'] = array(
+    'title' => t('Delete variable'),
+    'description' => t('Delete a variable across all sites'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('compare_schema_variable_delete_form'),
+    'access arguments' => array('adjust schema'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 1,
+  );
+
+  $items['flush_cache'] = array(
+    'title' => t('Flush Child Site Caches'),
+    'description' => t('Flushes caches of a child site'),
+    'access arguments' => array('access content'),
+    'page callback' => 'compare_schema_flush_cache',
+    'type' => MENU_CALLBACK,
+  );
+  
+  $items['admin/multisite/languages'] = array(
+    'title' => t('Add/Import Languages'),
+    'description' => t('Add/Import languages across all LifeDesk sites.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('compare_schema_languages_form'),
+    'access arguments' => array('add languages'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_theme
+*/
+function compare_schema_theme() {
+  return array(
+    'compare_schema_sitelist_form' => array(
+      'arguments' => array('form' => NULL),
+    ),
+    'compare_schema_themelist_form' => array(
+      'arguments' => array('form' => NULL),
+    ),
+  );
+}
+
+function compare_schema_block_page() {
+  $item = menu_get_item();
+  $content = system_admin_menu_block($item);
+
+  if (system_admin_compact_mode()) {
+    $output .= '<ul class="menu">';
+    foreach ($content as $item) {
+      $output .= '<li class="leaf">'. l($item['title'], $item['href'], $item['localized_options']) .'</li>';
+    }
+    $output .= '</ul>';
+  }
+  else {
+    $output .= '<dl class="admin-list">';
+    foreach ($content as $item) {
+      $output .= '<dt>'. l($item['title'], $item['href'], $item['localized_options']) .'</dt>';
+      $output .= '<dd>'. $item['description'] .'</dd>';
+    }
+    $output .= '</dl>';
+  }
+
+  return $output;
+}
+
+function compare_schema_offline_form(&$form_state) {
+  $form['status'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Multisite Status'),
+    '#description' => t('Set all sites offline or online as needed'),
+  );
+
+  if(variable_get('sites_offline',0)) {
+    $message = '<div class="messages warning">' . t('All sites are now offline') . '</div>';
+  }
+  else {
+    $message = '<div class="messages status">' . t('All sites are now online') . '</div>';
+  }
+
+  $form['status']['status'] = array(
+    '#type' => 'markup',
+    '#value' => $message,
+  );
+
+  $form['status']['offline'] = array(
+    '#type' => 'submit',
+    '#value' => t('Set All Offline'),
+  );
+
+  $form['status']['online'] = array(
+    '#type' => 'submit',
+    '#value' => t('Set All Online'),
+  );
+
+  return $form;
+}
+
+function compare_schema_offline_form_submit($form, &$form_state) {
+  $op = $form_state['values']['op'];
+  switch($op) {
+    case t('Set All Offline'):
+      compare_schema_setoffline_all();
+    break;
+
+    case t('Set All Online'):
+      compare_schema_setonline_all();
+    break;
+  }
+}
+
+/**
+ * Implementation of hook_form
+ */
+function compare_schema_themelist_form(&$form_state) {
+	global $base_url;
+
+    $url = parse_url($base_url);
+    $host = explode('.',$url['host'],2);
+
+	$site_theme = variable_get("compare_schema_drupal_site_theme", "expert");
+
+    $header = array(
+      array('data' => t('Site Title'), 'field' => 'n.title'),
+      array('data' => t('URL'), 'field' => 'ds.shortname'),
+      array('data' => t('Default Logo')),
+      array('data' => t('Title Retained')),
+      array('data' => t('Color')),
+    );
+
+	$sql = "SELECT n.nid, n.title, ds.shortname FROM {node} n INNER JOIN {drupal_site} ds ON (n.nid = ds.nid)";
+	$sql .= tablesort_sql($header);
+
+    $query_count = '
+      SELECT
+        COUNT(DISTINCT n.nid)
+      FROM
+        {node} n
+      WHERE n.type = "drupal_site"';
+
+    $result = pager_query($sql, 25, 0, $query_count);
+
+	while($drupal_site = db_fetch_object($result)) {
+	  $theme_settings = array();
+	  $color_settings = array();
+	
+	  //switch the connection to the child site
+	  $switch_db = db_switch($drupal_site->shortname);
+	
+	  //get the theme settings
+	  $theme_settings = db_switch_variable_get("theme_" . $site_theme . "_settings", array());
+      $color_settings = db_switch_variable_get("color_" . $site_theme . "_palette", array());
+	  //switch the connection back
+	  $switch_db = db_switch();
+
+      $form['site_name'][$drupal_site->nid] = array('#value' => $drupal_site->title);
+      $form['site_url'][$drupal_site->nid] = array('#value' => l('http://' . $drupal_site->shortname . '.' . $host[1], 'http://' . $drupal_site->shortname . '.' . $host[1], array('absolute' => TRUE, 'attributes' => array('target' => '_blank'))));
+
+      $default_logo = ($theme_settings['default_logo'] == 0) ? 'no' : 'yes';
+      $toggle_name = ($theme_settings['toggle_name'] == 0) ? 'no' : 'yes';
+      $color = ($color_settings) ? 'yes' : 'no';
+
+      $form['default_logo'][$drupal_site->nid] = array('#value' => $default_logo);
+      $form['toggle_name'][$drupal_site->nid] = array('#value' => $toggle_name);
+      $form['color'][$drupal_site->nid] = array('#value' => $color);
+	}
+	
+	return $form;
+}
+
+/**
+ * Theme themelist form.
+ */
+function theme_compare_schema_themelist_form($form) {
+
+  $module_path = drupal_get_path('module', 'compare_schema') .'/';
+
+  drupal_add_css($module_path .'css/compare_schema.css');
+	
+  $header = array(
+    array('data' => t('Site Title'), 'field' => 'n.title'),
+    array('data' => t('URL'), 'field' => 'ds.shortname'),
+    array('data' => t('Default Logo')),
+    array('data' => t('Title Retained')),
+    array('data' => t('Custom Color')),
+  );
+
+  if (isset($form['site_name']) && is_array($form['site_name'])) {
+    foreach (element_children($form['site_name']) as $key) {
+      $rows[] = array(
+        drupal_render($form['site_name'][$key]),
+        drupal_render($form['site_url'][$key]),
+        drupal_render($form['default_logo'][$key]),
+        drupal_render($form['toggle_name'][$key]),
+        drupal_render($form['color'][$key])
+      );
+    }
+  }
+  else {
+    $rows[] = array(array('data' => t('No sites created.'), 'colspan' => '5'));
+  }
+
+  $output = '<div id="compare-schema-themelist-download">' . l(t('Download Theme Settings'), 'admin/multisite/themelist_download') . '</div>';
+
+  $output .= theme('table', $header, $rows);
+
+  return $output;
+}
+
+function compare_schema_themelist_settings() {
+
+  $form['compare_schema_drupal_site_theme'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Theme of all Child LifeDesk sites'),
+    '#description' => t('Insert the theme all child LifeDesk sites use'),
+    '#default_value' => variable_get('compare_schema_drupal_site_theme', 'expert'),
+    '#required' => true,
+  );
+
+  return system_settings_form($form);
+}
+
+/**
+ * Download callback for sites' theme settings
+ */
+function compare_schema_themelist_download() {
+	  global $conf;
+	
+	  $site_theme = variable_get("compare_schema_drupal_site_theme", "expert");
+
+	  header('Content-Type: text/tab-separated-values');
+	  $domain = $conf['_lifedesks_domain'];
+	  $filename = 'lifedesk_themes_'.gmdate("Ymd_Gi").'.txt';
+
+      $output .= t("nid") . "\t"; 
+      $output .= t('Site') . "\t";
+      $output .= t('URL') . "\t";
+      $output .= t('Default Logo') . "\t";
+      $output .= t('Title Retained') . "\t";
+      $output .= t('Custom Color') . "\t";
+
+      $output .= "\n";
+
+	  $sql = db_query("SELECT n.nid, n.title, ds.shortname FROM {node} n INNER JOIN {drupal_site} ds ON (n.nid = ds.nid)");
+
+	  while($result = db_fetch_object($sql)) {
+		
+		$theme_settings = array();
+		$color_settings = array();
+
+		//switch the connection to the child site
+		$switch_db = db_switch($result->shortname);
+
+		//get the theme settings
+		$theme_settings = db_switch_variable_get("theme_" . $site_theme . "_settings", array());
+	    $color_settings = db_switch_variable_get("color_" . $site_theme . "_palette", array());
+		//switch the connection back
+		$switch_db = db_switch();
+
+		$default_logo = ($theme_settings['default_logo'] == 0) ? 'no' : 'yes';
+		$toggle_name = ($theme_settings['toggle_name'] == 0) ? 'no' : 'yes';
+		$color = ($color_settings) ? 'yes' : 'no';
+
+		$output .= $result->nid . "\t";
+		$output .= $result->title . "\t";
+		$output .= 'http://' . $result->shortname . '.' . $conf['_lifedesks_domain'] . "\t";
+		$output .= $default_logo . "\t";
+		$output .= $toggle_name . "\t";
+		$output .= $color . "\n";
+	  }
+
+      header('Content-Disposition: attachment; filename='.$filename);
+      echo $output;
+}
+
+/**
+ * Implementation of hook_form
+*/
+function compare_schema_sitelist_form(&$form_state) {
+
+  require_once './includes/install.inc';
+
+  global $base_url;
+
+  $url = parse_url($base_url);
+  $host = explode('.',$url['host'],2);
+
+  $module_path = drupal_get_path('module', 'compare_schema') .'/';
+  drupal_add_css($module_path .'css/compare_schema.css');
+  drupal_add_js($module_path . 'js/compare_schema.js');
+
+  $header = array(
+    array(),
+    array('data' => t('Site'), 'field' => 'n.title'),
+    array('data' => t('Subdomain'), 'field' => 'ds.shortname'),
+    array('data' => t('Created') , 'field' => 'n.created', 'sort' => 'asc'),
+    array('data' => t('Active Sessions')),
+    array('data' => t('Module Status')),
+    array('data' => t('In Gallery'), 'field' => 'ds.display'),
+  );
+
+  $sql = '
+    SELECT
+      ds.shortname, ds.display, n.nid, n.title, n.created
+    FROM
+      {drupal_site} ds
+    JOIN
+      {node} n ON ds.nid = n.nid';
+  $sql .= tablesort_sql($header);
+
+  $query_count = '
+    SELECT
+      COUNT(DISTINCT n.nid)
+    FROM
+      {node} n
+    WHERE n.type = "drupal_site"';
+
+  $result = pager_query($sql, 25, 0, $query_count);
+
+  $drupal_sites = array();
+  while ($drupal_site = db_fetch_object($result)) {
+    //switch the connection to the child site
+    $switch_db = db_switch($drupal_site->shortname);
+
+    //get numbers of online users
+    $interval = time() - variable_get('user_block_seconds_online', 900);
+    $authenticated_users = db_query('SELECT DISTINCT u.uid, s.timestamp FROM {users} u INNER JOIN {sessions} s ON u.uid = s.uid WHERE s.timestamp >= %d AND s.uid > 0 ORDER BY s.timestamp DESC', $interval);
+    $authenticated_count = 0;
+    $max_users = variable_get('user_block_max_list_count', 10);
+    $items = array();
+    while ($account = db_fetch_object($authenticated_users)) {
+      $authenticated_count++;
+    }
+
+    module_rebuild_cache();
+
+    if (db_table_exists('cache_update')) {
+      cache_clear_all('*', 'cache_update', TRUE);
+    }
+
+    drupal_load_updates();
+
+    $need_update = FALSE;
+    $modules = drupal_get_installed_schema_version(NULL, TRUE, TRUE);
+    foreach ($modules as $module => $schema_version) {
+      $updates = drupal_get_schema_versions($module);
+      if (!_compare_schema_check_incompatibility($module) && $updates !== FALSE && $schema_version >= 0) {
+        $updates = drupal_map_assoc($updates);
+        $default = $schema_version;
+        foreach (array_keys($updates) as $update) {
+          if ($update > $schema_version) {
+            $need_update = TRUE;
+            break;
+          }
+        }
+      }
+    }
+
+    //switch the connection back to default
+    $switch_db = db_switch();
+
+    $drupal_sites[$drupal_site->nid] = '';
+    $form['site_name'][$drupal_site->nid] = array('#value' => l($drupal_site->title, 'http://' . $drupal_site->shortname . '.' . $host[1], array('absolute' => TRUE, 'attributes' => array('target' => '_blank'))));
+    $form['subdomain'][$drupal_site->nid] = array('#value' => $drupal_site->shortname);
+    $form['created'][$drupal_site->nid] = array('#value' => gmdate(DATE_W3C, $drupal_site->created));
+    $form['sessions'][$drupal_site->nid] = array('#value' => $authenticated_count == 0 ? '<span id="compare_schema_sessions_'.$drupal_site->nid.'" style="color:green">' . $authenticated_count . '</span>' : '<span id="compare_schema_sessions_'.$drupal_site->nid.'" style="color:red;font-weight:bold;">' . $authenticated_count . '</span>');
+    $form['schema_status'][$drupal_site->nid] =  array('#value' => $need_update ? '<span style="color:red;font-weight:bold;" id="compare_schema_update_status_'.$drupal_site->nid.'">' . t('needs update') . '</span>': '<span style="color:green" id="compare_schema_update_status_'.$drupal_site->nid.'">' . t('up to date') . '</span>');
+    $gallery = ($drupal_site->display == 1) ? t('yes') : t('no');
+    $form['gallery'][$drupal_site->nid] = array('#value' => '<span class="compare_schema_gallery compare_schema_gallery_nid_'.$drupal_site->nid.'"><a href="#" onclick="updateGallery('.$drupal_site->nid.');return false">' . $gallery  . '</a></span>');
+  }
+
+  $form['pager'] = array('#value' => theme('pager', NULL, 25, 0));
+
+  return $form;
+
+}
+
+/**
+ * Theme schema comparison.
+ */
+function theme_compare_schema_sitelist_form($form) {
+  $header = array(
+    array('data' => t('Site'), 'field' => 'n.title'),
+    array('data' => t('Subdomain'), 'field' => 'ds.shortname'),
+    array('data' => t('Created') , 'field' => 'n.created', 'sort' => 'asc'),
+    array('data' => t('Active Sessions')),
+    array('data' => t('Module Status')),
+    array('data' => t('In Gallery'), 'field' => 'ds.display'),
+  );
+
+  if (isset($form['site_name']) && is_array($form['site_name'])) {
+    foreach (element_children($form['site_name']) as $key) {
+      $rows[] = array(
+        drupal_render($form['site_name'][$key]),
+        drupal_render($form['subdomain'][$key]),
+        drupal_render($form['created'][$key]),
+        drupal_render($form['sessions'][$key]),
+        drupal_render($form['schema_status'][$key]),
+        drupal_render($form['gallery'][$key])
+      );
+    }
+  }
+  else {
+    $rows[] = array(array('data' => t('No sites created.'), 'colspan' => '6'));
+  }
+
+  $output .= '<div id="compare_schema_update_messages"></div>';
+
+  $output .= theme('table', $header, $rows);
+  if ($form['pager']['#value']) {
+    $output .= drupal_render($form['pager']);
+  }
+
+  $output .= drupal_render($form);
+
+  return $output;
+}
+
+/**
+ * Implementation of hook_form
+ */
+function compare_schema_updatesites_form(&$form_state, $sites) {
+
+  global $base_url;
+  if(!strstr($base_url,"int")){
+    $options = array(
+        'expert' => t('All Expert Lifedesks'),
+      );
+  } else {
+    $options = array(
+        'expert' => t('All Expert Lifedesks'),
+        'partner' => t('Content Partner sites'),
+      );
+  }
+
+  $form['compare_schema']['sites'] = array(
+    '#type' => 'radios',
+    '#title' => 'Select sites to update',
+    '#options' => $options,
+    '#default_value' => 'expert',
+  );
+
+  $form['compare_schema']['updates'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Update Sites'),
+    '#description' => t('Select actions below to execute across all sites')
+  );
+
+  $form['compare_schema']['updates']['message'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Announcement'),
+    '#description' => t('Set or clear a persistent message on all sites. FAST FLUSH SHOULD BE EXECUTED.'),
+    '#default_value' => variable_get('lifedesk_announcements',''),
+  );
+
+  $form['compare_schema']['updates']['version'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Version'),
+    '#description' => t('Set the version number for the release on all sites. FAST FLUSH SHOULD BE EXECUTED.'),
+    '#default_value' => variable_get('lifedesk_version', 'x'),
+  );
+
+  $form['compare_schema']['updates']['dropsessions'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Drop Sessions'),
+    '#description' => t('Drops active sessions across all sites.'),
+    '#default_value' => FALSE
+  );
+
+  $form['compare_schema']['updates']['apachesolr'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Rebuild Apache Solr indices'),
+    '#description' => t('Flush and rebuild all Apache Solr indices across all sites'),
+    '#default_value' => FALSE,
+  );
+
+  $form['compare_schema']['updates']['setoffline'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Set Offline'),
+    '#description' => t('Sets all sites offline.'),
+    '#default_value' => FALSE
+  );
+
+  $form['compare_schema']['updates']['backuprestore'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Backup and Restore Databases'),
+    '#description' => t('Saves backup of each site before running updates and restores if required(i.e. if update fails), respectively.'),
+    '#default_value' => FALSE
+  );
+
+  $form['compare_schema']['updates']['runupdates'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Run Updates'),
+    '#description' => t('Runs updates across all sites.'),
+    '#default_value' => FALSE
+  );
+
+  $form['compare_schema']['updates']['setonline'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Set Online'),
+    '#description' => t('Sets all sites online.'),
+    '#default_value' => FALSE
+  );
+
+  $form['compare_schema']['updates']['flushcaches'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Flush Caches'),
+    '#description' => t('A low level cache flush across all sites.'),
+    '#default_value' => FALSE
+  );
+
+  $form['compare_schema']['updates']['fastflush'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Fast Flush Caches'),
+    '#description' => t('A rapid cache flush to be used only with minor code releases (<em>i.e.</em> no new modules, no update hooks, or no adjustments to the menu structure)'),
+    '#default_value' => TRUE
+  );
+
+  $form['compare_schema']['updates']['updateall'] = array(
+    '#type' => 'submit',
+    '#value' => t('Update All')
+  );
+
+  return $form;
+}
+
+function compare_schema_updatesites_form_submit($form, &$form_state) {
+
+  global $base_url,$fh;
+  $date = time();
+  $backupdir = "UpdatesBackup". format_date($date,"custom","Y-m-d");
+  $backup_dir = getcwd()."/files/Update_Sites";
+  if (!file_exists($backup_dir)){
+    mkdir($backup_dir);
+  }
+  $backup = $backup_dir . "/" . $backupdir;
+  if (!file_exists($backup)){
+    mkdir($backup);
+  }
+
+  $logfile = "Update_Sites" . format_date($date,"custom","Y-m-d-H-i-s") . ".log";
+  $myFile = $backup . "/" . $logfile;
+  $fh = fopen($myFile, 'a');
+  $update_all_start = microtime(true);
+  //Set the variable max_execution_time in php.ini to 2 minutes per lifedesk to execute the updates
+  $result = NULL;
+  $sitecount = 0;
+  $partner_sites = array();
+  $sites = $form_state['values']['sites'];
+  if($sites == 'expert') {
+    $sitecount = db_result(db_query('SELECT count(ds.shortname) FROM {drupal_site} ds WHERE ds.profile = "expert"'));
+    $result = db_query('SELECT ds.shortname, ds.profile FROM {drupal_site} ds WHERE ds.profile = "expert"');
+  } elseif($sites == 'partner') {
+    $partners = db_query("SELECT ds.shortname, ds.stats FROM {drupal_site} ds");
+    while ($partner = db_fetch_array($partners)){
+      $stats = unserialize($partner['stats']);
+      if($stats['content_partner_file']){
+        $partner_sites[$sitecount] = $partner['shortname'];
+        $sitecount++;
+  }
+    }
+    $result = db_query('SELECT ds.shortname, ds.profile FROM {drupal_site} ds WHERE ds.profile = "expert"');
+  }
+  $max_exec_time = 120 * $sitecount;
+  ini_set('max_execution_time', $max_exec_time);
+  fwrite($fh, "max_execution_time variable in php.ini is set to " . ini_get('max_execution_time') . "\n\n");
+  fwrite($fh, "---------------------------------------------\n");
+
+  //set variable in admindb for message so we know what it is
+  $message = variable_get('lifedesk_announcements','x');
+  variable_set('lifedesk_announcements',$form_state['values']['message']);
+
+  //set variable in admindb for version so we know what it is
+  $version = variable_get('lifedesk_version', 'x');
+  variable_set('lifedesk_version',$form_state['values']['version']);
+
+  //get all the shortnames as an array
+  $drupal_sites = array();
+  while($drupal_site = db_fetch_object($result)) {
+    $drupal_sites[] = array(
+	  'shortname' => $drupal_site->shortname,
+	  'profile' => $drupal_site->profile,
+	);
+  }
+
+  foreach($drupal_sites as $drupal_site) {
+
+    if($partner_sites){
+        if(!in_array($drupal_site['shortname'],$partner_sites)){
+          continue;
+        }
+    }
+
+     //switch the connection to the child site
+    $switch_db = db_switch($drupal_site['shortname']);
+
+    $site_update_start = microtime(true);
+
+    //Set message across all sites (empty content clears content of variable)
+    compare_schema_message_all($fh,$form_state['values']['message'],$drupal_site['shortname'], $message);
+
+    //Set version across all sites (empty content clears content of variable)
+    compare_schema_version_all($fh, $form_state['values']['version'], $drupal_site['shortname'], $version);
+
+    //Drop sessions across all sites
+    if($form_state['values']['dropsessions']==1){
+      compare_schema_dropsessions_all($fh,$drupal_site['shortname']);
+    }
+
+    //Update Apache Solr indices
+    if($form_state['values']['apachesolr']==1) {
+	  compare_schema_apachesolr_all($fh, $drupal_site['shortname']);
+    }
+
+    //Set all sites offline
+    if($form_state['values']['setoffline']==1){
+      compare_schema_setoffline_all($fh, $drupal_site['shortname']);
+    }
+
+    //Update all sites
+    if($form_state['values']['runupdates']==1){
+      compare_schema_update_all($fh, $form_state['values']['backuprestore'], $drupal_site['shortname']);
+    }
+
+    //Set all sites online
+    if($form_state['values']['setonline']==1){
+      compare_schema_setonline_all($fh, $drupal_site['shortname']);
+    }
+
+    //Fast cache flush
+    if($form_state['values']['fastflush']==1) {
+	  compare_schema_flushcaches_fast_all($fh, $drupal_site['shortname']);
+    }
+
+    $site_update_duration = microtime(true) - $site_update_start;
+
+    fwrite($fh, "Updating site ".$drupal_site['shortname']." completed in ".$site_update_duration." seconds.\n");
+    fwrite($fh, "---------------------------------------------\n\n");
+
+    //switch the connection back
+    $switch_db = db_switch();
+
+  }
+
+  //update the version number in the help LifeDesk site
+  $switch_db = db_switch('help');
+  compare_schema_version_all($fh, $form_state['values']['version'], 'help', $version);
+  $switch_db = db_switch();
+
+  //flush the caches once everything else done
+  if($form_state['values']['flushcaches']==1){
+    include_once 'MultiCurl.class.php';
+
+    $url = parse_url($base_url);
+    $host = explode('.',$url['host'],2);
+    $host = $host[1];
+
+	class MyMultiCurl extends MultiCurl {
+	  protected function onLoad($url, $content, $info) {
+		if($info['http_code'] == 200) {
+		  compare_schema_write_message($url . "\t.....success.\n");
+		}
+	    else {
+		  compare_schema_write_message($url . "\t.....FAILED!\n");
+	    }
+	  }
+	}
+
+	try {
+	  $mc = new MyMultiCurl();
+	  $mc->setMaxSessions(5); // 20 parallel sessions
+	  $mc->setMaxSize(102400); // limit 10 Mb per session
+	  foreach($drupal_sites as $drupal_site) {
+            $shortname = $drupal_site['shortname'];
+	    $mc->addUrl('http://' . $shortname . '.' . $host . '/flush_caches');
+	  }
+	  $mc->wait();
+	} catch (Exception $e) {
+	  die($e->getMessage());
+	}
+  }
+
+  //Set the variable max_execution_time back to default(i.e. 30 seconds) in php.ini
+  ini_set('max_execution_time', '30');
+  fwrite($fh, "max_execution_time variable in php.ini is set to " . ini_get('max_execution_time') . "\n");
+
+  //Calculate the time duration required to update all the sites.
+  $update_all_duration = microtime(true) - $update_all_start;
+  fwrite($fh, "Updating all sites completed in " . $update_all_duration . " seconds.\n");
+  fclose($fh);
+
+  watchdog('Update All Sites', $base_url.'/files/Update_Sites/'.$backupdir.'/'.$logfile);
+  drupal_set_message(l(t('Click here'), $base_url.'/files/Update_Sites/'.$backupdir.'/'.$logfile) . t(' to see the update logs.'), 'status');
+}
+
+/**
+ * Function to write a message to the global $fh
+ */
+function compare_schema_write_message($content) {
+	global $fh;
+	fwrite($fh,$content);
+}
+
+/**
+ * Callback to add/remove a site from the gallery
+ */
+function compare_schema_update_gallery() {
+  $form = array(
+    '#post' => $_POST,
+  );
+  $form_state = array('submitted' => FALSE);
+  $nid = $_REQUEST['nid'];
+  
+  $drupal_site = db_fetch_object(db_query("SELECT display FROM {drupal_site} WHERE nid=%d",$nid));
+
+  switch($drupal_site->display) {
+    case 0:
+      db_query("UPDATE {drupal_site} SET display=1 WHERE nid=%d",$nid);
+      drupal_json(array('status' => 'shown'));
+    break;
+
+    case 1:
+      db_query("UPDATE {drupal_site} SET display=0 WHERE nid=%d",$nid);
+      drupal_json(array('status' => 'hidden'));
+    break;
+
+    default:
+      drupal_json(array('status' => 'failed'));	
+  }
+}
+
+/**
+ * Callback to force a drop session
+ */
+function compare_schema_drop_sessions() {
+  global $base_url;
+
+  $url = parse_url($base_url);
+
+  $form = array(
+    '#post' => $_POST,
+  );
+  $form_state = array('submitted' => FALSE);
+  $nid = $_REQUEST['nid'];
+  $drupal_site = db_fetch_object(db_query("SELECT shortname FROM {drupal_site} WHERE nid=%d",$nid));
+
+  if(!$drupal_site->shortname) {
+    return;
+  }
+
+  //switch the connection
+  $switch_db = db_switch($drupal_site->shortname);
+
+  db_query("DELETE FROM {sessions}");
+
+  //check for any sessions
+  $sessions = db_fetch_object(db_query("SELECT uid FROM {sessions} LIMIT 1"));
+
+  //switch the connection back
+  $switch_db = db_switch();
+
+  if(!$sessions->uid) {
+    drupal_json(array('status' => 'dropped'));
+  }
+  else {
+    $message = '<div class="messages error">' . t('Sessions were not dropped.') . '</div>';
+    drupal_json(array('status' => 'failed','data' => $message));
+  }
+
+}
+
+/**
+* Callback to update schema for all modules in one site
+*/
+function compare_schema_update(){
+  require_once './includes/install.inc';
+
+  $module_admin = drupal_get_path('module', 'profile_master') .'/profile_master.admin.inc';
+  include_once($module_admin);
+
+  global $hiddenModules,$base_url;
+
+  $url = parse_url($base_url);
+
+  $form = array(
+    '#post' => $_POST,
+  );
+  $form_state = array('submitted' => FALSE);
+  $nid = $_REQUEST['nid'];
+  $drupal_site = db_fetch_object(db_query("SELECT shortname FROM {drupal_site} WHERE nid=%d",$nid));
+
+  if(!$drupal_site->shortname) {
+    return;
+  }
+
+  //switch the connection
+  $switch_db = db_switch($drupal_site->shortname);
+
+  //look for modules that need to be installed
+  foreach($hiddenModules as $module => $status){
+    if($status==TRUE) {
+      $module_status = db_fetch_object(db_query("SELECT status FROM {system} WHERE name = '%s'",$module));
+      if($module_status->status == 0) {
+        $modules_to_install[] = $module;
+      }
+    }
+  }
+
+  //install required modules as needed
+  if($modules_to_install) {
+    drupal_install_modules($modules_to_install);
+  }
+
+  drupal_load_updates();
+
+  $modules = drupal_get_installed_schema_version(NULL, TRUE, TRUE);
+  foreach ($modules as $module => $schema_version) {
+    $updates = drupal_get_schema_versions($module);
+    if (!_compare_schema_check_incompatibility($module) && $updates !== FALSE && $schema_version >= 0) {
+      $updates = drupal_map_assoc($updates);
+      $default = $schema_version;
+      foreach (array_keys($updates) as $update) {
+        if ($update > $schema_version) {
+          $function = $module .'_update_'. $update;
+          if (function_exists($function)) {
+            call_user_func($function);
+            drupal_set_installed_schema_version($module, $update);
+            $update_success = TRUE;
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  //remove any residual entries in the system table for child site
+  db_query("DELETE FROM {system} WHERE filename LIKE '%" . $url['host'] . "%'");
+
+  //switch the connection back
+  $switch_db = db_switch();
+
+  if($update_success) {
+    $message = '<div class="messages status">' . t('Modules successfully updated.') . '</div>';
+    drupal_json(array('status' => 'updated','data' => $message));
+  }
+  else {
+    $message = '<div class="messages error">' . t('Something bad happened. Check the databases.') . '</div>';
+    drupal_json(array('status' => 'failed','data' => $message));
+  }
+
+}
+
+/**
+ * Callback to flush caches of child site
+ */
+function compare_schema_flush_cache($child) {
+    global $base_url;
+    $url = parse_url($base_url);
+    $host = explode('.',$url['host'],2);
+
+    $req = drupal_http_request('http://' . $child . '.' . $host[1] .  '/flush_caches');
+    drupal_json($req->code);
+}
+
+ /**
+  * callback function installs required modules if not already installed, flushes all caches and updates modules if needed
+  */
+function compare_schema_update_all($fh, $backuprestore, $shortname) {
+  // Load the necessary install include
+  require_once './includes/install.inc';
+
+  $module_admin = drupal_get_path('module', 'profile_master') .'/profile_master.admin.inc';
+  include_once($module_admin);
+
+  global $hiddenModules,$base_url;
+
+  $url = parse_url($base_url);
+  $host = explode('.',$url['host'],2);
+  $failed_status = FALSE;
+  $restore_status = FALSE;
+
+  $stringData = "Updating site ".$shortname.":\n";
+  fwrite($fh, $stringData);
+
+  //backup db
+  if($backuprestore == 1){
+    $backup_db = compare_schema_backupdb($shortname, $fh);
+  }
+
+  $stringData = "";
+
+  //look for modules that need to be installed
+  foreach($hiddenModules as $module => $status){
+    if($status==TRUE) {
+      $module_status = db_fetch_object(db_query("SELECT status FROM {system} WHERE name = '%s'"),$module);
+      if($module_status->status == 0) {
+        $modules_to_install[] = $module;
+      }
+    }
+  }
+
+  //install required modules as needed
+  if($modules_to_install) {
+    drupal_install_modules($modules_to_install);
+  }
+
+  //look for updates and install those too
+  drupal_load_updates();
+
+  $modules = drupal_get_installed_schema_version(NULL, TRUE, TRUE);
+  foreach ($modules as $module => $schema_version) {
+    if(!$failed_status){
+      $updates = drupal_get_schema_versions($module);
+      if (!_compare_schema_check_incompatibility($module) && $updates !== FALSE && $schema_version >= 0) {
+        $updates = drupal_map_assoc($updates);
+        $default = $schema_version;
+        foreach (array_keys($updates) as $update) {
+          if ($update > $schema_version) {
+            $function = $module .'_update_'. $update;
+            if (function_exists($function)) {
+              //execute the update function
+              $updated = call_user_func($function);
+              $stringData .= "Executing " . $function . "(): ";
+              //set the version number
+              foreach($updated as $update_query){
+                if(!$update_query['success'] && $update_query['query']){
+                  $output = ereg_replace("&#039;","'",$update_query['query']);
+                  $stringData .= "\n FAILED: " . $output;
+                  $failed_status = TRUE;
+                  $restore_status = TRUE;
+                } else {
+                  $output = ereg_replace("&#039;","'",$update_query['query']);
+                  $stringData .= "\n SUCCESS: " . $output;
+                }
+              }
+              if(!$failed_status){
+                drupal_set_installed_schema_version($module, $update);
+                $stringData .= "\nSchema version updated successfully!\n";
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  //remove any residual entries in the system table for child site
+  db_query("DELETE FROM {system} WHERE filename LIKE '%" . $url['host'] . "%'");
+
+  if($restore_status) {
+    if($backuprestore == 1){
+      $stringData .= "\nRestoring database ".$shortname."...";
+      fwrite($fh, $stringData);
+      //restore db
+      $dropped = db_query("DROP DATABASE %s", $shortname);
+      $created = db_query("CREATE DATABASE %s", $shortname);
+      compare_schema_restoredb($backup_db, $shortname, $fh);
+      $stringData = "Updating site ".$shortname." failed! \n";
+      fwrite($fh, $stringData);
+      drupal_set_message(t("Restored database: " . $shortname),'status');
+    } else {
+      $stringData .= "\n'Backup and Restore Databases' option wasn't selected. Restoring database failed!\n";
+      $stringData .= "Updating site ".$shortname." failed! \n";
+      fwrite($fh, $stringData);
+    }
+  } else {
+    fwrite($fh, $stringData);
+  }
+}
+
+function compare_schema_supportpass_form(&$form_state) {
+
+  $form['message'] = array(
+    '#type' => 'markup',
+    '#value' => '<h2>' . t('Receive LifeDesks Support Password') . '</h2><div class="messages status">' . t('The password for the LifeDesks support account (login: ldsupport) changes on a nightly basis across all sites.<br />Click the button below to receive the password via email.') . '</div>',
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Send Password')
+  );
+
+  return $form;
+}
+
+function compare_schema_supportpass_form_submit($form, &$form_state) {
+	global $user;
+	$params['user'] = $user;
+	$params['account'] = 'ldsupport';
+	$params['pass'] = base64_decode(variable_get('lifedesks_support', ''));
+	if($params['pass']) {
+		drupal_mail('compare_schema', 'notice', $user->mail, user_preferred_language($user), $params);
+		$message = t('!user requested password for support account', array('!user' => $user->name));
+		watchdog('compare_schema', $message, array(), WATCHDOG_NOTICE);
+		drupal_set_message(t('The password has been sent to ' . $user->mail . ' and your request for the password has been logged.'), 'status');
+	}
+	else {
+		drupal_set_message(t('The password for the ldsupport account does not yet exist.'), 'error');
+	}
+}
+
+function compare_schema_cron() {
+  global $base_url;
+
+  $url = parse_url($base_url);
+  $host = explode('.',$url['host'],2);
+
+  $qry = db_query('SELECT ds.shortname FROM {drupal_site} ds');
+
+  $drupal_sites = array();
+  while ($drupal_site = db_fetch_object($qry)) {
+    $drupal_sites[] = $drupal_site->shortname;
+  }
+
+  include_once 'MultiCurl.class.php';
+
+  $url = parse_url($base_url);
+  $host = explode('.',$url['host'],2);
+  $host = $host[1];
+
+	class MyMultiCurl extends MultiCurl {
+	  protected function onLoad($url, $content, $info) {
+		if($info['http_code'] !== 200) {
+		  	$message = t('Cron failed for !url', array('!url' => $url));
+			watchdog('compare_schema', $message, array(), WATCHDOG_NOTICE);
+		}
+	  }
+	}
+
+	try {
+	  $mc = new MyMultiCurl();
+	  $mc->setMaxSessions(5); // 20 parallel sessions
+	  $mc->setMaxSize(102400); // limit 10 Mb per session
+	  foreach($drupal_sites as $shortname) {
+	    $mc->addUrl('http://' . $shortname . '.' . $host . '/cron.php');
+	    $mc->addUrl('http://' . $shortname . '.' . $host . '/flush_caches');
+	  }
+	  $mc->wait();
+	} catch (Exception $e) {
+	  die($e->getMessage());
+	}
+}
+
+/**
+ * Implementation of hook_mail
+ */
+function compare_schema_mail($key, &$message, $params) {
+  $language = $message['language'];
+  $variables = user_mail_tokens($params['user'], $language);
+  $variables['!account'] = $params['account'];
+  $variables['!pass'] = $params['pass'];
+
+  switch($key) {
+    case 'notice':
+    $message['subject'] = t('LifeDesks ldsupport password', $variables, $language->language);
+    $message['body'][] = t("The !account password for today is:\n\n!pass\n\nThanks,\n\nThe LifeDesks Team", $variables, $language->language);
+    break;
+  }
+}
+
+function compare_schema_supportpass_admin_form(&$form_state) {
+    _user_password_dynamic_validation();
+    $form['title'] = array(
+	  '#type' => 'markup',
+	  '#value' => '<h2>' . t('LifeDesks Support Password') . '</h2>',
+	);
+	$form['pass'] = array(
+	  '#type' => 'password_confirm',
+	  '#required' => true,
+	);
+	$form['submit'] = array(
+	  '#type' => 'submit',
+	  '#value' => t('Submit'),
+	);
+
+	return $form;	
+}
+
+
+function compare_schema_supportpass_admin_form_submit($form, &$form_state) {
+
+  $pass_set = false;
+
+  $qry =  db_query("SELECT shortname FROM {drupal_site}");
+  while($result = db_fetch_object($qry)) {
+    //switch the connection
+    $switch_db = db_switch($result->shortname);
+
+    $lduser = db_switch_variable_get("lifedesk_support","");
+    $user = user_load(array('uid' => $lduser));
+    if($user) {
+	  user_save($user, array('pass' => $form_state['values']['pass']));
+    }
+
+    //switch the connection back to default
+    $switch_db = db_switch();
+  
+    $pass_set = true;
+  }
+
+  if($pass_set) {
+    drupal_set_message(t('Passwords reset for all LifeDesks support accounts.'), 'status');
+  }
+  
+}
+
+function _compare_schema_check_incompatibility($name, $type = 'module') {
+  static $themes, $modules;
+
+  // Store values of expensive functions for future use.
+  if (empty($themes) || empty($modules)) {
+    $themes = system_theme_data();
+    $modules = module_rebuild_cache();
+  }
+
+  if ($type == 'module' && isset($modules[$name])) {
+    $file = $modules[$name];
+  }
+  else if ($type == 'theme' && isset($themes[$name])) {
+    $file = $themes[$name];
+  }
+  if (!isset($file)
+      || !isset($file->info['core'])
+      || $file->info['core'] != DRUPAL_CORE_COMPATIBILITY
+      || version_compare(phpversion(), $file->info['php']) < 0) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+function compare_schema_backupdb($dbname, $fh){
+  global $db_url, $user;
+  $cur_db = parse_url(is_array($db_url) ? $db_url['default'] : $db_url);
+  $hostname = $cur_db['host'];
+  $username = $cur_db['user'];
+  $password = $cur_db['pass'];
+
+  $date = time();
+  $backupFile = $dbname . format_date($date,"custom","Y-m-d-H-i-s");
+  $backup = getcwd()."/files/Update_Sites/UpdatesBackup". format_date($date,"custom","Y-m-d");
+  $command = "mysqldump -h$hostname -u$username -p$password $dbname > $backup/$backupFile.sql";
+  system($command);
+  $stringData = "Backup of database " . $dbname . " completed!\n";
+  fwrite($fh, $stringData);
+  return $backupFile.".sql";
+}
+
+function compare_schema_restoredb($backup_db, $dbname, $fh){
+  global $db_url, $user;
+  $cur_db = parse_url(is_array($db_url) ? $db_url['default'] : $db_url);
+  $hostname = $cur_db['host'];
+  $username = $cur_db['user'];
+  $password = $cur_db['pass'];
+
+  $date = time();
+  $backup = getcwd()."/files/Update_Sites/UpdatesBackup". format_date($date,"custom","Y-m-d");
+  $command = "mysql -h$hostname -u$username -p$password $dbname < $backup/$backup_db";
+  system($command);
+  $stringData = "Restored!\n";
+  fwrite($fh, $stringData);
+}
+
+function compare_schema_message_all($fh, $new_message, $shortname, $old_message) {
+	variable_set('lifedesk_announcements',$new_message);
+	if($new_message) {
+	  if($new_message != $old_message) {
+	    fwrite($fh, $shortname . " announcement updated.\n");	
+	  }
+	}
+	else if($old_message && !$new_message) {
+	  fwrite($fh, $shortname . " announcement removed.\n");
+	}
+	else {
+	}
+}
+
+function compare_schema_version_all($fh, $new_version, $shortname, $old_version) {
+	variable_set('lifedesk_version',$new_version);
+	if($new_version && $new_version != $old_version) {
+	  fwrite($fh, $shortname . " version updated to $new_version.\n");
+	}
+}
+
+function compare_schema_setoffline_all($fh, $shortname){
+  //set offline message
+  variable_set('site_offline_message', t('@site is currently under maintenance. We should be back shortly. Thank you for your patience.', array('@site' => variable_get('site_name', 'LifeDesks'))));
+
+  //set offline
+  variable_set('site_offline',1);
+  if(db_switch_variable_get('site_offline',0))
+    fwrite($fh, $shortname . " is offline now\n");
+  else
+    fwrite($fh, "Failed setting the site " . $shortname . " offline.\n");
+}
+
+function compare_schema_setonline_all($fh, $shortname){
+  //set online
+  variable_set('site_offline',0);
+  if(!db_switch_variable_get('site_offline',1))
+    fwrite($fh, $shortname . " is online now\n");
+  else
+    fwrite($fh, "Failed setting the site " . $shortname . " online.\n");
+}
+
+function compare_schema_flushcaches_fast_all($fh, $shortname) {
+	//reset the css and js such that visitors are forced to reload them
+	$string_history = db_switch_variable_get('css_js_query_string', '00000000000000000000');
+    $new_character = $string_history[0];
+    // Not including 'q' to allow certain JavaScripts to re-use query string.
+    $characters = 'abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    while (strpos($string_history, $new_character) !== FALSE) {
+      $new_character = $characters[mt_rand(0, strlen($characters) - 1)];
+    }
+    variable_set('css_js_query_string', $new_character . substr($string_history, 0, 19));
+
+    //clear the cache tables
+    $caches = array('cache', 'cache_block', 'cache_filter', 'cache_form', 'cache_page', 'cache_menu');
+    foreach ($caches as $table) {
+      db_query("TRUNCATE TABLE {". $table ."}");
+    }
+
+    fwrite($fh, $shortname . ": Fast flush executed successfully!\n");
+}
+
+function compare_schema_dropsessions_all($fh, $shortname) {
+  db_query("DELETE FROM {sessions}");
+  if (db_affected_rows()){
+    fwrite($fh, "Active sessions from site " . $shortname . " are dropped. \n");
+  }
+}
+
+function compare_schema_apachesolr_all($fh, $shortname) {
+  module_load_include('module', 'apachesolr');
+  apachesolr_rebuild_index_table();
+  fwrite($fh, $shortname . ": Apache Solr index will be rebuilt\n");
+}
+
+function compare_schema_variable_set_form(&$form_state) {
+  $form = array();
+
+  $form['messsage'] = array(
+    '#type' => 'markup',
+    '#value' => '<div class="messages status">' . t('Use this form to set a variable across all sites') . '</div>',
+  );
+
+  $form['sites'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Site selection')
+    
+  );
+
+  $form['sites']['all'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Apply to all sites'),
+  );
+ 
+  $form['sites']['or'] = array(
+    '#type' => 'markup',
+    '#value' => t('--or--'),
+  );
+
+  $opt = array();
+  $multiple = true;
+  $qry =  db_query("SELECT shortname FROM {drupal_site}");
+  while($result = db_fetch_object($qry)) {
+    $opt[$result->shortname] = $result->shortname;
+  }
+
+  asort($opt);
+
+  $form['sites']['site'] = array(
+    '#type' => 'select',
+    '#options' => $opt,
+    '#multiple' => $multiple,
+    '#size' => $multiple ? min(12, count($opt))  : 0,
+  );
+
+  $form['variable']['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Variable'),
+    '#description' => t('Variable name in all sites'),
+    '#required' => true,
+  );
+
+  $options = array(
+	'' => t('--Choose--'),
+    'integer' => t('integer'),
+    'text' => t('text'),
+  );
+
+  $form['variable']['type'] = array(
+    '#type' => 'select',
+    '#title' => t('Data type'),
+    '#options' => $options,
+    '#required' => true,
+  );
+
+  $form['variable']['value'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Value'),
+    '#description' => t('Variable value'),
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+
+  return $form;
+	
+}
+
+function compare_schema_variable_set_form_submit($form, &$form_state) {
+
+  if($form_state['values']['type'] == 'integer') {
+    $value = (int)$form_state['values']['value'];
+  }
+  else {
+    $value = $form_state['values']['value'];
+  }
+
+  $sites = array();
+
+  if($form_state['values']['all'] == 1) {
+    $qry =  db_query("SELECT shortname FROM {drupal_site}");
+    while($result = db_fetch_object($qry)) { 
+	  $sites[] = $result->shortname;
+	}
+  }
+  else {
+    $sites = $form_state['values']['site'];
+  }
+
+  foreach($sites as $site) {
+    //switch the connection
+	$switch_db = db_switch($site);
+
+	//save the variable
+	variable_set($form_state['values']['name'], $value);
+
+	//switch the connection back to default
+	$switch_db = db_switch();
+  }
+
+  drupal_set_message(t('%variable with %value saved across !count sites', array('%variable' => $form_state['values']['name'], '%value' => $form_state['values']['value'], '!count' => count($sites))));
+}
+
+function compare_schema_variable_delete_form(&$form_state) {
+  $form = array();
+
+  $form['messsage'] = array(
+    '#type' => 'markup',
+    '#value' => '<div class="messages error">' . t('Use this form to delete a variable across all sites') . '</div>',
+  );
+
+  $form['variable'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Variable'),
+    '#description' => t('A variable in across all sites (<em>e.g.</em> lifedesk_announcements)'),
+    '#required' => true,
+  );
+
+  $form['delete'] = array(
+    '#type' => 'submit',
+    '#value' => t('Delete All'),
+  );
+
+  return $form;
+}
+
+function compare_schema_variable_delete_form_submit($form, &$form_state) {
+  if($form_state['values']['variable']) {
+    $qry =  db_query("SELECT shortname FROM {drupal_site}");
+
+    while($result = db_fetch_object($qry)) {
+      //switch the connection
+      $switch_db = db_switch($result->shortname);
+      
+      //delete the variable
+      variable_del($form_state['values']['variable']);
+      
+      //switch the connection back to default
+      $switch_db = db_switch();
+    }
+    drupal_set_message(t('%variable deleted across all sites', array('%variable' => $form_state['values']['name'])));
+  }
+}
+
+function compare_schema_languages_form(&$form_state) {
+  // Get all languages, except English
+  $names = locale_language_list('name', TRUE);
+  unset($names['en']);
+
+  if (!count($names)) {
+    $languages = _locale_prepare_predefined_list();
+    $default = array_shift(array_keys($languages));
+  }
+  else {
+    $languages = array(
+      t('Already added languages') => $names,
+      t('Languages not yet added') => _locale_prepare_predefined_list()
+    );
+    $default = array_shift(array_keys($names));
+  }
+
+  $form = array();
+  $form['import'] = array('#type' => 'fieldset',
+    '#title' => t('Import translation'),
+  );
+  $form['import']['file'] = array('#type' => 'file',
+    '#title' => t('Language file'),
+    '#size' => 50,
+    '#description' => t('A Gettext Portable Object (<em>.po</em>) file.'),
+  );
+  $form['import']['langcode'] = array('#type' => 'select',
+    '#title' => t('Import into'),
+    '#options' => $languages,
+    '#default_value' => $default,
+    '#description' => t('Choose the language you want to add strings into. If you choose a language which is not yet set up, it will be added.'),
+  );
+  $form['import']['group'] = array('#type' => 'radios',
+    '#title' => t('Text group'),
+    '#default_value' => 'default',
+    '#options' => module_invoke_all('locale', 'groups'),
+    '#description' => t('Imported translations will be added to this text group.'),
+  );
+  $form['import']['mode'] = array('#type' => 'radios',
+    '#title' => t('Mode'),
+    '#default_value' => LOCALE_IMPORT_KEEP,
+    '#options' => array(
+      LOCALE_IMPORT_OVERWRITE => t('Strings in the uploaded file replace existing ones, new ones are added'),
+      LOCALE_IMPORT_KEEP => t('Existing strings are kept, only new strings are added')
+    ),
+  );
+  $form['import']['submit'] = array('#type' => 'submit', '#value' => t('Import'));
+  $form['#attributes']['enctype'] = 'multipart/form-data';
+
+  return $form;
+}
+
+function compare_schema_languages_form_submit($form, &$form_state) {
+  // Ensure we have the file uploaded
+  if ($file = file_save_upload('file')) {
+
+    $qry =  db_query("SELECT shortname FROM {drupal_site}");
+
+    while($result = db_fetch_object($qry)) {
+      //switch the connection
+      $switch_db = db_switch($result->shortname);
+
+      // Add language, if not yet supported
+      $languages = language_list('language', TRUE);
+      $langcode = $form_state['values']['langcode'];
+      if (!isset($languages[$langcode])) {
+        $predefined = _locale_get_predefined_list();
+        locale_add_language($langcode);
+        drupal_set_message(t('The language %language has been created in site %site', array('%language' => t($predefined[$langcode][0]), '%site' => $result->shortname)));
+      }
+      
+      // Now import strings into the language
+      if ($ret = compare_schema_locale_import_po($file, $langcode, $form_state['values']['mode'], $form_state['values']['group']) == FALSE) {
+        drupal_set_message(t('The translation import of language %langcode failed in site %site.', array('%langcode' => t($langcode), '%site' => $result->shortname)), 'error');
+        watchdog('locale', 'The translation import of language %langcode failed in site %site.', array('%langcode' => t($langcode), '%site' => $result->shortname), WATCHDOG_ERROR);
+      }
+
+      //switch the connection back to default
+      $switch_db = db_switch();
+    }
+  }
+  else {
+    drupal_set_message(t('File to import not found.'), 'error');
+  }
+  return;
+}
+
+function compare_schema_locale_import_po($file, $langcode, $mode, $group = NULL) {
+  // Try to allocate enough time to parse and import the data.
+  if (function_exists('set_time_limit')) {
+    @set_time_limit(240);
+  }
+
+  // Check if we have the language already in the database.
+  if (!db_fetch_object(db_query("SELECT language FROM {languages} WHERE language = '%s'", $langcode))) {
+    drupal_set_message(t('The language selected for import is not supported.'), 'error');
+    return FALSE;
+  }
+
+  // Get strings from file (returns on failure after a partial import, or on success)
+  $status = _locale_import_read_po('db-store', $file, $mode, $langcode, $group);
+  if ($status === FALSE) {
+    // Error messages are set in _locale_import_read_po().
+    return FALSE;
+  }
+  // Get status information on import process.
+  list($headerdone, $additions, $updates, $deletes, $skips) = _locale_import_one_string('db-report');
+  if (!$headerdone) {
+    drupal_set_message(t('The translation file %filename appears to have a missing or malformed header.', array('%filename' => $file->filename)), 'error');
+  }
+
+  // Clear cache and force refresh of JavaScript translations.
+  _locale_invalidate_js($langcode);
+
+  //drupal_set_message(t('The translation was successfully imported. There are %number newly created translated strings, %update strings were updated and %delete strings were removed.', array('%number' => $additions, '%update' => $updates, '%delete' => $deletes)));
+
+  if ($skips) {
+    $skip_message = format_plural($skips, 'One translation string was skipped because it contains disallowed HTML.', '@count translation strings were skipped because they contain disallowed HTML.');
+    //drupal_set_message($skip_message);
+    watchdog('locale', $skip_message, NULL, WATCHDOG_WARNING);
+  }
+  return TRUE;
+}

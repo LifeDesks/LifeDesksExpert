@@ -1,0 +1,525 @@
+<?php
+
+/**
+ * Define constants.
+ */
+function classification_import_init() {
+    define('FILE_CHECK_OP', t('Check File'));
+    define('FILE_IMPORT_OP', t('Import File'));
+    define('EOL_IMPORT_OP', t('Search'));
+    define('FILE_STRUCTURE_PARENT_CHILD', t('parent-child'));
+    define('FILE_STRUCTURE_FULL_HIERARCHY', t('full hierarchy'));
+    define('FILE_STRUCTURE_FULL_HIERARCHY_ALT', t('full hierarchy (alternate)'));
+}
+
+
+/**
+ * Declare global functions.
+ */
+$root_terms_count = 0;
+
+/**
+ * Implementation of hook_perm().
+ */
+function classification_import_perm() {
+  return array(
+    'import classification'
+  );
+}
+
+/*
+ * Implementation of hook_theme().
+ */
+function classification_import_theme() {
+  return array(
+    'classification_import_tcs_message' => array( 
+      'arguments' => array(),
+      'path' => drupal_get_path('module', 'classification_import') . '/includes/classification_import_tcs.inc',
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function classification_import_menu() {
+  $items['admin/classification/biological/import'] = array(
+    'title' => t('Import Names'),
+    'description' => t('Import names into your site\'s classification or into any temporary classification if present.'),
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('classification_import_importform', arg(4)),
+    'access arguments' => array('import classification'),
+    'weight' => 0
+  );
+
+  $items['admin/settings/classification_import'] = array(
+    'title' => 'Classification Import settings',
+    'description' => 'Configure behavior of the classification_import module.',
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('classification_import_admin_settings'),
+    'access arguments' => array('administer classification import'),
+    'file' => 'classification_import.admin.inc',
+  );
+
+  $items['classification_import/search'] = array(
+    'page callback' => 'classification_import_tcs_search',
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('import classification'),
+    'file' => 'includes/classification_import_tcs.inc',
+  );
+
+  $items['classification_import/import_classification'] = array(
+    'page callback' => 'classification_import_tcs',
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('import classification'),
+    'file' => 'includes/classification_import_tcs.inc',
+  );
+
+  $items['classification_import/import_status'] = array(
+    'page callback' => 'classification_import_tcs_status',
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('import classification'),
+    'file' => 'includes/classification_import_tcs.inc',
+  );
+
+  $items['classification_import/import_message'] = array(
+    'page callback' => 'theme',
+    'page arguments' => array('classification_import_tcs_message'),
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('import classification'),
+    'file' => 'includes/classification_import_tcs.inc',
+  );
+  
+  return $items;
+}
+
+/**
+ * Classification import form.
+ */
+function classification_import_importform(&$form_state, $vid = '') {
+
+  // Check to see if directories exist. If they don't, under file import generate an error message and prevent import of files.
+  $directories_exist = _classification_import_check_directories();
+
+  // Check classification status lock, and return warning if classification is locked. We'll check again prior to submit.
+  if (variable_get('classification_status',1) == 0) {
+    drupal_set_message(t('Sorry, your classification is currently being imported or edited. Please wait a moment and try again.'), 'warning', FALSE);
+    return $form;
+  }
+
+  // Add css and js files and settings.
+  $module_path = drupal_get_path('module', 'classification_import') .'/';
+  drupal_add_css($module_path .'css/classification_import.css');
+  drupal_add_js($module_path .'js/jquery.scrollTo.js');
+  drupal_add_js($module_path . 'js/classification_import.js');
+  drupal_add_js(array('classification_import_tcs_limit' => variable_get('classification_import_tcs_limit', 15000)), 'setting');
+
+  // Why setting form cache to TRUE?
+  $form['#cache'] = TRUE;
+  // Required for posting files in a form.
+  $form['#attributes'] = array('enctype' => 'multipart/form-data');
+
+  // Render fieldset containing list of biological classifications. User may select one into which names will be imported.
+  $form['vocab'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Destination for import'),
+  );
+  // Get all vocabularies.
+  $vocabs = taxonomy_get_vocabularies();
+  $vocab_options = array();
+  // Extract only biological classification vocabularies, for use in form.
+  foreach ($vocabs as $vocab) {
+    if ($vocab->module == 'classification') {
+      if ($vocab->vid == CLASSIFICATION_PRIMARY) {
+        $vocab_options[$vocab->vid] = variable_get('site_name', 'Taxa') . ' classification';
+      }
+      elseif ($vocab->vid != CLASSIFICATION_DELETIONS && $vocab->vid != CLASSIFICATION_LOST_FOUND) {
+        $vocab_options[$vocab->vid] = $vocab->name;
+      }
+    }
+  }
+  // Set default selected vocabulary.
+  if (!empty($form_state['storage']['vid'])) {
+    $vocab_default = $form_state['storage']['vid'];
+  }
+  elseif (array_key_exists(arg(4), $vocab_options)) {
+    $vocab_default = arg(4);    
+  }
+  else {
+    $vocab_default =    variable_get('classification_primary', 1);
+  }
+  // Define radio buttons for selecting vocabulary into which names will be imported.
+  $form['vocab']['vid'] = array(
+    '#type' => 'radios',
+    '#title' => t('Destination classification for import'),
+    '#required' => TRUE,
+    '#options' => $vocab_options,
+    '#default_value' => $vocab_default,
+    '#attributes' => array('class' => 'classification-selector'),
+  );
+  $form['vocab']['message'] = array(
+    '#type' => 'markup',
+    '#prefix' => '<div class="messages status">', 
+    '#value' =>    t('We recommended that you first !add_vocab_url an alternate classification, return here to import, then copy all or parts of it into your primary classification, using the !tree_editor_url. You may also paste flat lists of names into your primary or alternate classifications.', array('!add_vocab_url' => l(t('create'), 'admin/content/taxonomy/add/vocabulary'), '!tree_editor_url' => l(t('tree editor'), 'admin/classification/biological/edit'))),
+    '#suffix' => '</div>',
+    '#weight' => -10,
+  );
+
+  // Generate replacement values for file_import description text. Note, not using l functions so as to provide better context for translators, following best practices. @see http://api.drupal.org/api/function/t.
+  $replace = array(
+    '!limit' => number_format(variable_get('classification_import_file_limit', 15000)),
+    '!extensions' => implode(', ', array_filter(variable_get('classification_import_extensions', array('txt', 'xls', 'xlsx')))), 
+    '!parentchild_xlsx_url' => url($module_path . 'examples/parentchild.xlsx'),
+    '!parentchild_xls_url' => url($module_path . 'examples/parentchild.xls'),
+    '!fullhierarchy_xlsx_url' => url($module_path . 'examples/fullhierarchy.xlsx'),
+    '!fullhierarchy_xls_url' => url($module_path . 'examples/fullhierarchy.xls'),
+    '!fullhierarchy_alt_xlsx_url' => url($module_path . 'examples/fullhierarchy-alt.xlsx'),
+    '!fullhierarchy_alt_xls_url' => url($module_path . 'examples/fullhierarchy-alt.xls'),
+  );
+  $form['file_import'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Import a file'),
+    '#collapsible' => TRUE,
+    '#collapsed' => ($form_state['storage']['vid']) ? FALSE : TRUE,
+    '#description' => (!$directories_exist) ? '<div class="messages error">' . t('The required directories for storing classification import files are missing and could not be created. Please contact your site administrator.') .'</div>' : '<div class="messages warning">'
+                      . t('Limit !limit rows.', $replace)
+                      . '<p>'
+                      . t('Accepted file extensions are !extensions in either: ', $replace)
+                      . '<ul>'
+                      . '  <li>' . t('parent-child format (download examples <a href="!parentchild_xlsx_url">parentchild.xlsx</a> or <a href="!parentchild_xls_url">parentchild.xls</a>)', $replace) . '</li>'
+                      . '  <li>' . t('full hierarchy format (download examples <a href="!fullhierarchy_xlsx_url">fullhierarchy.xlsx</a> or <a href="!fullhierarchy_xls_url">fullhierarchy.xls</a>)', $replace) . '</li>'
+                      . '  <li>' . t('alternate full hierarchy format (download examples <a href="!fullhierarchy_alt_xlsx_url">fullhierarchy-alt.xlsx</a> or <a href="!fullhierarchy_alt_xls_url">fullhierarchy-alt.xls</a>)', $replace) . '</li>'
+                      . '</ul>'
+                      . '</p>'
+                      . '</div>',
+  );
+  unset($replace);
+  
+  // Only allow file import if directories have been successfully created.
+  if ($directories_exist) {
+    // Define form elements for checking file.
+    $form['file_import']['import_check'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Step 1. Check your file'),
+    );
+    $form['file_import']['import_check']['file_to_check'] = array(
+      '#type' => 'file',
+      '#title' => t('File to check'),
+    );
+    $form['file_import']['import_check']['import_check_submit'] = array(
+      '#type' => 'submit',
+      '#value' => FILE_CHECK_OP,
+    );
+    
+    // Define form elements for importing file.
+    $form['file_import']['import_final'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Step 2. Import your file'),
+    );
+    $form['file_import']['import_final']['file_to_import'] = array(
+      '#type' => 'file',
+      '#title' => t('File to import'),
+    );
+    $form['file_import']['import_final']['import_final_submit'] = array(
+      '#type' => 'submit',
+      '#value' => FILE_IMPORT_OP,
+    );
+  }
+
+
+/** NOT CURRENTLY IN USE 
+
+  $form['dwca_import'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Import a Darwin Core Archive (DwC-A)'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#description' => '<div class="messages warning">' . t('Darwin Core Archive (DwC-A) is a gzipped (*.gz) folder containing a metadata file and several peripheral files described as extensions. Your !link facility produces Darwin Core Archive as does the Global Biodiversity Information Facility Integrated Publishing Toolkit. More information about Darwin Core Archive may be found !gbif.', array('!link' => l(t('classification publishing'), 'admin/classification/biological/export/share'), '!gbif' => l(t('here'), 'http://www.gbif.org/informatics/standards-and-tools/publishing-data/data-standards/darwin-core-archives/', array('attributes' => array('target', '_blank'), 'absolute' => true)))) . '</div>', 
+  );
+
+  $form['dwca_import']['dwca_import_check'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Step 1. Check your file'),
+  );
+
+  $form['dwca_import']['dwca_import_check']['classification_import_dwc_check'] = array(
+    '#type' => 'file',
+    '#title' => t('File to check'),
+  );
+
+  $form['dwca_import']['dwca_import_check']['dwca_import_check'] = array(
+    '#type' => 'submit',
+    '#value' => t('Check DwC-A File'),
+  );
+
+  $form['dwca_import']['dwca_import_final'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Step 2. Import your file'),
+  );
+
+  $form['dwca_import']['dwca_import_final']['classification_import_dwc_final'] = array(
+    '#type' => 'file',
+    '#title' => t('File to import'),
+  );
+
+  $form['dwca_import']['dwca_import_final']['dwca_import_final'] = array(
+    '#type' => 'submit',
+    '#value' => t('Import DwC-A File'),
+  );
+
+//*/
+
+  // Define form elements for importing names from EOL services.
+  $form['eol_import'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Import from EOL'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#description' => '<div class="messages warning">' . t('Limit !limit names.', array('!limit' => number_format(variable_get('classification_import_tcs_limit', 15000)))) . '</div>',
+  );    
+  $form['eol_import']['taxonomic_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Search for highest taxonomic name of relevance'),
+    '#description' => t('This must be a parent name for all taxa to be treated on this site.'),
+  );
+  $form['eol_import']['search'] = array(
+    '#type' => 'submit', 
+    '#value' => t('Search'),
+    '#prefix' => '<div id="search_button">',
+    '#suffix' => '<div id="search_status"></div></div><div id="search_results"></div><div id="import_status"></div>',
+    '#attributes' => array('class' => 'search-service'),
+  );
+  $form['eol_import']['total_names'] = array(
+     '#type' => 'hidden',
+  );
+
+  return $form;
+}
+
+/**
+ * Validate callback for classification import form.
+ * Implementation of hook_form_validate().
+ * @see classification_import_importform().
+ */
+function classification_import_importform_validate($form, &$form_state) {
+  
+  switch ($form_state['values']['op']) {
+      case FILE_CHECK_OP:
+      $element = array(
+        'name' => 'file_to_check',
+          'value' => $form_state['values']['file_to_check'],
+        );
+        break;
+      case FILE_IMPORT_OP:
+        $element = array(
+        'name' => 'file_to_import',
+        'value' => $form_state['values']['file_to_import'],
+      );
+      break;
+    }
+    // Check file is accepted extension and is not empty.
+    if (!empty($element)) {
+      // Load required code for handling file imports.
+      module_load_include('inc','classification_import','includes/classification_import_file');
+      // Attempt to upload file to temporary directory, if file fails validation it will return error and 0 value.
+      $validators = classification_import_file_validators();
+      $file = file_save_upload($element['name'], $validators);
+      if ($file == 0) {
+        // If file_save_upload validators failed then we shouldn't get to this point, unless they've submitted the form without selecting a file, or there is some other unlikely upload error.
+        form_set_error($element['name'], t('Please select a valid file.'));
+      }
+      else {
+        // Pass file object to submit handler.
+        $form_state['storage']['file'] = $file;
+      }
+    }
+    
+    // Check vocabulary is valid biological classification, if it is pass it to submit handler, if it isn't return form error.
+    if ($form_state['values']['op'] != FILE_CHECK_OP) {
+    $vocab = _classification_import_validate_vocabulary($form_state['values']['vid']);
+    if ($vocab === FALSE) {
+      form_set_error('vid', t('The selected destination classification does not appear to be a valid biological classification. Please reselect, or contact your site administrator if the problem persists.'));
+    }
+    else {
+      $form_state['storage']['vocabulary'] = $vocab;
+    }
+    }
+    
+}
+
+/**
+ *  Submit callback for classification import form.
+ *  Implementation of hook_form_submit().
+ *  @see classification_import_importform().
+ */
+function classification_import_importform_submit($form, &$form_state) {
+  
+  timer_start('classification_import');
+  
+  $file = (!empty($form_state['storage']['file'])) ? $form_state['storage']['file'] : '';
+  $vocab = (!empty($form_state['storage']['vocabulary'])) ? $form_state['storage']['vocabulary'] : '';
+  
+  switch ($form_state['values']['op']) {
+      
+    case FILE_CHECK_OP:
+      
+      // Load required code for handling file imports. Should already be loaded in form validate function but no harm in checking.
+      module_load_include('inc','classification_import','includes/classification_import_file');
+      // Check file is valid format.
+      $checked = _classification_import_file_check($file, TRUE);
+      // If file failed check, save to file failed check folder.
+      if ($checked['success'] === FALSE && variable_get('classification_import_retain_copy', 1) > 0) {
+        _classification_import_file_save_file($file, array('checked' => $checked));
+      }
+      // Return details of check results to user.
+      if (!empty($checked['feedback'])) drupal_set_message($checked['feedback'], ($checked['success'] === TRUE) ? 'status' : 'error', FALSE);
+      
+    break;
+      
+      
+      
+    case FILE_IMPORT_OP:
+      
+      // Load required code for handling file imports. Should already be loaded in form validate function but no harm in checking.
+      module_load_include('inc','classification_import','includes/classification_import_file');
+      
+      // Check file is valid format for import.
+      $checked = _classification_import_file_check($file, FALSE);
+      if ($checked['success'] === TRUE) { // Check succeeded so begin file import process.
+        
+        // Lock the classification.
+        $locked = _classification_lock_classification();
+        if ($locked === FALSE) { // We can't lock classification so we don't do anything and indicate to user to try again.
+          // TODO: Something more elegant, e.g. retain form setting so they don't have to re-upload, if we are unable to lock the classification.
+          drupal_set_message(t("Your file passed all checks, unfortunately data was not imported, it appears someone else may be actively editing the classification at this time, or attempting another import. Please try again in a moment."), 'error', FALSE);
+        }
+        else { // Classification is locked.
+        
+          // Insert names and associated relationship data into database.
+          $inserted = _classification_import_file_insert_data($file, $vocab, $checked['data']['excel_info'], $checked['data']['content']);
+          // Save file for posterity, as tar.gz format, whether failed or not.
+          if (variable_get('classification_import_retain_copy', 1) > 0) {
+            _classification_import_file_save_file($file, array('checked' => $checked, 'inserted' => $inserted));
+          }
+          // Return details of insert results to user.
+          if (!empty($inserted['feedback'])) drupal_set_message($inserted['feedback'], ($inserted['success'] === TRUE) ? 'status' : 'error', FALSE);
+          
+          // We are done importing. Unlock classification - reset classification status to ready to allow other edits/imports.
+          _classification_unlock_classification();
+          
+        }
+      }
+      else { // Check failed.
+        if (variable_get('classification_import_retain_copy', 1) > 0) {
+          // Save file to failed directory and return details to user, any processing errors will already have been written to watchdog.
+          _classification_import_file_save_file($file, array('checked' => $checked));
+        }
+        if (!empty($checked['feedback'])) drupal_set_message($checked['feedback'], 'error', FALSE);
+      }
+      
+      
+    break;
+    
+/** NOT CURRENTLY IN USE 
+    case t('Check DwC-A File'):
+      //load the DwC-A file import include to check contents and structure
+      module_load_include('inc','classification_import','includes/classification_import_dwc');
+      classification_import_dwc_check($form, $form_state);
+    break;
+    
+
+    case t('Import DwC-A File'):
+      //load the DwC-A file import include
+      module_load_include('inc','classification_import','includes/classification_import_dwc');
+      classification_import_dwc_final($form, $form_state);
+    break;
+//*/
+
+    // Nothing here for EOL web services import because we use AHAH framework and lots of jQuery
+  }
+  
+  // Show memory consumption.
+  if (variable_get('classification_import_show_memory_consumption', 0) == 1) {
+    drupal_set_message(date('H:i:s') . " Peak memory usage: " . (memory_get_peak_usage(TRUE) / 1024 / 1024) . " MB", "warning");
+    // Show execution time.
+    drupal_set_message(t('The submit script took !time seconds', array('!time' => number_format(timer_read('classification_import') / 1000, 3))), 'warning', FALSE);
+    timer_stop('classification_import');
+  }
+}
+
+
+/*
+ * Helper function to check that directories exist.
+ * @return boolean TRUE if directories are setup, FALSE if directories don't exist.  
+ */
+function _classification_import_check_directories() {
+  
+  // Check main classification import directory exsits.
+  $classification_import_path = file_create_path('classification_import');
+  if (!file_check_directory($classification_import_path, FILE_CREATE_DIRECTORY)) {
+    return FALSE;
+  }
+  // Main directory exists so check that subdirectories exist.
+  $subdirectories = array('files', 'files/failed_check', 'dwc');
+  foreach ($subdirectories as $subdirectory) {
+    $path = $classification_import_path . "/" . $subdirectory;
+    if (!file_check_directory($path, FILE_CREATE_DIRECTORY)) {
+      return FALSE;
+    }
+  }
+  return TRUE;
+}
+
+/*
+ * Helper function to execute a command
+ */
+function _classification_import_proc($command) {
+  $proc = proc_open($command, array(0 => array('pipe', 'r'), 1 => array('pipe', 'w'), 2 => array('pipe', 'w')), $pipes);
+  fwrite($pipes[0], '');
+  fclose($pipes[0]);
+  $stdout = stream_get_contents($pipes[1]);
+  fclose($pipes[1]);
+  $stderr = stream_get_contents($pipes[2]);
+  fclose($pipes[2]);
+  $rtn = proc_close($proc);
+  
+  return array('code' => $rtn, 'message' => $stderr);
+}
+
+/**
+ * Helper function to validate vocabulary is a biological classification.
+ * @param $vid
+ * @return vocabulary Object or FALSE
+ */
+function _classification_import_validate_vocabulary($vid) {
+  
+  // Load vocabulary.
+  $vocab = taxonomy_vocabulary_load($vid);
+  
+  // Return FALSE if vocabulary cannot be loaded.
+  if ($vocab === FALSE) return FALSE;
+  
+  // Return FALSE if vocabulary is not a biological classification.
+  if ($vocab->module != 'classification') return FALSE;
+  
+  // Adjust vocabulary name if, vocabulary is the site's primary classification.
+  if ($vocab->vid == variable_get('classification_primary', 0)) {
+    $vocab->name = variable_get('site_name', 'Taxa') . ' classification';
+  }
+  
+  return $vocab;
+}
+/**
+ * Return an array of validation functions for file upload.
+ *
+ * @return
+ *   An array which will be used to validate the file upload
+ */
+function classification_import_file_validators() {
+  $validators = array(
+    'file_validate_extensions' => array(implode(' ', array_unique(variable_get('classification_import_extensions', array('txt', 'xls', 'xlsx'))))),
+  );
+  return $validators;
+}

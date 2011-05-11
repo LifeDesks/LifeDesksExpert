@@ -1,0 +1,17 @@
+6.x.1-4
+--------
+- removing t() in menu title & description.
+- #257681: Added piclens_image_taxonomy module.
+- #267535: check on $args[0] variable.
+- #271816: custom logo support.
+- #270331: added readme.txt in help pages.
+- #283096: add title to rss feed.
+- #270532: implement paging.
+
+6.x.1-3
+-------
+- #252372: check if we are looking at a collection of albums only
+  if so, do not add piclens javascript & link.
+- #252897 and #253322: support for not using clean urls by not using the url() function
+  but file_create_url() instead.
+

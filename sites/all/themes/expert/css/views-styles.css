@@ -1,0 +1,55 @@
+/* $Id: views-styles.css,v 1.1 2009/08/12 04:25:15 johnalbin Exp $ */
+
+/**
+ * @file
+ * Views Styling
+ */
+
+.page-image #content-area {
+	position:relative;
+	margin:0px;
+}
+
+.page-image-tid #content-area {
+	position:relative;
+	margin:0px;
+}
+
+div.view-image-gallery {
+	width:80%;
+}
+
+div.view .image-gallery-nodes ul {
+	text-align:left;
+	margin-left: 0px;
+	padding-left: 0px;
+}
+
+.page-image div.view .image-gallery-nodes ul, .page-image-tid div.view .image-gallery-nodes ul {
+	width:650px;
+}
+
+div.view .image-gallery-nodes ul li {
+	width:145px;
+	height:125px;
+	vertical-align:top;
+}
+
+.page-image div.view .image-gallery-nodes ul li, .page-image-tid div.view .image-gallery-nodes ul li {
+	width:150px;
+}
+
+div.view-image-gallery-terms {
+	position:absolute;
+	right:10px;
+	top:0px;
+	width:150px;
+}
+
+div.views-field-name {
+	display:inline;
+}
+
+div.views-field-image-gallery-count {
+	display:inline;
+}

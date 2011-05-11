@@ -1,0 +1,247 @@
+/**
+ * Admin pages
+ */
+body.admin #title {
+  background: url(images/admin/admin.gif) no-repeat;
+}
+
+body.admin-content #title {
+  background: url(images/admin/admin-content.gif) no-repeat;
+}
+
+body.admin-content-book #title {
+  background: url(images/admin/admin-content-book.gif) no-repeat;
+}
+
+body.admin-content-comment #title {
+  background: url(images/admin/admin-content-comment.gif) no-repeat;
+}
+
+body.admin-content-node_settings #title {
+  background: url(images/admin/admin-content-node_settings.gif) no-repeat;
+}
+
+body.admin-content-taxonomy #title {
+  background: url(images/admin/admin-content-taxonomy.gif) no-repeat;
+}
+
+body.admin-content-types #title {
+  background: url(images/admin/admin-content-types.gif) no-repeat;
+}
+
+body.admin-content-rss_publishing #title {
+  background: url(images/admin/admin-content-rss_publishing.gif) no-repeat;
+}
+
+body.admin-user #title {
+  background: url(images/admin/admin-user.gif) no-repeat;
+}
+
+body.admin-user-rules #title {
+  background: url(images/admin/admin-user-rules.gif) no-repeat;
+}
+
+body.admin-user-permissions #title {
+  background: url(images/admin/admin-user-permissions.gif) no-repeat;
+}
+
+body.admin-user-roles #title {
+  background: url(images/admin/admin-user-roles.gif) no-repeat;
+}
+
+body.admin-user-settings #title {
+  background: url(images/admin/admin-user-settings.gif) no-repeat;
+}
+
+body.admin-user-user #title {
+  background: url(images/admin/admin-user.gif) no-repeat;
+}
+
+body.admin-reports #title {
+  background: url(images/admin/admin-reports.gif) no-repeat;
+}
+
+body.admin-reports-dblog #title {
+  background: url(images/admin/admin-settings-logging.gif) no-repeat;
+}
+
+body.admin-reports-access_denied #title {
+  background: url(images/admin/admin-reports-access_denied.gif) no-repeat;
+}
+
+body.admin-reports-page_not_found #title {
+  background: url(images/admin/admin-reports-page_not_found.gif) no-repeat;
+}
+
+body.admin-reports-status #title {
+  background: url(images/admin/admin-reports-status.gif) no-repeat;
+}
+
+body.admin-reports-updates #title {
+  background: url(images/admin/admin-reports-updates.gif) no-repeat;
+}
+
+body.admin-build #title {
+  background: url(images/admin/admin-build.gif) no-repeat;
+}
+
+body.admin-build-block #title {
+  background: url(images/admin/admin-build-block.gif) no-repeat;
+}
+
+body.admin-build-frontpage #title {
+  background: url(images/admin/admin-content.gif) no-repeat;
+}
+
+body.admin-build-menu #title {
+  background: url(images/admin/admin-build-menu.gif) no-repeat;
+}
+
+body.admin-build-menu_customize-navigation #title {
+  background: url(images/admin/admin-build-menu.gif) no-repeat;
+}
+
+body.admin-build-menu_customize-primary_links #title {
+  background: url(images/admin/admin-build-menu.gif) no-repeat;
+}
+
+body.admin-build-menu_customize-secondary_links #title {
+  background: url(images/admin/admin-build-menu.gif) no-repeat;
+}
+
+body.admin-build-modules #title {
+  background: url(images/admin/admin-build-modules.gif) no-repeat;
+}
+
+body.admin-build-themes #title {
+  background: url(images/admin/admin-build-themes.gif) no-repeat;
+}
+
+body.admin-settings #title {
+  background: url(images/admin/admin-settings.gif) no-repeat;
+}
+
+body.admin-settings-actions #title {
+  background: url(images/admin/admin-settings-actions.gif) no-repeat;
+}
+
+body.admin-settings-admin #title {
+  background: url(images/admin/admin-build-themes.gif) no-repeat;
+}
+
+body.admin-settings-clean_urls #title {
+  background: url(images/admin/admin-settings-clean_urls.gif) no-repeat;
+}
+
+body.admin-settings-date_time #title {
+  background: url(images/admin/admin-settings-date_time.gif) no-repeat;
+}
+
+body.admin-settings-error_reporting #title {
+  background: url(images/admin/admin-settings-error_reporting.gif) no-repeat;
+}
+
+body.admin-settings-file_system #title {
+  background: url(images/admin/admin-settings-file_system.gif) no-repeat;
+}
+
+body.admin-settings-image_toolkit #title {
+  background: url(images/admin/admin-settings-image_toolkit.gif) no-repeat;
+}
+
+body.admin-settings-filters #title {
+  background: url(images/admin/admin-settings-filters.gif) no-repeat;
+}
+
+body.admin-settings-logging #title {
+  background: url(images/admin/admin-settings-logging.gif) no-repeat;
+}
+
+body.admin-settings-performance #title {
+  background: url(images/admin/admin-settings-performance.gif) no-repeat;
+}
+
+body.admin-settings-site_information #title {
+  background: url(images/admin/admin-settings-site_information.gif) no-repeat;
+}
+
+body.admin-settings-site_maintenance #title {
+  background: url(images/admin/admin-settings-site_maintenance.gif) no-repeat;
+}
+
+body.admin-export #title {
+	background: url(images/admin/eol.gif) no-repeat;
+}
+
+body.admin-help #title {
+  background: url(images/admin/admin-help.gif) no-repeat;
+}
+
+body.comment #title {
+	background: url(images/admin/admin-content-comment.gif) no-repeat;
+}
+
+body.node-add #title {
+  background: url(images/admin/node-add.gif) no-repeat;
+}
+
+body.node-add-book #title {
+  background: url(images/admin/admin-content-book.gif) no-repeat;
+}
+
+body.node-add-story #title {
+  background: url(images/admin/node-add-story.gif) no-repeat;
+}
+
+body.image_gallery #title {
+  background: url(images/admin/pictures.gif) no-repeat;
+}
+
+body.biblio #title {
+  background: url(images/admin/admin-content-book.gif) no-repeat;
+}
+
+body.catalog #title {
+  background: url(images/admin/admin-build-menu.gif) no-repeat;
+}
+
+body.admin-classification-biological #title {
+  background: url(images/admin/classification_tree.gif) no-repeat;
+}
+
+body.help_pages #title {
+  background: url(images/admin/admin-help.gif) no-repeat;
+}
+
+body.taxa #title {
+  background: url(images/admin/admin-settings-error_reporting.gif) no-repeat;
+}
+
+body.node-add-taxon_description #title {
+  background: url(images/admin/admin-settings-error_reporting.gif) no-repeat;
+}
+
+body.admin-build-taxonpages #title {
+  background: url(images/admin/admin-settings-error_reporting.gif) no-repeat;
+}
+
+body.members #title {
+  background: url(images/admin/admin-user.gif) no-repeat;
+}
+
+body.invite #title {
+  background: url(images/admin/admin-user.gif) no-repeat;
+}
+
+body.user #title {
+  background: url(images/admin/user.gif) no-repeat;
+}
+
+/**
+ * Misc.
+ */
+.help {
+  background: url(images/misc/help.gif) no-repeat 0 3px !important;
+  padding-left: 34px;
+  min-height: 30px;
+}

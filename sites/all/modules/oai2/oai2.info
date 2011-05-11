@@ -1,0 +1,13 @@
+; $Id: oai2.info,v 1.1.2.2.2.1 2008/12/15 22:29:04 rjerome Exp $
+name = OAI2
+description = This module provides Open Archives 2 protocol access to the information stored by the Biblio module
+dependencies[] = biblio
+core = 6.x
+package = Biblio
+
+; Information added by drupal.org packaging script on 2009-06-22
+version = "6.x-1.2"
+core = "6.x"
+project = "oai2"
+datestamp = "1245678440"
+

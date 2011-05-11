@@ -1,0 +1,123 @@
+.classification-tag-entry {
+  margin:5px 0px;
+}
+
+.classification-tag-single {
+  padding:5px;
+  display:block;
+  margin:2px;
+  font-size:large;
+}
+
+.classification-tag {
+  background-color:#eee;
+  padding:2px;
+  display:inline;
+  margin:2px;
+}
+
+.classification-tag-tid {
+  display:none;
+}
+
+.classification-add-tag {
+	background-image:url("../images/add.gif");
+	background-position:1px 1px;
+	background-repeat:no-repeat;
+	height:21px;
+	width:50px;
+	padding-left:18px;
+}
+
+.classification-edit-tag {
+  background-image:url("../images/pencil.gif");
+  background-position:3px 50%;
+  background-repeat:no-repeat;
+  padding-left:24px;
+  cursor:pointer;
+  font-size:12px;
+}
+
+.classification-remove-tag {
+  background-image:url("../images/delete.gif");
+  background-position:3px 50%;
+  background-repeat:no-repeat;
+  padding-left:20px;
+  cursor:pointer;
+  font-size:12px;
+  cursor:pointer;
+}
+
+.classification-tag-popular {
+  background-color:#eee;
+  color:#999;
+  padding:2px;
+  display:inline;
+  margin:2px;
+}
+.classification-add-tag-popular {
+  color:green;
+  padding-left:5px;
+  cursor:pointer;
+}
+
+#classification-settings-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	z-index: 90;
+	width: 100%;
+	height: 500px;
+	display:none;
+}
+
+#classification-settings-content-warning {
+	display:none;
+}
+
+#classification-settings-messsage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  width: 300px;
+  text-align:center;
+  display:none;
+}
+
+#classification-settings-warning {
+  margin:0px auto;
+  width:500px;
+}
+
+#classification-settings-selection {
+	margin:0 0 10px 5px;
+	padding:0;
+	list-style:none;
+}
+
+#classification-settings-selection li {
+	list-style: none;
+	padding: 0px;
+	margin: 0px;
+	background:none;
+}
+
+#classification-settings-node-types {
+	display:none;
+}
+
+.classification_settings_noedit {
+	color:#FF0000;
+}
+
+a.tabledrag-handle .handle {
+	background:transparent url(../images/move.gif) no-repeat scroll 0 0 !important;
+	margin-top:0px !important;
+	height: 16px !important;
+    width: 16px !important;
+}
+
+div.warning {
+	margin-bottom:10px;
+}

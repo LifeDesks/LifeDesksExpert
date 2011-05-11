@@ -1,0 +1,375 @@
+<?php
+// $Id: drupal_sites.install,v 1.0 2009/02/01 12:40 dshorthouse Exp $
+
+ /**
+ * Menu items
+ */
+function drupal_sites_menu() {
+  $items['contact_us'] = array(
+    'title' => t('Contact Us Submissions'),
+    'page callback' => drupal_get_form,
+    'page arguments' => array('drupal_sites_contact_form'),
+    'access arguments' => array('access comments'),
+    'type' => MENU_NORMAL_ITEM,
+    'weight' => -18,
+  );
+  $items['drupal_sites/expert_delete'] = array(
+    'page callback' => drupal_get_form,
+    'page arguments' => array('drupal_sites_expert_admin_form'),
+    'access arguments' => array('administer comments'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['drupal_sites/contact_delete'] = array(
+    'page callback' => drupal_get_form,
+    'page arguments' => array('drupal_sites_contact_admin_form'),
+    'access arguments' => array('administer comments'),
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm
+ */
+function drupal_sites_perm() {
+  return array(
+    'create drupal site'
+  );
+}
+
+/**
+ * Implementation of hook_theme
+*/
+function drupal_sites_theme() {
+  return array(
+    'drupal_sites_csk12_form' => array(
+      'arguments' => array('form' => NULL),
+    ),
+    'drupal_sites_contact_form' => array(
+      'arguments' => array('form' => NULL),
+    ),
+  );
+}
+
+function drupal_sites_contact_form(&$form_state) {
+  $module_path = drupal_get_path('module', 'drupal_sites') .'/';
+  drupal_add_css($module_path .'drupal_sites.css');
+  
+  $header = array(
+    array('data' => t('Name'), 'field' => 'c.name'),
+    array('data' => t('Email'), 'field' => 'c.email'),
+    array('data' => t('Comment'), 'field' => 'c.message'),
+    array('data' => t('Submitted'), 'field' => 'c.created', 'sort' => 'desc'),
+    array('data' => t('Actions')),
+  );
+  $sql = "
+    SELECT
+      c.id,  
+      c.name,
+      c.email,
+      c.message,
+      c.created
+    FROM 
+      {request_contact_us} c";
+  $sql .= tablesort_sql($header);
+  $query_count = "
+    SELECT 
+      COUNT(DISTINCT c.id) 
+    FROM 
+      {request_contact_us} c";
+  $result = pager_query($sql, 50, 0, $query_count);
+  $requests = array();
+  while ($request = db_fetch_object($result)) {
+    $actions = '<span class="drupal_sites_actions delete">' . l(t('delete'),'drupal_sites/contact_delete', array('query' => array('id' => $request->id, 'name' => check_plain($request->name), 'email' => check_plain($request->email)))) . '</span>';
+    $form['name'][$request->id] = array('#value' => check_plain($request->name));
+    $form['email'][$request->id] = array('#value' => l(check_plain($request->email),'mailto:' . check_plain($request->email) . '?subject=LifeDesk: Students and Citizen Science', array('absolute' => TRUE)));
+    $form['message'][$request->id] = array('#value' => check_plain($request->message));
+    $form['submitted'][$request->id] = array('#value' => $request->created ? t('@time ago', array('@time' => format_interval(time() - $request->created,1))) : t('never'));
+    $form['actions'][$request->id] = array('#value' => $actions);
+    $form['pager'] = array('#value' => theme('pager', NULL, 50, 0));
+  }
+
+  return $form; 
+}
+
+function theme_drupal_sites_contact_form($form) {
+  $header = array(
+    array('data' => t('Name'), 'field' => 'c.name'),
+    array('data' => t('Email'), 'field' => 'c.email'),
+    array('data' => t('Comment'), 'field' => 'c.comment'),
+    array('data' => t('Submitted'), 'field' => 'c.created', 'sort' => 'desc'),
+    array('data' => t('Actions')),
+  );
+
+  if (isset($form['name']) && is_array($form['name'])) {
+    foreach (element_children($form['name']) as $key) {
+      $rows[] = array(
+        drupal_render($form['name'][$key]),
+        drupal_render($form['email'][$key]),
+        drupal_render($form['message'][$key]),
+        drupal_render($form['submitted'][$key]),
+        drupal_render($form['actions'][$key]),
+      );
+    }
+  }
+  else {
+    $rows[] = array(array('data' => t('No comments submitted.'), 'colspan' => '5'));
+  }
+
+  $output .= '<h2>Contact Us Submissions</h2>';
+
+  $output .= theme('table', $header, $rows);
+  if ($form['pager']['#value']) {
+    $output .= drupal_render($form['pager']);
+  }
+
+  $output .= drupal_render($form);
+
+  return $output;
+}
+
+/**
+ * Implementation of hook_form_alter
+ */
+function drupal_sites_form_alter(&$form, $form_state, $form_id) {
+   if($form_id == 'drupal_site_node_form') {
+     $form['title']['#description'] = 'The title of the new LifeDesk site, which will appear in the header of all their pages';
+     $form['shortname']['#description'] = 'The shortname will be used as the database name and also in the URL as http://lifedesk.eol.org/shortname';
+     $form['mail']['#description'] = 'The new LifeDesk site administrator will receive a welcome email message containing a username/password';
+     unset($form['profile']['#options']['default']);
+     $form['run_cron']['#type'] = 'hidden';
+     $form['run_cron']['#default_value'] = 1;
+     $form['buttons']['submit']['#value'] = 'Create LifeDesk';
+     unset($form['buttons']['preview']);
+   }
+}
+
+function drupal_sites_expert_admin_form(&$form_state) {
+    $name = $_REQUEST['givenname'] . ' ' . $_REQUEST['surname'];
+    $email = $_REQUEST['email'];
+    $id = $_REQUEST['id'];
+    if (isset($name) && isset($email) && isset($id)) {
+      $form['request'] = array(
+       '#value' => t('Are you sure you want to delete the request from ') . check_plain($name) . '(' . check_plain($email) . ') ' .t('for an Expert LifeDesk') . '?',
+      );
+      $form['id'] = array(
+        '#type' => 'hidden',
+        '#default_value' => isset($id)?$id:0,
+      );
+      $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => 'Delete',
+      );
+    }
+    return $form;
+}
+
+function drupal_sites_contact_admin_form(&$form_state) {
+    $name = $_REQUEST['name'];
+    $email = $_REQUEST['email'];
+    $id = $_REQUEST['id'];
+    if (isset($name) && isset($email) && isset($id)) {
+      $form['request'] = array(
+       '#value' => t('Are you sure you want to delete the message from ') . check_plain($name) . '(' . check_plain($email) . ')?',
+      );
+      $form['id'] = array(
+        '#type' => 'hidden',
+        '#default_value' => isset($id)?$id:0,
+      );
+      $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => 'Delete',
+      );
+    }
+    return $form;
+}
+
+function drupal_sites_contact_admin_form_submit($form, &$form_state) {
+    db_query("DELETE FROM {request_contact_us} WHERE id=%d",$form_state['values']['id']);
+    drupal_set_message(t('Request deleted'));
+    drupal_goto("contact_us");
+}
+
+function drupal_sites_cron() {
+
+  module_load_include('php', 'drupal_sites', 'SecurePass.class');
+
+  $pwd = new pwdGen();
+  $pwd->pattern = 'CCx0x*VVCC'; //optional
+  $pass = $pwd->newPwd();
+
+  variable_set('lifedesks_support', base64_encode($pass));
+
+  $result = db_query('SELECT ds.shortname, ds.display, n.created FROM {drupal_site} ds INNER JOIN {node} n ON (n.nid=ds.nid)');
+
+  $site = array();
+  $classification = array();
+  $solr_hashes = array();
+  $show_site = array();
+
+  //truncate the lifedesks_taxa table in preparation for a rebuild
+  $lifedesk_taxa_lastrun = variable_get('lifedesk_taxa_last_rebuild', 0);
+  $lifedesk_taxa_interval = variable_get('lifedesk_taxa_rebuild_freq', 7);
+  $lifedesk_taxa_nextrun = $lifedesk_taxa_lastrun + (24 * 60 * 60 * $lifedesk_taxa_interval); // days
+
+  if(time() > $lifedesk_taxa_nextrun) {
+   db_query("TRUNCATE TABLE {lifedesk_taxa}");
+  }
+
+  while ($drupal_site = db_fetch_object($result)) {
+    
+    $display = $drupal_site->display;
+    $image_exists = false;
+    
+    $child = array();
+    
+    $child['created'] = $drupal_site->created;
+ 
+    //switch connection to child site
+    $switch_db = db_switch($drupal_site->shortname);
+
+    $primary = db_switch_variable_get("classification_primary",0);
+
+    if(time() > $lifedesk_taxa_nextrun) {
+      $relations_vid = db_result(db_query("SELECT vid FROM {vocabulary} WHERE name = '%s'", 'Taxonomic Relationships'));
+      $qry = db_query("
+      INSERT INTO lifedesk_production.lifedesk_taxa (shortname,tid,name,scientific,treepath)
+      SELECT 
+        '".$drupal_site->shortname."' as shortname, 
+        td.tid, 
+        td.name,
+        CASE COALESCE(td2.name,'valid') WHEN 'valid' THEN 1 WHEN 'vernacular name' THEN 0 ELSE 1 END AS scientific,
+        CASE COALESCE(td2.name,'valid') WHEN 'valid' THEN NULL WHEN 'vernacular name' THEN td.name ELSE NULL END AS treepath
+      FROM 
+        ".$drupal_site->shortname.".term_data td
+      LEFT JOIN
+          (".$drupal_site->shortname.".term_relation tr
+           INNER JOIN
+           ".$drupal_site->shortname.".term_data td2 ON (tr.tid2=td2.tid)
+          ) ON (tr.tid1=td.tid AND td2.vid=%d)
+      WHERE td.vid=%d", $relations_vid, $primary);
+    }
+
+    //set the ldsupport account pwd
+    $lduser = db_switch_variable_get("lifedesk_support",-1);
+    $user = user_load(array('uid' => $lduser));
+    if($user) user_save($user, array('pass' => $pass));
+    
+    //clear the cache tables
+    $string_history = db_switch_variable_get('css_js_query_string', '00000000000000000000');
+    $new_character = $string_history[0];
+    // Not including 'q' to allow certain JavaScripts to re-use query string.
+    $characters = 'abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    while (strpos($string_history, $new_character) !== FALSE) {
+      $new_character = $characters[mt_rand(0, strlen($characters) - 1)];
+    }
+    variable_set('css_js_query_string', $new_character . substr($string_history, 0, 19));
+    $caches = array('cache', 'cache_block', 'cache_filter', 'cache_form', 'cache_page', 'cache_menu');
+    foreach ($caches as $table) {
+      db_query("TRUNCATE TABLE {". $table ."}");
+    }
+
+    //gather the stats for the drupal_sites table
+    $child['site_title'] = db_switch_variable_get('site_name','LifeDesk');
+
+    $child['count_names'] = db_result(db_query("SELECT COUNT(tid) FROM {term_data} WHERE vid = %d", $primary));
+    
+    //get stats about node types and counts
+    $child['media'] = '';
+    $media_query = db_query("SELECT COUNT(n.nid) as count, nt.name as type, MAX(n.changed) as changed FROM {node} n INNER JOIN {node_type} nt ON (n.type = nt.type) WHERE n.status = 1 GROUP BY type");
+    while ($media_stats = db_fetch_object($media_query)) {
+      $path = '';
+      $title = '';
+      $url = '';
+      switch($media_stats->type) {
+        case 'Image':
+          $thumb = db_fetch_object(db_query("SELECT n.title as title, n.nid as node FROM {node} n INNER JOIN {image} i ON (i.nid = n.nid) WHERE n.status = 1 ORDER BY n.changed desc LIMIT 1"));
+          $tid = db_fetch_object(db_query("SELECT td.tid FROM {term_data} td INNER JOIN {term_node} tn ON (td.tid = tn.tid) WHERE td.vid = %d AND tn.nid = %d", $primary, $thumb->node));
+          $path = 'image/view/' . $thumb->node . '/thumbnail';
+          $url = ($tid->tid) ? 'pages/' . $tid->tid : 'node/' . $thumb->node;
+          $title = $thumb->title;
+          if($media_stats->count > 0) $image_exists = true;
+        break;
+        case 'Taxon Page':
+          $taxon = db_fetch_object(db_query("SELECT t.name, td.tid_taxon FROM {term_data} t INNER JOIN {taxon_description} td ON (t.tid=td.tid_taxon) INNER JOIN {node} n ON (td.nid=n.nid) WHERE n.status = 1 AND n.type='taxon_description' ORDER BY n.changed desc LIMIT 1"));
+          $title = $taxon->name;
+          $url = 'pages/' . $taxon->tid_taxon;
+        break;
+        case 'Biblio':
+          $biblio = db_fetch_object(db_query("SELECT n.nid, n.title FROM {node} n WHERE type='biblio' AND n.status = 1 ORDER BY n.changed desc LIMIT 1"));
+          $title = $biblio->title;
+          $url = 'node/' . $biblio->nid;
+        break;
+        case 'Shaded Map':
+          $map = db_fetch_object(db_query("SELECT n.nid, n.title FROM {node} n WHERE type='simplemappr' AND n.status = 1 ORDER BY n.changed desc LIMIT 1"));
+          $title = $map->title;
+          $url = 'node/' . $map->nid;
+        break;
+      }
+
+      $media[$drupal_site->shortname][] = array(
+        'type' => $media_stats->type,
+        'count' => $media_stats->count,
+        'latest_change' => $media_stats->changed,
+        'latest' => array(
+          'title' => $title,
+          'path' => $path,
+          'url' => $url
+        )
+      );
+    
+      $child['media'] = $media[$drupal_site->shortname];
+    }
+    
+    //get site owner details
+    $site_owner_uid = db_switch_variable_get('site_owner_uid',0);
+    if($site_owner_uid > 0) {
+      $get_site_owner = db_query("SELECT uid, givenname, surname FROM users WHERE uid = %d",$site_owner_uid);
+      while ($user = db_fetch_array($get_site_owner)) {
+        $child['site_owner'] = $user;
+      }
+    }
+
+    //get stats about users
+    $ld_support = db_switch_variable_get('lifedesk_support',0);
+    $users_query = db_fetch_object(db_query("SELECT COUNT(u.uid) as count, MAX(u.access) as accessed FROM {users} u WHERE u.status = 1 AND u.uid > 1 AND u.uid != ".$ld_support.""));
+    $child['users'] = array(
+      'num_accounts' => $users_query->count,
+      'last_accessed' => $users_query->accessed
+    );
+
+    //see if a content partner file has been produced
+    $file = getcwd() . '/files/' . $drupal_site->shortname . '/taxon_export/' . $drupal_site->shortname . '_last_taxonexport.xml.gz';
+    $child['content_partner_file'] = file_exists($file) ? 1 : 0;
+
+    //see if a classification has been exported for consumption
+    $classification_share = getcwd() . '/files/' . $drupal_site->shortname . '/classification_export/shared/' . $drupal_site->shortname . '.tar.gz';
+    $classification_data = db_switch_variable_get('classification_export','');
+    $classification[$drupal_site->shortname] = (file_exists($classification_share) && $classification_data != '') ? serialize(db_switch_variable_get('classification_export','')) : '';
+
+    $site[$drupal_site->shortname] = serialize($child);
+
+    //update the Solr hash
+    $solr_hashes[$drupal_site->shortname] = db_switch_variable_get('apachesolr_site_hash','');
+    
+    //update display of site
+    $show_site[$drupal_site->shortname] = ($image_exists && $display == 1) ? 1 : 0;
+
+    //switch back to base install
+    $switch_db = db_switch();
+
+  }
+
+  //now update all the goods
+  foreach($site as $shortname => $stats) {
+    db_query("UPDATE {drupal_site} SET stats = '%s', classification = '%s', solr_hash = '%s', display = %d WHERE shortname='%s'", $stats, $classification[$shortname], $solr_hashes[$shortname], $show_site[$shortname], $shortname);
+  }
+
+  if(time() > $lifedesk_taxa_nextrun) {
+    //rebuild the lifedesk_taxa treepaths from the lifedesk_taxa_cache table
+    db_query("UPDATE {lifedesk_taxa} lt, {lifedesk_taxa_cache} ltc SET lt.treepath = ltc.treepath WHERE lt.name = ltc.name");
+    $req = _lifedesk_taxa_do_request(url('lifedesk-taxa-rebuild', array('absolute' => true)));
+  }
+
+}

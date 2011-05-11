@@ -1,0 +1,14 @@
+name = Classification Slickgrid
+description = "Grid edit the names in your biological classifications"
+package = "LifeDesk"
+project = "classification_slickgrid"
+
+dependencies[] = taxonomy
+dependencies[] = classification
+dependencies[] = jquery_update
+dependencies[] = jquery_ui
+dependencies[] = transaction
+
+core = 6.x
+
+version = "6.x-6000"

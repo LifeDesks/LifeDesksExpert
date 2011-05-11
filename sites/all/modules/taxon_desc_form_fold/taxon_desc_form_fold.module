@@ -1,0 +1,66 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Created by Jimmy of Netivism.
+ * Updated by Burke of TaiBIF.
+ * Modified by Cheng-Hsin Hsu of TaiBIF.
+ * This module alters the taxon description form to folded position so it's easier for users to look for chapters they'd like to edit.
+ */
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function taxon_desc_form_fold_form_alter(&$form, &$form_state, $form_id) {
+  if($form_id == 'taxon_description_node_form'){
+
+    $chapter = $_GET['chapter'] ? $_GET['chapter'] : '';
+
+    if($chapter) {
+      $chapter_parent = db_result(db_query("SELECT td.name FROM {term_data} td INNER JOIN {term_hierarchy} th ON (td.tid=th.parent) INNER JOIN {term_data} td2 ON (th.tid=td2.tid) WHERE LOWER(td2.name)='%s'",strtolower($chapter)));
+    }
+		
+    foreach($form['taxon_description'] as $htid => $hitem){
+      if($htid[0] != '#'){ // Identifying $tid of Chapter parent, a.k.a. header
+        $header_form = &$form['taxon_description'][$htid]; // Getting Headers
+
+        if($header_form['#title'] != $chapter_parent){ // Don't collapse the header being edited.
+          $header_form['#collapsed'] = TRUE; // Collapsing Headers
+        }
+
+        foreach($hitem as $ctid => $citem){
+          if($ctid[0] != '#'){
+            foreach($citem as $item_type => $item ){ // $item_type is either 'content' or 'contributors'
+              $item_form = &$form['taxon_description'][$htid][$ctid][$item_type];
+              if($item_type == 'content') {
+                taxon_desc_form_fold_collapsed($item_form, $chapter);
+     		      }
+
+              //Folding 'contributors' into 'content'
+              $content_form = &$form['taxon_description'][$htid][$ctid]['content'];
+              if($content_form['content']['#default_value']) $header_form['#collapsed'] = FALSE;
+              $content_form['format']['#weight'] = 40;
+              $contributors_form = $form['taxon_description'][$htid][$ctid]['contributors'];
+              $content_form['contributors'] = $contributors_form;
+              $rightsholders_form = $form['taxon_description'][$htid][$ctid]['rightsholders'];
+              $content_form['rightsholders'] = $rightsholders_form;
+            }//foreach END
+            unset($form['taxon_description'][$htid][$ctid]['contributors']);
+            unset($form['taxon_description'][$htid][$ctid]['rightsholders']);
+          }//if($ctid[0]) CHECK END
+        }//foreach END
+      }//if($htid[0]) CHECK END
+    }//foreach END
+  }
+}
+
+function taxon_desc_form_fold_collapsed(&$form, $term){
+  if($form['#type'] == 'item'){
+    $form['#type'] = 'fieldset';
+    $form['#collapsible'] = TRUE;
+    if($form['content']['#title'] != $term) $form['#collapsed'] = TRUE;
+    if($form['content']['#default_value']) $form['#collapsed'] = FALSE;
+    $form['#title'] = $form['content']['#title'];
+  }
+}

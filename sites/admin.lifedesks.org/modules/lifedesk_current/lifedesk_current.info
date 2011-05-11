@@ -1,0 +1,14 @@
+name = LifeDesk Current Tasks
+description = "A CCK-based content type to track current features under development for LifeDesk"
+package = "LifeDesk"
+project = "lifedesk_current"
+
+dependencies[] = content
+dependencies[] = content_copy
+dependencies[] = text
+dependencies[] = auto_nodetitle
+dependencies[] = token
+
+core = 6.x
+
+version = "6.x-1"

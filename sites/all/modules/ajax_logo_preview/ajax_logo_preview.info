@@ -1,0 +1,9 @@
+name = "AJAX Logo Preview"
+description = "Presents a user with a preview of their logo upon selecting a file."
+package = "LifeDesk"
+project = "ajax_logo_preview"
+
+core = 6.x
+
+version = "6.x-1.0"
+datestamp = "1272412800"

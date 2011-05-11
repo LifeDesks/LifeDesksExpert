@@ -1,0 +1,44 @@
+<?php
+
+function db_switch($db_name='') {
+  global $db_url, $active_db, $db_type;
+
+  if(!is_array($db_url)) {
+    $db_url = array('default' => $db_url);
+  }
+
+  if($db_name) {
+	  $url = parse_url($db_url['default']);
+	  $conn = $url['scheme'] . '://' . $url['user'] . ':' . $url['pass'] . '@' . $url['host'] . '/' . $db_name;
+	  $db_url[$db_name] = $conn;
+	  db_set_active($db_name);	
+  }
+  else {
+	  switch($db_type) {
+	    case 'mysqli':
+		  mysqli_close($active_db);
+		break;
+		case 'mysql':
+		  mysql_close($active_db);
+		break;
+		case 'pgsql':
+		  pg_close($active_db);
+		break;
+	  }
+	//do some housekeeping on db_url
+	foreach($db_url as $key => $value) {
+	  if($key != 'default') unset($db_url[$key]);
+    }
+	$db_url = $db_url['default'];
+    db_set_active();
+  }
+
+}
+
+function db_switch_variable_get($var='',$default='') {
+  $val = db_fetch_object(db_query("SELECT value from {variable} WHERE name='%s'",$var));
+  if(!$val) {
+    return $default;	
+  }
+  return unserialize($val->value);
+}

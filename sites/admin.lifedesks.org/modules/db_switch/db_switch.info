@@ -1,0 +1,8 @@
+name = Database Switch
+description = "A simple function that opens and closes database connections for use in multisite environments"
+package = "LifeDesk"
+project = "db_switch"
+
+core = 6.x
+
+version = "6.x-1.0"

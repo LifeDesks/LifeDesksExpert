@@ -1,0 +1,534 @@
+<?php
+// $Id
+/**
+ * @file classification.data_monitoring.test
+ * Test classes extending ClassificationWebTestCase for the purpose of testing data monitoring responses.
+ */
+class ClassificationDataMonitoringWebTestCase extends ClassificationWebTestCase {
+
+  protected $monitor_log;
+  protected $monitor;
+
+  public static function getInfo() {
+    return array(
+      'name' => t('Classification data monitoring web tests'),
+      'description' => t('Web tests for data monitoring of the classification module.'),
+      'group' => t('Classification'),
+    );
+  }
+
+  // Inactive responses.
+  /**
+   * Testing classification_term_relation_type_missing monitor and response.
+   * /
+  public function testClassificationMonitorTermRelationTypeMissing() {
+    $this->monitor['classification_term_relation_type_missing'] = array(
+      'response_trigger' => 'none',
+    );
+    $this->assertMonitoringResponse('classification_term_relation_type_missing');
+  }//*/
+  /**
+   * Testing classification_terms_missing_vocabulary monitor and response.
+   * /
+  public function testClassificationMonitorTermsMissingVocabulary() {
+    $this->monitor['classification_terms_missing_vocabulary'] = array(
+      'response_trigger' => 'none',
+    );
+    $this->assertMonitoringResponse('classification_terms_missing_vocabulary');
+  }//*/
+  /**
+   * Testing classification_term_multiple_parents monitor and response.
+   * /
+  public function testClassificationMonitorTermsMultipleParents() {
+    $this->monitor['classification_term_multiple_parents'] = array(
+      'response_trigger' => 'none',
+    );
+    $this->assertMonitoringResponse('classification_term_multiple_parents');
+  }//*/
+
+
+  // Automated simple responses.
+  /**
+   * Test automated responses.
+   * /
+  public function testClassificationMonitorsAutomated() {
+    $this->monitor = array();
+    $this->monitor['classification_term_hierarchy_child_missing'] = array(
+      'response_trigger' => 'automatic',
+      'expected_response_action' => 'deleted',
+    );
+    $this->monitor['classification_term_relation_missing'] = array(
+      'response_trigger' => 'automatic',
+      'expected_response_action' => 'deleted',
+    );
+    $this->monitor['classification_node_term_term_missing'] = array(
+      'response_trigger' => 'automatic',
+      'expected_response_action' => 'deleted',
+    );
+    $this->monitor['classification_node_term_node_missing'] = array(
+      'response_trigger' => 'automatic',
+      'expected_response_action' => 'deleted',
+    );
+
+    variable_set('data_monitoring_respond', 1);
+
+    $this->initMonitoringResponse();
+
+    $ids = array();
+    foreach ($this->monitor as $id => $monitor) {
+      $this->generateErroneousData($id);
+      $ids[$id] = TRUE;
+    }
+
+    $this->assertMonitorsFail($ids, TRUE);
+    $this->assertMonitorsPass(TRUE);
+
+    $this->destroyMonitoringResponse();
+  }
+  //*/
+
+  // Simple responses triggered manually.
+  /**
+   * Testing classification_term_hierarchy_child_missing monitor and response with response triggered manually.
+   * /
+  public function testClassificationMonitorTermHierarchyChildMissing() {
+    $this->monitor['classification_term_hierarchy_child_missing'] = array(
+      'response_trigger' => 'automatic',
+      'expected_response_action' => 'deleted',
+    );
+    $this->assertMonitoringResponse('classification_term_hierarchy_child_missing', FALSE);
+  }//*/
+  /**
+   * Testing classification_term_relation_missing monitor and response with response triggered manually.
+   * /
+  protected function testClassificationMonitorTermRelationMissing() {
+    $this->monitor['classification_term_relation_missing'] = array(
+      'response_trigger' => 'automatic',
+      'expected_response_action' => 'deleted',
+    );
+    $this->assertMonitoringResponse('classification_term_relation_missing', FALSE);
+  }//*/
+  /**
+   * Testing classification_node_term_term_missing monitor and response with response triggered manually.
+   * /
+  protected function testClassificationMonitorNodeTermTermMissing() {
+    $this->monitor['classification_node_term_term_missing'] = array(
+      'response_trigger' => 'automatic',
+      'expected_response_action' => 'deleted',
+    );
+    $this->assertMonitoringResponse('classification_node_term_term_missing', FALSE);
+  }//*/
+  /**
+   * Testing classification_node_term_node_missing monitor and response with response triggered manually.
+   * /
+  protected function testClassificationMonitorNodeTermNodeMissing() {
+    $this->monitor['classification_node_term_node_missing'] = array(
+      'response_trigger' => 'automatic',
+      'expected_response_action' => 'deleted',
+    );
+    $this->assertMonitoringResponse('classification_node_term_node_missing', FALSE);
+  }//*/
+
+
+
+  // Test complex batch responses.
+  /**
+   * Testing classification_hierarchy_missing monitor and response with response triggered manually.
+   */
+  protected function testClassificationMonitorHierarchyMissing() {
+    $this->monitor['classification_hierarchy_missing'] = array(
+      'response_trigger' => 'manual',
+      'expected_response_action' => 'moved',
+    );
+    $this->assertMonitoringResponse('classification_hierarchy_missing', 'classification_create_hierarchy_move_to_lost_found');
+  }//*/
+
+
+
+  // Helper functions.
+  /**
+   * Helper function to run monitoring and test a monitor with an inactive response.
+   */
+  protected function assertMonitoringResponse($mid, $rid) {
+    $this->initMonitoringResponse();
+    $this->generateErroneousData($mid);
+    $this->assertMonitorsFail($mid, TRUE);
+
+    $this->assertMonitorResponseIsPending($mid, $rid);
+    $this->assertMonitorResponsePreview($mid, $rid);
+    $this->assertMonitorResponseImplementation($mid, $rid);
+
+    // Clear logs and run monitors a final time to ensure response fixed issue.
+    $this->assertMonitorsPass(TRUE);
+    if (isset($this->monitor[$mid]['state']['sql']) && isset($this->monitor[$mid]['state']['before'])) {
+      $this->monitor[$mid]['state']['diff'] = $this->diffState($mid);
+      $this->assertEqual($this->monitor[$mid]['total_affected_records'], $this->monitor[$mid]['state']['diff'],
+                         t('When we compare current state with previous state the difference (!diff) is the same as the count of affected records (!affected_records).', array('!diff' => $this->monitor[$mid]['state']['diff'], '!affected_records' => $this->monitor[$mid]['total_affected_records'])),
+                         t('Classification'));
+    }
+
+    $this->destroyMonitoringResponse();
+  }
+
+  /**
+   * Helper function to prepare environment for testing monitoring and reponse.
+   */
+  protected function initMonitoringResponse() {
+    $this->generateDummyClassificationData();
+    // Check monitors pass after adding dummy data.
+    $this->assertMonitorsPass(TRUE);
+    $this->clearMonitorLogs();
+  }
+  /**
+   * Helper function to clear class variables before next test begins.
+   */
+  protected function destroyMonitoringResponse() {
+    if (isset($this->monitor)) unset($this->monitor);
+    if (isset($this->monitor_log)) unset($this->monitor_log);
+  }
+
+  /**
+   * Helper function to generate state result.
+   */
+  protected function generateStateResult($mid) {
+    return db_result(db_query($this->monitor[$mid]['state']['sql']));
+  }
+  /**
+   * Helper function to get difference between current state and previous state.
+   */
+  protected function diffState($mid) {
+    return $this->monitor[$mid]['state']['before'] - $this->generateStateResult($mid);
+  }
+  /**
+   * Helper function to generate erroneous data.
+   */
+  protected function generateErroneousData($mid) {
+
+    switch ($mid) {
+
+      case 'classification_hierarchy_missing':
+        // Generate error by removing term hierarchies for a term with children.
+        $this->assertEqual(2, db_affected_rows(db_query("DELETE FROM {term_hierarchy} WHERE tid IN (%d, %d)", $this->dummy_terms[1]['tid'], $this->dummy_terms[2]['tid'])),
+                           t('When we remove term hierarchies, 2 rows in the term_hierarchy table are affected.'),
+                           t('Classification'));
+        $this->monitor[$mid]['state']['sql'] = "SELECT Count(*) FROM {term_data}";
+        $this->monitor[$mid]['state']['before'] = $this->generateStateResult($mid);
+        $this->monitor[$mid]['directly_affected_records'] = 2; // Monitor is only aware of terms directly affected, it is not aware of children.
+        $this->monitor[$mid]['total_affected_records'] = 9; // 9 term_data records are affected by the removal of the 2 term_heirarchy records - 2 terms and 7 children.
+        break;
+
+      case 'classification_term_relation_missing':
+        // Generate error by removing term relation records whilst leaving term relation has type records in place.
+        $this->assertEqual(2, db_affected_rows(db_query("DELETE FROM {term_relation} WHERE tid1 IN (%d, %d)", $this->dummy_terms[3]['tid'], $this->dummy_terms[4]['tid'])),
+                           t('When we remove term relations, 2 rows in the term_relation table are affected.'),
+                           t('Classification'));
+        $this->monitor[$mid]['directly_affected_records'] = $this->monitor[$mid]['total_affected_records'] = 2; // 2 term_relation_has_type records are now extraneous.
+        break;
+      case 'classification_node_term_term_missing':
+        $this->generateNodeData();
+        // Generate error by adding node term records for non existent terms.
+        $this->assertEqual(2, db_affected_rows(db_query("INSERT INTO {term_node} VALUES (%d, %d, %d), (%d, %d, %d)", 1, 1, 998, 2, 2, 999)),
+                           t('When we insert term node records, 2 rows in the term_node table are affected.'),
+                           t('Classification'));
+        $this->monitor[$mid]['directly_affected_records'] = $this->monitor[$mid]['total_affected_records'] = 2; // Two node term records are are now extraneous.
+        break;
+      case 'classification_node_term_node_missing':
+        // Generate error by adding node term record for non existent nodes.
+        $this->assertEqual(2, db_affected_rows(db_query("INSERT INTO {term_node} VALUES (%d, %d, %d), (%d, %d, %d)", 998, 998, $this->dummy_terms[0]['tid'], 999, 999, $this->dummy_terms[1]['tid'])),
+                           t('When we insert term node records, 2 rows in the term_node table are affected.'),
+                           t('Classification'));
+        $this->monitor[$mid]['directly_affected_records'] = $this->monitor[$mid]['total_affected_records'] = 2; // Two node term records are are now extraneous.
+        break;
+      case 'classification_term_hierarchy_child_missing':
+        // Generate error by removing term but leaving term_heiarchy in place.
+        $this->assertEqual(2, db_affected_rows(db_query("DELETE FROM {term_data} WHERE tid IN (%d, %d)", $this->dummy_terms[0]['tid'], $this->dummy_terms[1]['tid'])),
+                           t('When we remove a child term, 2 rows in the term data table are affected.'),
+                           t('Classification'));
+        $this->monitor[$mid]['directly_affected_records'] = $this->monitor[$mid]['total_affected_records'] = 2; // Two term hierarchy records are now extraneous.
+
+        break;
+
+      case 'classification_term_multiple_parents':
+        // We generate error by created additional term hierarchy records - multiple parents for a single term.
+        $this->assertEqual(2, db_affected_rows(db_query("INSERT INTO {term_hierarchy} VALUES (%d, %d), (%d, %d)", $this->dummy_terms[5]['tid'], $this->dummy_terms[0]['tid'], $this->dummy_terms[4]['tid'], $this->dummy_terms[1]['tid'])),
+                       t('When we add a second parent to an existing term, one row in the term hierarchy table is affected.'),
+                       t('Classification'));
+        $this->monitor[$mid]['directly_affected_records'] = $this->monitor[$mid]['total_affected_records'] = 2;
+        break;
+
+      case 'classification_term_relation_type_missing':
+
+        // We remove term relation type record for taxonomic relationship to generate failed monitor for synonym terms.
+        $this->assertEqual(1, db_affected_rows(db_query("DELETE FROM {term_relation_types} WHERE vid = %d", CLASSIFICATION_RELATIONS)),
+                          t('When we delete term relation type taxonomic relationship, 1 row in the term_relation_types table is affected.'),
+                          t('Classification'));
+        $this->monitor[$mid]['directly_affected_records'] = $this->monitor[$mid]['total_affected_records'] = 2; // Two synonym terms affected by this deletion.
+        break;
+
+      case 'classification_terms_missing_vocabulary':
+        // We remove vocabulary record to generate failed monitor for terms in that vocabulary.
+        $this->assertEqual(1, db_affected_rows(db_query("DELETE FROM {vocabulary} WHERE vid = %d", CLASSIFICATION_PRIMARY)),
+                           t('When we delete the primary classification, one row in the vocabulary table is affected.'),
+                           t('Classification'));
+        $this->monitor[$mid]['directly_affected_records'] = $this->monitor[$mid]['total_affected_records'] = 10; // 10 terms affected by this deletion.
+        break;
+
+    }
+  }
+
+
+  /**
+   * Helper function to run monitors.
+   */
+  protected function runMonitors() {
+    // Test all monitors without any erroneous data.
+    $this->drupalPost('admin/reports/data-monitoring/monitors', array(), t('Run monitors'));
+  }
+
+  /**
+   * Helper function to assert all monitors pass.
+   */
+  protected function assertMonitorsPass($refresh = FALSE) {
+    if ($refresh) {
+      $this->clearMonitorLogs();
+      $this->runMonitors();
+    }
+    $this->assertRaw('class="no-logs"', t('When monitor is run without erroneous data monitors should pass and no logs should be recorded.'), t('Classification'));
+  }
+
+  /**
+   * Helper function to assert a monitor has failed.
+   * @param $mids
+   *     Array with key as monitor identifier as defined in classification_data_monitoring_monitors(), and value as whether response was executed.
+   * @param $refresh
+   *     Boolean determines whether to clear existing logs and rerun monitoring before assertions.
+   */
+  protected function assertMonitorsFail($mids, $refresh = FALSE) {
+
+    if (!is_array($mids)) $mids = array($mids => FALSE);
+
+    if ($refresh) {
+      $this->clearMonitorLogs();
+      $this->runMonitors();
+    }
+
+    $results = db_query("SELECT dml.*, dmm.id FROM {data_monitoring_log} dml JOIN {data_monitoring_monitors} dmm ON dml.dmid = dmm.dmid WHERE dml.responses_pending > 0 OR dml.responses_implemented > 0");
+    $this->monitor_log = array();
+    while ($row = db_fetch_array($results)) {
+      if (array_key_exists($row['id'], $mids)) {
+        $this->monitor_log[$row['id']] = $row;
+      }
+      else {
+        $this->assert('exception',
+                      t('When testing failure of monitors, monitor !unexpected_monitor_id failed unexpectedly, with result count of !result_count.', array('!unexpected_monitor_id' => $row['id'], '!result_count' => $row['result_count'])),
+                      t('Classification'));
+      }
+    }
+
+    foreach ($mids as $mid => $response_executed) {
+
+      $this->assertEqual($this->monitor_log[$mid]['result_count'], $this->monitor[$mid]['directly_affected_records'],
+                         t('When testing failure of monitor !monitor_id, monitor log result count should match expected value of !result_count.', array('!monitor_id' => $mid, '!result_count' => $this->monitor[$mid]['directly_affected_records'])),
+                         t('Classification'));
+      if ($response_executed) {
+        $this->assertEqual($this->monitor_log[$mid]['responses_implemented'], 1,
+                         t('When testing failure of monitor !monitor_id, monitor responses implemented should be 1.', array('!monitor_id' => $mid)),
+                         t('Classification'));
+      }
+      else {
+        $this->assertEqual($this->monitor_log[$mid]['responses_pending'], 1,
+                         t('When testing failure of monitor !monitor_id, monitor responses pending should be 1.', array('!monitor_id' => $mid)),
+                         t('Classification'));
+
+      }
+
+    }
+
+  }
+
+//  /**
+//   * Helper function to assert that monitor response has not been configured.
+//   * Requires $this->monitor_log to have been set by $this->assertMonitorsFail().
+//   */
+//  protected function assertMonitorResponseIsInactive($mid) {
+//    global $base_url;
+//    $this->drupalGet('admin/reports/data-monitoring/respond/' . $this->monitor_log[$mid]['dmlid']);
+//    $current_url = $this->getUrl();
+//    $expected_url = $base_url . '/admin/reports/data-monitoring/monitors';
+//    $this->assertEqual($current_url, $expected_url,
+//                       t('When response is executed for monitor !monitor_id, user is redirected immediately back to monitors list (!expected_url). No action is taken.', array('!monitor_id' => $mid, '!expected_url' => $expected_url)),
+//                       t('Classification'));
+//    // Assert monitor fails again.
+//    $this->assertMonitorsFail($mid);
+//  }
+
+  /**
+   * Helper function to assert that monitor response has been configured.
+   * Requires $this->monitor_log to have been set by $this->assertMonitorsFail().
+   */
+  protected function assertMonitorResponseIsPending($mid, $rid) {
+    $this->drupalGet('admin/reports/data-monitoring/responses/' . $this->monitor_log[$mid]['dmlid']);
+    $this->assertPattern('#class="[^"]*?state-1[^/]*? data-rid="' . $rid .'#si',
+                         t('When response page is visited before response is triggered response !rid state is pending.', array('!rid' => $rid)),
+                         t('Classification'));
+  }
+
+  protected function assertMonitorResponsePreview($mid, $rid) {
+    $this->drupalPost(NULL, array('responses-1' => 1), t('Preview'));
+    $this->assertPattern('#class="[^"]*?state-2[^/]*? data-rid="' . $rid . '#si',
+                         t('When response !rid is previewed state is preview.', array('!rid' => $rid)),
+                         t('Classification'));
+    $this->assertPattern('#class="' . $this->monitor[$mid]['expected_response_action'] . '">' . $this->monitor[$mid]['total_affected_records'] . '#si',
+                         t('When response !rid is previewed !affected_records records are show as !expected_response_action', array('!affected_records' => $this->monitor[$mid]['total_affected_records'], '!expected_response_action' => $this->monitor[$mid]['expected_response_action'])),
+                         t('Classification'));
+  }
+
+  protected function assertMonitorResponseImplementation($mid, $rid) {
+    $this->drupalPost(NULL, array('responses-1' => 1), t('Implement'));
+    $this->assertPattern('#class="[^"]*?state-4[^/]*? data-rid="' . $rid . '#si',
+                         t('When response !rid is implemented state is completed.', array('!rid' => $rid)),
+                         t('Classification'));
+    $this->assertPattern('#class="' . $this->monitor[$mid]['expected_response_action'] . '">' . $this->monitor[$mid]['total_affected_records'] . '#si',
+                         t('When response !rid is implemented !affected_records records are show as !expected_response_action', array('!affected_records' => $this->monitor[$mid]['total_affected_records'], '!expected_response_action' => $this->monitor[$mid]['expected_response_action'])),
+                         t('Classification'));
+  }
+
+  /**
+   * Helper function to clear monitor logs.
+   */
+  protected function clearMonitorLogs() {
+    db_query("TRUNCATE {data_monitoring_monitors}");
+    db_query("TRUNCATE {data_monitoring_log}");
+    db_query("TRUNCATE {data_monitoring_response_log}");
+    unset($this->monitor_log);
+  }
+}
+
+
+/**
+ * Class extends classification unit test specifically for data monitoring.
+ *
+ */
+class ClassificationDataMonitoringUnitTestCase extends ClassificationUnitTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => t('Classification data monitoring unit tests'),
+      'description' => t('Unit tests for data monitoring of the classification module.'),
+      'group' => t('Classification'),
+    );
+  }
+  /**
+   * Initialises data monitoring.
+   * Ensure classes and include files are available, discovers and return monitors
+   * data which is required to run unit tests on classification response procedures.
+   * @return
+   *     Object of class Monitors.
+   */
+  public static function initDataMonitoring() {
+    _data_monitoring_class_include();
+    _data_monitoring_module_include('data_monitoring.inc');
+    return _data_monitoring_discover_monitors();
+  }
+
+  public function testResponseClassificationTermRelationMissing() {
+    $monitors = $this->initDataMonitoring();
+
+    // Monitor passed.
+    $passed_results = array('count' => 0);
+    $monitor = clone $monitors['classification']['classification_term_relation_type_missing'];
+    $monitor->setResults($passed_results);
+    unset($passed_results);
+    $monitor->setFailed($monitor->evaluateFailed());
+    $this->assertFalse($monitor->getFailed(), t('When monitor classification_term_relation_type_missing passes, failed should be false.'));
+
+    classification_data_monitoring_response($monitor, 'preview');
+    $message = t('When monitor classification_term_relation_type_missing passes, response result should return null.');
+    $this->assertNull($monitor->getResponseResult(), $message);
+    unset($message);
+    unset($monitor);
+
+    // Monitor failed.
+    $failed_results = array('count' => 10, 'header' => array(), 'rows' => array());
+    $failed_results['header'] = array(
+      'trid' => 'trid',
+      'rtid' => 'rtid',
+    );
+    $i = 0;
+    while ($i < 10) {
+      $failed_results['rows'][$i] = array(
+        'trid' => $i + 1,
+        'rtid' => 1,
+      );
+      $i++;
+    }
+    unset($i);
+    $monitor = clone $monitors['classification']['classification_term_relation_type_missing'];
+    $monitor->setResults($failed_results);
+    unset($failed_results);
+    $monitor->setFailed($monitor->evaluateFailed());
+    $this->assertTrue($monitor->getFailed(), t('When monitor classification_term_relation_type_missing fails, failed should be true.'));
+
+    classification_data_monitoring_response($monitor, 'preview');
+    $message = t('When monitor classification_term_relation_type_missing fails, response result should return empty array.');
+    $this->assertEqual($monitor->getResponseResult(), array(), $message);
+    unset($message);
+    unset($monitor);
+
+    unset($monitors);
+  }
+
+
+
+  public function testResponseClassificationTermsMissingVocabulary() {
+    $monitors = $this->initDataMonitoring();
+
+    // Monitor passed
+    $passed_results = array('count' => 0);
+    $monitor = clone $monitors['classification']['classification_terms_missing_vocabulary'];
+    $monitor->setResults($passed_results);
+    unset($passed_results);
+    $monitor->setFailed($monitor->evaluateFailed());
+    $this->assertFalse($monitor->getFailed(), t('When monitor classification_terms_missing_vocabulary passes, failed should be false.'));
+
+    classification_data_monitoring_response($monitor, 'preview');
+    $message = t('When monitor classification_terms_missing_vocabulary passes, response result should return null.');
+    $this->assertNull($monitor->getResponseResult(), $message);
+    unset($message);
+    unset($monitor);
+
+
+
+
+    // Monitor failed
+    $failed_results = array('count' => 10, 'header' => array(), 'rows' => array());
+    $failed_results['header'] = array(
+      'tid' => 'tid',
+      'vid' => 'vid',
+      'name' => 'name',
+    );
+    $i = 0;
+    while ($i < 10) {
+      $failed_results['rows'][$i] = array(
+        'tid' => $i + 1,
+        'vid' => 12345,
+        'name' => $this->randomString(10),
+      );
+      $i++;
+    }
+    unset($i);
+    $monitor = clone $monitors['classification']['classification_terms_missing_vocabulary'];
+    $monitor->setResults($failed_results);
+    unset($failed_results);
+    $monitor->setFailed($monitor->evaluateFailed());
+    $this->assertTrue($monitor->getFailed(), t('When monitor classification_terms_missing_vocabulary fails, failed should be true.'));
+
+    classification_data_monitoring_response($monitor, 'preview');
+    $message = t('Monitor classification_terms_missing_vocabulary response result should return empty array.');
+    $this->assertEqual($monitor->getResponseResult(), array(), $message);
+    unset($monitor);
+    unset($message);
+
+    unset($monitors);
+  }
+}

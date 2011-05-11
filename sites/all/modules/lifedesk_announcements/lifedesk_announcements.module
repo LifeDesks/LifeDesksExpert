@@ -1,0 +1,134 @@
+<?php
+
+/**
+ * Implementation of hook_theme().
+ */
+function lifedesk_announcements_theme() {
+  return array(
+    'lifedesk_announcements_message' => array(
+      'arguments' => array('message' => NULL),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_menu
+ */
+function lifedesk_announcements_menu() {
+    $items['admin/settings/lifedesk_announcements'] = array(
+      'title' => t('Reminder messages'),
+      'description' => 'Configure periodic email reminders.',
+      'type' => MENU_NORMAL_ITEM,
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('lifedesk_announcements_admin_settings'),
+      'access arguments' => array('administer site configuration'),
+      'file' => 'lifedesk_announcements.admin.inc',
+    );
+
+    return $items;
+}
+
+/**
+ * Implementation of hook_block
+ */
+function lifedesk_announcements_block($op = 'list', $delta = 0, $edit = array()) {
+  switch ($op) {
+    case 'list':
+      $block[0]['info'] = t('LifeDesk Announcements');
+      $block[0]['cache'] = BLOCK_NO_CACHE;
+      return $block;
+    case 'configure':
+      $form = array();
+      if ($delta == 0) {
+        $form['lifedesk_announcements'] = array(
+          '#type' => 'textfield',
+          '#title' => t('LifeDesk Announcement'),
+          '#size' => 60,
+          '#description' => t('This string will appear in the announcement.'),
+          '#default_value' => variable_get('lifedesk_announcements',''),
+        );
+      }
+      return $form;
+    case 'save':
+      if ($delta == 0) {
+        variable_set('lifedesk_announcements', $edit['lifedesk_announcements']);
+      }
+      return;
+    case 'view':
+      $block = array();
+      if (user_access('access content')) {
+        switch ($delta) {
+          case 0:
+            $block['subject'] = '';
+            $block['content'] = theme('lifedesk_announcements_message', _lifedesk_announcements_message());
+            break;
+        }
+      }
+      return $block;
+  }
+}
+
+function _lifedesk_announcements_message() {
+    $message = variable_get('lifedesk_announcements','');
+    return $message;
+}
+
+function theme_lifedesk_announcements_message($message) {
+  $output = '';
+  if($message) {
+    $module_path = drupal_get_path('module', 'lifedesk_announcements') .'/';
+    drupal_add_css($module_path .'css/lifedesk_announcements.css');
+    $output .= '<div class="messages warning announcements">';
+    $output .= $message;
+    $output .= '</div>';
+  }
+  return $output;
+}
+
+/**
+* Implementation of hook_cron
+*/
+function lifedesk_announcements_cron() {
+    
+    global $base_url;
+
+    $interval = 60 * 60 * 24 * 30 * variable_get('lifedesk_announcements_inactive_period', 2);
+    $ldsupport = variable_get('lifedesk_support', 1);
+    $from = variable_get('site_mail', 'lifedesk@eol.org');
+    $site_name = variable_get('site_name', 'Drupal Site');
+    $message = t("Dear !user,\n\nWe noticed that it has been a while since you or your fellow members logged into your LifeDesk, !site_name at !site_url. If you are taking a break, not to worry, your site will still be here for you when you return. However, if you do not need your site anymore, remember that you can delete it. Instructions on how to do this can be found here: http://help.lifedesks.org/node/50. If you are the owner of your site, you may at any time download the code and its underlying database before deleting it.\n\nIf you are still deciding whether or not LifeDesk is the right platform for you, that is okay. To help you decide, our new features and bug fixes can be found here: http://www.lifedesks.org/newfeatures/. If you have any questions, you can use the red feedback tab on the left-hand side of your site when logged in. There is also help documentation available at all times in the upper-right corner of every page on your site.\n\nWe hope to see you back soon,\n\nThe LifeDesks Team");
+    
+    $stale = true;    
+    $qry = db_query("SELECT u.access FROM {users} u WHERE u.uid > 1 AND u.status = 1 AND u.uid != " . $ldsupport);
+    while($result = db_fetch_object($qry)) {
+      if ($result->access > (time()-$interval)) {
+        $stale = false;
+        return;  
+      }
+    }
+    if($stale && variable_get("lifedesk_announcements_inactive_message_sent",0) < (time()-$interval)) {
+        $user = user_load(variable_get("site_owner_uid", 1));
+        $variables = array(
+          '!user' => $user->givenname . ' ' . $user->surname,
+          '!site_url' => $base_url,
+          '!site_name' => $site_name
+        );
+        $params['subject'] = t("LifeDesks: We miss you");
+        $params['body'] = t(variable_get("lifedesk_announcements_inactive_message", $message), $variables);
+        drupal_mail('lifedesk_announcements', 'direct', $user->mail, user_preferred_language($user), $params, $from);
+
+        variable_set("lifedesk_announcements_inactive_message_sent", time());
+    }
+}   
+
+/**
+ * Implementation of hook_mail
+ */
+function lifedesk_announcements_mail($key, &$message, $params) {
+  switch($key) {
+    case 'direct':
+      $message['subject'] = $params['subject'];
+      $message['body'][] = $params['body'];
+    break;
+  }
+}

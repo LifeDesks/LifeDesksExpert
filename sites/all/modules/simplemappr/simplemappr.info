@@ -1,0 +1,8 @@
+name = SimpleMappr
+description = "Create simple, shaded region maps"
+package = "SimpleMappr"
+project = "simplemappr"
+
+core = 6.x
+
+version = "6.x-6000"

@@ -1,0 +1,160 @@
+<?php
+
+/**
+ * Implementation of hook_menu().
+ */
+function lifedesk_greenbar_menu() {
+    $items['next'] = array(
+      'page callback' => 'lifedesk_greenbar_next_lifedesk',
+      'type' => MENU_CALLBACK,
+      'access arguments' => array('access content'),
+    );
+  return $items;
+}
+
+/**
+ * Implementation of hook_block
+ */
+function lifedesk_greenbar_block($op = 'list', $delta = 0) {
+    global $theme_key;
+    if ($op == 'list') {
+      $default_placement = 'footer';
+      $regions = system_region_list($theme_key);
+      if (isset($regions) && array_key_exists($default_placement, $regions)) {
+        $blocks[0]['region'] = $default_placement;
+      } else {
+        $blocks[0]['region'] = BLOCK_REGION_NONE;
+      }
+      $blocks[0]['info'] = t('LifeDesk Green Bar');
+      return $blocks;
+    }
+    else {
+	  if ($op == 'view') {
+	    $block['subject'] = t('LifeDesk Green Bar');
+        $block['content'] = _lifedesk_greenbar_getbar();
+	  }
+	  return $block;
+    }
+}
+
+/**
+ * Callback function to handle random LifeDesk selection with "next>>" link in theme
+ */
+function lifedesk_greenbar_next_lifedesk() {
+  global $conf,$base_url;
+
+  $parsed_baseURL = parse_url($base_url);
+  $urlbits = explode(".",$parsed_baseURL['host'],2);
+
+  //the following is the admin db in the site's settings.php file
+  $admin_db = $conf['_lifedesks_admindb'];
+  if(!$admin_db) {
+	drupal_goto('');
+    return; 
+  }
+
+  $switch_db = _lifedesk_greenbar_dbswitch($admin_db);
+
+  //get the count of lifedesks
+  $count = db_result(db_query("SELECT COUNT(shortname) FROM {drupal_site} WHERE profile='expert' AND display=1"));
+
+  $lifedesk = rand(0,($count-1));
+
+  $site = db_result(db_query("SELECT shortname from {drupal_site} where shortname != '%s' AND profile='expert' AND display=1 limit $lifedesk,1", $urlbits[0]));
+
+  if($site) {
+    drupal_goto('http://' . $site . '.' . $urlbits[1]);	
+  }
+  else {
+    drupal_goto('next');	
+  }
+}
+
+/**
+ * Helper function to switch a db connection
+ */
+function _lifedesk_greenbar_dbswitch($db_name='') {
+  global $db_url;
+
+  if(!is_array($db_url)) {
+    $db_url = array('default' => $db_url);
+  }
+
+  if (!$db_name) {
+    $cur_db = db_set_active('default');
+  }
+  if($db_name) {
+	$url = parse_url($db_url['default']);
+	$conn = $url['scheme'] . '://' . $url['user'] . ':' . $url['pass'] . '@' . $url['host'] . '/' . $db_name;
+    $db_url[$db_name] = $conn;
+    $cur_db = db_set_active($db_name);
+  }
+  return $cur_db;
+}
+
+function _lifedesk_greenbar_getbar() {
+  global $conf, $base_url, $user;
+  $domain = $conf['_lifedesks_domain'];
+
+  $module_path = drupal_get_path('module', 'lifedesk_greenbar') .'/';
+
+  drupal_add_css($module_path . 'css/lifedesk_greenbar.css');
+  drupal_add_js($module_path . 'js/lifedesk_greenbar.js');
+
+  $output  = '<div id="lifedesk-greenbar-region">';
+  $output .= '<form id="lifedesk-greenbar-search-form" method="post" accept-charset="UTF-8" action="' . $base_url . '/search/apachesolr_search/">';
+
+  $output .= '<div id="lifedesk-greenbar-search" class="lifedesk-greenbar">';
+  $output .= '<input class="lifedesk-greenbar-search-form-text" type="text" title="' . t('Enter the terms you wish to search for.') . '" value="' . htmlspecialchars($_POST['keys']) . '" size="15" name="keys" maxlength="128"/>';
+  $output .= '<input class="lifedesk-greenbar-search-form-submit" type="submit" value="' . t('Search') . '" />';
+  $output .= '<input type="hidden" name="apachesolr_search[get]" value="[]" />';
+  $output .= '<input type="hidden" name="apachesolr_search[queryvalues]" value="[]" />';
+  $output .= '</div>';
+
+  $output .= '<div id="lifedesk-greenbar-search-form-dropdown"></div><fieldset id="lifedesk-greenbar-search-menu"><p><input id="lifedesk-greenbar-search-type" type="checkbox" name="lifedesk-greenbar-search-type" title="search"><label for="lifedesk-greenbar-search-type">' . t('Search all LifeDesks') . '</label></p></fieldset>';
+
+  $output .= '<div id="lifedesk-greenbar-next" class="lifedesk-greenbar">';
+  $output .= l(t('Next LifeDesk >>'), 'next');
+  $output .= '</div>';
+
+  $output .= '<div id="lifedesk-greenbar-meta" class="lifedesk-greenbar">';
+
+  if($user->uid == 0 ) {
+    $links[] = array(
+      'class' => 'lifedesk-greenbar-create',
+      'title' => t('Create a LifeDesk'),
+      'link' => 'http://www.' . $domain . '/create',
+      'options' => array('absolute' => TRUE, 'html' => true),
+    );	
+  }
+  $links[] = array(
+    'class' => 'lifedesk-greenbar-new',
+    'title' => t('What\'s New'),
+    'link' => 'http://www.' . $domain . '/newfeatures',
+    'options' => array('absolute' => TRUE, 'html' => TRUE)
+  );
+  $links[] = array(
+    'class' => 'lifedesk-greenbar-help',
+    'title' => t('Help'),
+    'link' => 'http://help.' . $domain,
+    'options' => array('absolute' => TRUE, 'html' => TRUE),
+  );
+
+  $count = 1;
+  foreach($links as $link) {
+    $output .= '<span class="' . $link['class'] .'">' . l($link['title'], $link['link'], $link['options']);
+	if($link['class'] == 'lifedesk-greenbar-new') {
+      $output .= t(' v. !version', array('!version' => variable_get('lifedesk_version', 'x')));
+	}
+	$output .= '</span>';
+    if($count < count($links)) $output .= "|";
+    $count++;
+  }
+
+  $output .= '</div>';
+
+  $output .= '</form>';
+  $output .= '</div>';
+
+  return $output;
+}

@@ -1,0 +1,2493 @@
+# $Id: biblio.nb.po,v 1.1.2.1 2010/02/23 14:33:50 rjerome Exp $
+#
+# LANGUAGE translation of Drupal (general)
+# Copyright 2010 Gisle Hannemyr <gisle@hannemyr.no>
+# Generated from files:
+#  biblio.admin.inc,v 1.57 2009/05/29 14:25:04 rjerome
+#  biblio.pages.inc,v 1.51 2009/05/29 14:25:04 rjerome
+#  translations/biblio.db.trans.inc: n/a
+#  biblio.import.export.inc,v 1.40 2009/05/29 14:25:04 rjerome
+#  biblio_theme.inc,v 1.58 2009/05/29 14:25:04 rjerome
+#  biblio.module,v 1.191 2009/05/29 14:25:04 rjerome
+#  biblio.views.inc,v 1.9 2009/06/03 14:43:58 rjerome
+#  biblio_handler_citation.inc,v 1.3 2009/06/03 14:43:58 rjerome
+#  biblio_handler_field_contributor.inc,v 1.8 2009/04/21 01:59:31 rjerome
+#  biblio.info,v 1.6 2009/01/09 01:20:47 rjerome
+#  biblio_handler_field.inc: n/a
+#  biblio_handler_filter_type.inc: n/a
+#  biblio_style_apa.inc,v 1.22 2009/05/29 14:25:04 rjerome
+#  biblio_style_cse.inc,v 1.23 2009/05/30 00:46:09 rjerome
+#  ris_parser.inc,v 1.14 2009/04/21 21:14:16 rjerome
+#  biblio.install,v 1.75 2009/06/01 01:25:11 rjerome
+#
+msgid ""
+msgstr "Project-Id-Version: Biblio 6.x\n"
+"POT-Creation-Date: 2009-06-03 14:29-0400\n"
+"PO-Revision-Date: 2010-02-21 22:22+0100\n"
+"Last-Translator: Gisle Hannemyr <gisle@hannemyr.no>\n"
+"Language-Team: Language =nb <gisle@hannemyr.no>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+"X-Poedit-Language: Norwegian bokmål\n"
+"X-Poedit-Country: Norway\n"
+"X-Poedit-SourceCharset: utf-8\n"
+
+#: biblio.admin.inc:44
+msgid "Base URL"
+msgstr "Base-URL"
+
+#: biblio.admin.inc:47
+msgid "This sets the base URL used to access the biblio module (e.g. /biblio )."
+msgstr "Dette setter Basis-URL for biblio-modulen (f.eks. /biblio)."
+
+#: biblio.admin.inc:51
+msgid "Biblio page title"
+msgstr "Overskrift for litteraturlisten"
+
+#: biblio.admin.inc:54
+msgid "The page title shown on the base URL."
+msgstr "Sidetittelen vist på siden med Basis-URL."
+
+#: biblio.admin.inc:59
+msgid "Number of results per page"
+msgstr "Antall resultater pr. side"
+
+#: biblio.admin.inc:63
+msgid "This sets the number of results that will be displayed per page."
+msgstr "Dette setter antall resultater som vil bli vist pr. side"
+
+#: biblio.admin.inc:67
+msgid "Restrict users such that they can only view their own biblio entries"
+msgstr "Brukerne kan kun se sine egne biblio-poster"
+
+#: biblio.admin.inc:70
+msgid "This option restricts the users capability to view biblio entries.  They will only be able to see the entries which they have created and own."
+msgstr "Dette valget begrenser brukernes mulighet til å se biblio-poster.  De vil kun få se poster som de har skapt og som de eier."
+
+#: biblio.admin.inc:76;422;434
+#: biblio.pages.inc:618;899
+#: translations/biblio.db.trans.inc:212
+msgid "Author"
+msgstr "Forfatter"
+
+#: biblio.admin.inc:81
+msgid "Automatically delete orphaned authors"
+msgstr "Slett ubrukte forfattere automatisk"
+
+#: biblio.admin.inc:84
+msgid "Orphaned authors are those which are no longer linked to any entries as the result of a biblio update or delete."
+msgstr "Ubrukte forfattere er de som ikke lenger er lenket til noe verk som resultat av en sletting eller oppdatering."
+
+#: biblio.admin.inc:90
+msgid "BibTex settings"
+msgstr "BibTex-innstillinger"
+
+#: biblio.admin.inc:95
+msgid "Retain bibtex's {Protected} capitalization in the title string, but hide the braces on display"
+msgstr "Behold BibTexs  {Beskyttet} skrivemåte i tittelstrengen, men skjul krøllparentesene."
+
+#: biblio.admin.inc:105
+msgid "Block settings"
+msgstr "Blokkinnstillinger"
+
+#: biblio.admin.inc:110
+msgid "Title for the \"New Publications\" block"
+msgstr "Tittel for blokka \"Nye publikasjoner\""
+
+#: biblio.admin.inc:118
+msgid "Number of results in the \"New Publications\" block"
+msgstr "Antall resultater i blokka \"Nye publikasjoner\""
+
+#: biblio.admin.inc:122
+msgid "This sets the number of results that will be displayed in the \"New Publications\" block."
+msgstr "Dette setter antallet resultater som vil bli vist i blokka \"Nye publikasjoner\"."
+
+#: biblio.admin.inc:126
+msgid "Order by"
+msgstr "sorter etter"
+
+#: biblio.admin.inc:129
+msgid "Date Created"
+msgstr "Dato opprettet"
+
+#: biblio.admin.inc:130
+msgid "Year Published"
+msgstr "Publiseringsår"
+
+#: biblio.admin.inc:140
+msgid "Node ID"
+msgstr "Node ID"
+
+#: biblio.admin.inc:148
+msgid "Citekey"
+msgstr "Sitatnøkkel"
+
+#: biblio.admin.inc:149
+msgid "You can alter citekey related settings here."
+msgstr "Du kan endre innstillinger for sitatnøkkel her."
+
+#: biblio.admin.inc:153
+msgid "Show citation key in results"
+msgstr "Vis sitatnøkkel i resultatlisten"
+
+#: biblio.admin.inc:156
+msgid "This will output the citekey as the first item in the citation string"
+msgstr "Dette vil vise sitatnøkkel som første element i stitatstrengen"
+
+#: biblio.admin.inc:160
+msgid "Auto generate citekeys if not given"
+msgstr "Generér  sitatnøkler automatisk"
+
+#: biblio.admin.inc:163
+msgid "This option will cause \"citekey\" entries to be automatically generated if a value is not provided."
+msgstr "Dette valget vil skru på automatisk generering av \"sitatnøkkel\"-verdier dersom ingen verdi oppgis."
+
+#: biblio.admin.inc:167
+msgid "Citekey prefix"
+msgstr "Sitatnøkkel-prefiks"
+
+#: biblio.admin.inc:171
+msgid "This text will be combined with the field choosen below to form the auto generated citekey."
+msgstr "Denne teksten vil bli kombinert med feltet som er valgt ut under for å produsere den auto-genererte sitatnøkkelen."
+
+#: biblio.admin.inc:175
+msgid "Primary Citekey  field"
+msgstr "Primærfelt for sitatnøkkelen"
+
+#: biblio.admin.inc:178
+msgid "Select the field to be used when generating citekeys."
+msgstr "Velg feltet som skal brukes for å generere sitatnøkkelen."
+
+#: biblio.admin.inc:182
+msgid "Secondary Citekey field"
+msgstr "Sekundærfelt for sitatnøkkelen"
+
+#: biblio.admin.inc:185
+msgid "If the field above has no value this field will be used."
+msgstr "Dersom feltet over er tomt, så vil dette feltet bli brukt."
+
+#: biblio.admin.inc:191
+msgid "PHP code for citekey generation"
+msgstr "PHP-kode for generering av sitatnøkkelen."
+
+#: biblio.admin.inc:193
+msgid "Advanced usage only: PHP code that returns the citekey. Should not include &lt;?php ?&gt; delimiters."
+msgstr "Avansert bruk: PHP-kode som returnerer sitatnøkkelen.  Kan ikke inneholde &lt;?php ?&gt; delimitere."
+
+#: biblio.admin.inc:201;205;210
+msgid "Footnotes"
+msgstr "Fotnoter"
+
+#: biblio.admin.inc:202
+msgid "You can integrate with the !url module here."
+msgstr "Du kan integrere med !url modulen her."
+
+#: biblio.admin.inc:205;210;242;371;376
+#: biblio.import.export.inc:124
+msgid "Depends on"
+msgstr "Avhenger av"
+
+#: biblio.admin.inc:205;242;371
+#: biblio.import.export.inc:124
+msgid "disabled"
+msgstr "deaktiviert"
+
+#: biblio.admin.inc:210;376
+msgid "enabled"
+msgstr "aktivert"
+
+#: biblio.admin.inc:215
+msgid "Integration with the footnotes module"
+msgstr "Integration med dem Modul footnote"
+
+#: biblio.admin.inc:219
+msgid "This will convert &lt;bib&gt; tags into &lt;fn&gt; tags.  This will cause intermingled &lt;bib&gt; and &lt;fn&gt; tags to be sequentially numbered.  For this to work, you must put the &lt;bib&gt; filter ahead of the &lt;fn&gt; filter in the filter chain.  If this option is not set, &lt;bib&gt; and &lt;fn&gt; tags will be handled separately."
+msgstr "Dette vil konvertere &lt;bib&gt;-tagger til &lt;fn&gt;-tagger. Dette vil medføre at de sammeflettede &lt;bib&gt;- og &lt;fn&gt;-taggende blir nummerert fortløpende.  For at dette skal fungere må du sette &lt;bib&gt;-filteret foran &lt;fn&gt;-filteret i filterkjeden. Dersom dette valget ikke er satt vil  &lt;bib&gt;- og &lt;fn&gt;-tagger bli behandlet separat."
+
+#: biblio.admin.inc:225
+#: biblio_theme.inc:168
+#: translations/biblio.db.trans.inc:64
+msgid "Keywords"
+msgstr "Nøkkelord"
+
+#: biblio.admin.inc:230
+msgid "Keyword separator"
+msgstr "Nøkkelord-separator"
+
+#: biblio.admin.inc:233
+msgid "Enter the character which will be used to separate multiple keywords in the keyword field"
+msgstr "Tast det tegnet som vil bli brukt for skille nøkkelord i nøkkelord-feltet"
+
+#: biblio.admin.inc:237
+msgid "Automatically remove orphaned keywords"
+msgstr "Fjern ubrukte nøkkelord automatisk"
+
+#: biblio.admin.inc:240
+msgid "This option automatically deletes keywords which are no longer associated with any publications (primarily due to the due to the removal of a publication or editing a keyword)."
+msgstr "Dette valget sletter automatisk nøkkelord som ikke lenger er assosiert med noen  publikasjon (primært grunnet fjerning av publikasjonen eller redigering av nøkkelordet)."
+
+#: biblio.admin.inc:242
+#: biblio.import.export.inc:124
+msgid "Taxonomy"
+msgstr "Taksonomi"
+
+#: biblio.admin.inc:245
+msgid "Copy any selected taxonomy terms to the biblio keyword database"
+msgstr "Kopier utvalgte taksonomi-termer til nøkkelord-databasen i biblio"
+
+#: biblio.admin.inc:253
+msgid "Use keywords from biblio entries as taxonomy \"free tags\""
+msgstr "Bruk nøkkelord fra biblio-poster som taksonomi \"frie tagger\""
+
+#: biblio.admin.inc:257
+msgid "This option allows user to add keywords (free tags) to describe their documents. These keywords will be registered as taxonomy."
+msgstr "Dette valget lar brukeren legge til nøkkelord (frie tagger) for å beskrive dokumenter.  Disse nøkkelordene vil bli registrert i taksonomien."
+
+#: biblio.admin.inc:262;489
+msgid "none"
+msgstr "ingen"
+
+#: biblio.admin.inc:269
+msgid "Vocabulary"
+msgstr "Vokabular"
+
+#: biblio.admin.inc:272
+msgid "Select vocabulary (category) to use for free tags."
+msgstr "Velg vokabular (kategori) som skal brukes som frie tagger."
+
+#: biblio.admin.inc:284
+msgid "Links"
+msgstr "Lenker"
+
+#: biblio.admin.inc:290
+msgid "Export Links"
+msgstr "Eksporter Lenker"
+
+#: biblio.admin.inc:294
+msgid "Show export links"
+msgstr "Vis eksportlenker"
+
+#: biblio.admin.inc:297
+#: biblio.import.export.inc:76
+msgid "EndNote Tagged"
+msgstr "EndNote Tagged"
+
+#: biblio.admin.inc:298
+msgid "EndNote XML"
+msgstr "EndNote XML"
+
+#: biblio.admin.inc:299
+#: biblio.import.export.inc:75
+#: biblio_theme.inc:881;883
+#: biblio.module:1048
+msgid "BibTex"
+msgstr "BibTex"
+
+#: biblio.admin.inc:301
+msgid "You can select which export links to display here."
+msgstr "Du kan velge hvilke eksport-lenker som skal vises her."
+
+#: biblio.admin.inc:307
+msgid "Google Scholar Link"
+msgstr "Lenke til Google Scholar"
+
+#: biblio.admin.inc:311
+msgid "Show Google Scholar links"
+msgstr "Vis lenker til Google Scholar"
+
+#: biblio.admin.inc:314
+msgid "Selecting this option will display a link to Google Scholar beside each entry.  Clicking this link searches Google Scholar using the title and first author of the current biblio entry."
+msgstr "Dette valget vil vise en lenke til Google Scholar ved siden av hver post.  Klikker du på denne lenken søker du på Google Scholar etter tittelen og førsteforfatteren for den aktuelle biblio-posten."
+
+#: biblio.admin.inc:319
+msgid "Links open in new browser"
+msgstr "Lenker åpner i et nytt nettleservindu"
+
+#: biblio.admin.inc:322
+msgid "This causes related URLs to open in a new browser window"
+msgstr "Dette får relaterte URLer til å åpne i et nytt nettleservindu"
+
+#: biblio.admin.inc:326
+msgid "Carry \"inline\" mode through to all links"
+msgstr "Bruk \"Inline\"-modus på alle lenker"
+
+#: biblio.admin.inc:329
+msgid "This causes the \"inline\" mode to be applied to all links such as titles, authors and keywords"
+msgstr "Dette får \"Inline\"-modus til å bli brukt for alle lenker, som titler, forfattere og nøkkelord"
+
+#: biblio.admin.inc:334
+msgid "Hyperlink titles using supplied URL if available"
+msgstr "Hyperlenke-titler som bruker tildelte URL dersom tilgjengelig"
+
+#: biblio.admin.inc:337
+msgid "Selecting this links the titles to the supplied URL (if available) rather than the \"node\" view."
+msgstr "Å velge denne lenker titlene til den tildelte URL (dersom tilgjengelig)  i stedet for \"node\"-visning"
+
+#: biblio.admin.inc:341
+msgid "Hyperlink author names"
+msgstr "Hyperlenk forfatternavn"
+
+#: biblio.admin.inc:344
+msgid "This creates a hyperlink on author names which, when clicked, will select entries which contain that author"
+msgstr "Dette lager en hyperlenke knyttet til forfatternavn som, når den klikkes, vil velge poster som inneholder arbeider av den forfatteren"
+
+#: biblio.admin.inc:350
+msgid "OpenURL"
+msgstr "OpenURL"
+
+#: biblio.admin.inc:351
+msgid "You can set an <a href=\"http://en.wikipedia.org/wiki/OpenURL\">openurl</a> link here"
+msgstr "Du kan sette en <a href=\"http://en.wikipedia.org/wiki/OpenURL\">OpenURL</a>-lenke her"
+
+#: biblio.admin.inc:355
+msgid "OpenURL Base URL"
+msgstr "OpenURL Basis URL"
+
+#: biblio.admin.inc:358
+msgid "This sets your institution's base <a href=\"http://en.wikipedia.org/wiki/OpenURL\">OpenURL</a> gateway, which is used to generate OpenURL links. To implement a \"Universal\" OpenURL system, try using OCLC's <a href=\"http://www.oclc.org/productworks/urlresolver.htm\">OpenURL Resolver Registry</a> gateway: <a href=\"http://worldcatlibraries.org/registry/gateway\">http://worldcatlibraries.org/registry/gateway</a>"
+msgstr ""
+
+#: biblio.admin.inc:362
+msgid "OpenURL Image"
+msgstr "OpenURL Bild"
+
+#: biblio.admin.inc:365
+msgid "Enter a path to your image here, this image will be used as button which when clicked will find the entry via the OpenURL link"
+msgstr "Enter a path to your image here, this image will be used as button which when clicked will find the entry via the OpenURL link"
+
+#: biblio.admin.inc:371;376;384
+msgid "Search"
+msgstr "Søk"
+
+#: biblio.admin.inc:389
+msgid "Enable a search box on the biblio page."
+msgstr "Aktiver et søkefelt på biblio-siden."
+
+#: biblio.admin.inc:392
+msgid "Shows a search box on the biblio page that returns drupal search results in the biblio style."
+msgstr "Viser et søkefelt på biblio-siden som returnerer Drupal-søkeresultater i biblio-stil."
+
+#: biblio.admin.inc:396
+msgid "Search button text"
+msgstr "Søkeknapptekst"
+
+#: biblio.admin.inc:399
+msgid "Biblio search"
+msgstr "Biblio-søk"
+
+#: biblio.admin.inc:400
+msgid "This allows you to customize the text on the search button, it defaults to \"Biblio search\"."
+msgstr "This allows you to customize the text on the search button, it defaults to \"Biblio search\"."
+
+#: biblio.admin.inc:405
+msgid "Re-/Index a biblio node when creating or updating."
+msgstr "Re-/Indexieren eines biblio Eintrags bei der Erstellung oder Aktualisierung."
+
+#: biblio.admin.inc:408
+msgid "A biblio node must be indexed for the drupal search to know its content. You need to check this option if you want to search for a biblio node that you just created or updated. Otherwise you must wait for the cron job to reindex nodes."
+msgstr "En biblio-node nå bli indeksert for at drupal-søk skal vite om den.  Du må krysse av for dette valget dersom du ønsker å søke etter en biblio-node som du akkurat har laget eller oppdatert. Ellers må du vente til etter at cron har indeksert noden."
+
+#: biblio.admin.inc:414
+msgid "Sorting"
+msgstr "Sortér"
+
+#: biblio.admin.inc:415
+msgid "You can set the default sorting and ordering for the /biblio page here."
+msgstr "Du kan stille inn standard-sortering for /biblio-siden her."
+
+#: biblio.admin.inc:419
+#: biblio.pages.inc:563
+msgid "Sort by"
+msgstr "Sortér på"
+
+#: biblio.admin.inc:423;435;1485
+#: biblio.pages.inc:608;903
+#: biblio.views.inc:162;183
+#: biblio_theme.inc:1062
+msgid "Keyword"
+msgstr "Nøkkelord"
+
+#: biblio.admin.inc:424;436
+#: biblio_theme.inc:202;782
+#: biblio.module:1076
+msgid "Title"
+msgstr "Tittel"
+
+#: biblio.admin.inc:425;437
+#: biblio.pages.inc:631;901
+#: biblio.module:1299
+#: translations/biblio.db.trans.inc:101
+msgid "Type"
+msgstr "Type"
+
+#: biblio.admin.inc:426;438
+#: biblio.pages.inc:900
+msgid "Year"
+msgstr "År"
+
+#: biblio.admin.inc:431
+msgid "Show sort links"
+msgstr "Vis sorteringslenker"
+
+#: biblio.admin.inc:440
+msgid "You turn the sorting links at the top of the /biblio page here."
+msgstr "Du stiller inn sorteringslenkene på toppen av /biblio-siden her"
+
+#: biblio.admin.inc:444
+msgid "Show sort links as \"tabs\""
+msgstr "Vis sorteringslenker som \"faner\""
+
+#: biblio.admin.inc:447
+msgid "This changes the sort links from text links to tabs"
+msgstr "Dette endrer sorteringslenker fra tekstlenker til faner"
+
+#: biblio.admin.inc:451
+msgid "Order"
+msgstr "Rekkefølge"
+
+#: biblio.admin.inc:454
+msgid "Descending"
+msgstr "Synkende"
+
+#: biblio.admin.inc:455
+msgid "Ascending"
+msgstr "Stigende"
+
+#: biblio.admin.inc:462
+msgid "Styling"
+msgstr "Stiling"
+
+#: biblio.admin.inc:463
+msgid "You can set the default style for the /biblio page here."
+msgstr "Du kan sette standard-stil  for /biblio-siden her."
+
+#: biblio.admin.inc:467;993
+#: biblio_handler_citation.inc:24
+#: biblio_handler_field_contributor.inc:20
+msgid "Style"
+msgstr "Stil"
+
+#: biblio.admin.inc:470;996
+msgid "Set the bibliographic style of the \"list\" view."
+msgstr "Sett den bibliografiske stilen for \"liste\"-framvisning."
+
+#: biblio.admin.inc:475
+msgid "Node Layout"
+msgstr "Node-utlegg"
+
+#: biblio.admin.inc:478
+msgid "Original"
+msgstr "Original"
+
+#: biblio.admin.inc:479
+msgid "Only Fulltext if available"
+msgstr "Kun fulltekst dersom den er tilgjengelig"
+
+#: biblio.admin.inc:480
+msgid "Tabular"
+msgstr "Tabell"
+
+#: biblio.admin.inc:482
+msgid "This alters the layout of the \"node\" (full) view."
+msgstr "Dette endrer utlegg av visning av (full) \"node\"."
+
+#: biblio.admin.inc:486
+msgid "Annotations"
+msgstr "Anmerkninger"
+
+#: biblio.admin.inc:490
+msgid "notes"
+msgstr "notater"
+
+#: biblio.admin.inc:491
+msgid "custom1"
+msgstr "felt1"
+
+#: biblio.admin.inc:492
+msgid "custom2"
+msgstr "felt2"
+
+#: biblio.admin.inc:493
+msgid "custom3"
+msgstr "felt3"
+
+#: biblio.admin.inc:494
+msgid "custom4"
+msgstr "felt4"
+
+#: biblio.admin.inc:495
+msgid "custom5"
+msgstr "felt5"
+
+#: biblio.admin.inc:496
+msgid "custom6"
+msgstr "felt6"
+
+#: biblio.admin.inc:497
+msgid "custom7"
+msgstr "felt7"
+
+#: biblio.admin.inc:499
+msgid "Select a field from which an annotation will be displayed below biblo entry in \"short\" listings"
+msgstr "Velg et felt som en annotasjon skal vises under biblio-posten i \"korte\" listinger."
+
+#: biblio.admin.inc:507
+msgid "Syndication"
+msgstr "Syndikering"
+
+#: biblio.admin.inc:508
+msgid "You can set the RSS defaults here."
+msgstr "Du kan sette RSS-standardinnstillinger her."
+
+#: biblio.admin.inc:512
+msgid "Allow RSS feeds of new biblio entries"
+msgstr "Generer RSS-nyhetsstrøm for nye biblio-poster"
+
+#: biblio.admin.inc:515
+msgid "This will create an rss feed of the 10 most recent biblio entries. It will be available at /biblio/rss.xml"
+msgstr "Dette vil skape en RSS-nyhetsstrøm med de nyeste 10 biblio-poster. Den vil kunne leses på /biblio/rss.xml"
+
+#: biblio.admin.inc:519
+msgid "Number of items in the RSS feed."
+msgstr "Antall elementer i RSS-nyhetsstrømmen."
+
+#: biblio.admin.inc:523
+msgid "Limits the number of items in the /biblio/rss.xml feed to this number."
+msgstr "Begrenser antallet elementer for strømmen  /biblio/rss.xml til dette."
+
+#: biblio.admin.inc:548
+msgid "On this page you can set type specific \"Titles\" and \"Hints\" which will display on the input form. "
+msgstr "På denne siden kan du sette en type-spesifikk \"Tittel\" og \"Hint\" som vil vises på inndata-skjema. "
+
+#: biblio.admin.inc:550
+msgid "Checking the \"Visible\" box will add the field to the input form, checking \"Required\" will force the user to supply a value for this field and the weight value changes the order which it is rendered on the form with smaller values floating to the top of the form. "
+msgstr "Boksen \"Synlig\" bestemmer om feltet er synlig i inndata-skjema. Boksen \"Obligatorisk\" vil kreve at brukeren legger inn en verdi.  Tallenen i kolonnen \"Vekt\" endrer rekkefølgen på feltene (minste verdi øverst)."
+
+#: biblio.admin.inc:551
+msgid "Fields which are grayed out on this page have been set to \"common\" on the "
+msgstr "Felt som er grået ut på denne siden har blitt satt til \"felles\" på "
+
+#: biblio.admin.inc:553
+msgid " page."
+msgstr " siden."
+
+#: biblio.admin.inc:556
+msgid "Checking the \"Common\" box will add the field to all the different publication types. Checking \"Required\" will force the user to supply a value for the field, checking \"Autocomplete\" will enable AJAX type auto complete look up for the field when the user is entering data and the weight value changes the order which it is rendered on the form with smaller values floating to the top of the form. "
+msgstr "Boksen \"Felles\" vil legge feltet til alle de ulike publikasjonstypene.  Boksen \"Oblegatorisk\" vil kreve at brukeren legger inn en verdi-  Boksen \"Autofullfør\" vil skru på AJAX-type autofullføring for feltet når brukeren taster inn data.  Tallenen i kolonnen \"Vekt\" endrer rekkefølgen på feltene (minste verdi øverst)."
+
+#: biblio.admin.inc:558
+msgid "Finally, for each author field you can choose a set of author roles. Assigning different roles to authors within the same field, e.g. primary and secondary authors within the authors field, allows to theme them differently."
+msgstr "Til slutt, for hvert forfatterfelt kan du velge ett sett av forfatterroller.  Ved å tilordne ulike roller til forfattere i samme felt (f.eks. forfattere og medforfattere i forfatterfeltet) kan du vise dem fram på ulik måte."
+
+#: biblio.admin.inc:563
+msgid "Help"
+msgstr "Hjelp"
+
+#: biblio.admin.inc:608
+msgid "Field settings related to @type publications"
+msgstr "Felt-innstillinger for @type publikasjoner"
+
+#: biblio.admin.inc:617
+msgid "Field settings common to all publication types"
+msgstr "Felt-innstillinger for alle publikasjonstyper"
+
+#: biblio.admin.inc:695;1094;1347;1521;1556
+msgid "Save"
+msgstr "Lagre"
+
+#: biblio.admin.inc:778
+msgid "The changes have been saved."
+msgstr "Endringene har blitt lagret."
+
+#: biblio.admin.inc:791;798;1118
+#: biblio.pages.inc:1136;1170
+msgid "edit"
+msgstr "rediger"
+
+#: biblio.admin.inc:791
+msgid "hide"
+msgstr "skjul"
+
+#: biblio.admin.inc:791
+msgid "show"
+msgstr "vis"
+
+#: biblio.admin.inc:798;1121
+msgid "delete"
+msgstr "slett"
+
+#: biblio.admin.inc:803;1131
+msgid "Type Id"
+msgstr "Type-id"
+
+#: biblio.admin.inc:804;819;1077
+msgid "Type Name"
+msgstr "Type-navn"
+
+#: biblio.admin.inc:805;1134
+msgid "Operations"
+msgstr "Handlinger"
+
+#: biblio.admin.inc:809;812;1136;1138
+msgid "Add New Type"
+msgstr "Legg til ny type"
+
+#: biblio.admin.inc:810;813
+msgid "Reset all types to defaults"
+msgstr "Nullstill alle typer til standardverdier"
+
+#: biblio.admin.inc:827;1086;1133
+#: translations/biblio.db.trans.inc:96
+msgid "Description"
+msgstr "Beskrivelse"
+
+#: biblio.admin.inc:834;1094
+msgid "Create New Type"
+msgstr "Lag ny type"
+
+#: biblio.admin.inc:886
+msgid "There are @count biblio entries of this type, you should change the type of these entries before proceeding otherwise they will be deleted"
+msgstr ""
+
+#: biblio.admin.inc:894
+msgid "Are you sure you want to delete the custom biblio type:  %title ? "
+msgstr ""
+
+#: biblio.admin.inc:896;1172;1541
+msgid "This action cannot be undone."
+msgstr "Denne handlingen kan ikke gjøres om."
+
+#: biblio.admin.inc:896;1173;1414;1448;1524;1542
+msgid "Delete"
+msgstr "Slett"
+
+#: biblio.admin.inc:896;913;1174;1543
+msgid "Cancel"
+msgstr "Avbryt"
+
+#: biblio.admin.inc:913
+msgid "Are you sure you want to reset ALL the field definitions to the defaults? "
+msgstr ""
+
+#: biblio.admin.inc:913
+msgid "By doing this, you will loose all customizations you have made to the field titles, <b><u>this action cannot be undone</u></b>!"
+msgstr "Ved å gjøre dette vil du miste alle tilpassinger du har gjort til felttitlene, <b><u>denne handlingen kan ikke gjøres om!</u></b>"
+
+#: biblio.admin.inc:913
+msgid "Reset!"
+msgstr "Tilbakestill!"
+
+#: biblio.admin.inc:934
+msgid "My publications"
+msgstr "Mine publikasjoner"
+
+#: biblio.admin.inc:934
+msgid "Profile pages"
+msgstr "Profil-sider"
+
+#: biblio.admin.inc:939
+msgid "Allow users to override these settings on their \"My account\" page"
+msgstr ""
+
+#: biblio.admin.inc:941
+msgid "If this is selected, a form similar to this section will be available to the user when they edit their own account information.  This will allow them to override the global preferences set here."
+msgstr ""
+
+#: biblio.admin.inc:947
+msgid "Show my publications on my profile page"
+msgstr ""
+
+#: biblio.admin.inc:947
+msgid "Show publications on users profile pages"
+msgstr ""
+
+#: biblio.admin.inc:950
+msgid "Selecting this will create a listing of your publications on your profile page"
+msgstr ""
+
+#: biblio.admin.inc:950
+msgid "This sets the site wide default, users may change this in their profile"
+msgstr ""
+
+#: biblio.admin.inc:960
+msgid "Show \"My publications\" item in the navigation menu"
+msgstr ""
+
+#: biblio.admin.inc:975;1203
+msgid "(None)"
+msgstr "(Ingen)"
+
+#: biblio.admin.inc:982
+msgid "Link My Profile with this Author from the Biblio database"
+msgstr ""
+
+#: biblio.admin.inc:986
+msgid "This will link your profile to the selected author from the biblio database, then all publications containing this author to be displayed on your \"Publications\" tab."
+msgstr ""
+
+#: biblio.admin.inc:989
+msgid "System default"
+msgstr "System-standard"
+
+#: biblio.admin.inc:1006
+msgid "CrossRef Login Information"
+msgstr ""
+
+#: biblio.admin.inc:1012
+msgid "CrossRef OpenURL Account ID"
+msgstr ""
+
+#: biblio.admin.inc:1015
+msgid "Enter your CrossRef OpenURL account ID which you can obtain here "
+msgstr ""
+
+#: biblio.admin.inc:1132
+msgid "Contributor Type"
+msgstr ""
+
+#: biblio.admin.inc:1170
+msgid "Are you sure you want to delete the author type: %title ?"
+msgstr ""
+
+#: biblio.admin.inc:1209
+msgid "Drupal User ID"
+msgstr "Drupal bruker-ID"
+
+#: biblio.admin.inc:1217
+msgid "Complete Name"
+msgstr "Fullstendig Navn"
+
+#: biblio.admin.inc:1226
+msgid "Prefix"
+msgstr "Prefiks"
+
+#: biblio.admin.inc:1235
+msgid "First Name"
+msgstr "Fornavn"
+
+#: biblio.admin.inc:1244
+msgid "Initials"
+msgstr "Initialer"
+
+#: biblio.admin.inc:1253
+msgid "Last Name"
+msgstr "Etternavn"
+
+#: biblio.admin.inc:1262
+msgid "Suffix"
+msgstr "Suffiks"
+
+#: biblio.admin.inc:1271
+#: biblio_theme.inc:1031
+msgid "Affiliation"
+msgstr "Affiliation"
+
+#: biblio.admin.inc:1298
+msgid "Author Merge"
+msgstr ""
+
+#: biblio.admin.inc:1299
+msgid "Select other author names which will be merged.  Merging removes all the selected authors, then replaces any references to these authors with the author being edited above.  You should only do this if you are sure the other authors represent the same author as the one being edited. <B>THIS CANNOT BE UNDONE!</B>"
+msgstr ""
+
+#: biblio.admin.inc:1307
+msgid "Similar authors"
+msgstr ""
+
+#: biblio.admin.inc:1314;1376
+msgid "Merge"
+msgstr "Flett"
+
+#: biblio.admin.inc:1320
+msgid "Author Link"
+msgstr ""
+
+#: biblio.admin.inc:1321
+msgid "Select other author names which will be linked.  Linking relates all the selected authors to the author being edited above, and and keeps each instance in the database.  You should only do this if you are sure the other authors represent the same author as the one being edited. "
+msgstr ""
+
+#: biblio.admin.inc:1329
+msgid "This author has already been linked to these authors"
+msgstr ""
+
+#: biblio.admin.inc:1338
+msgid "Other authors which could be linked to this author"
+msgstr ""
+
+#: biblio.admin.inc:1423;1457
+msgid "No items selected."
+msgstr "Ingen elementer valgt."
+
+#: biblio.admin.inc:1466
+msgid "%count orphaned keywords have been deleted."
+msgstr ""
+
+#: biblio.admin.inc:1503
+msgid "Keyword Merge"
+msgstr ""
+
+#: biblio.admin.inc:1504
+msgid "Select other keywords which will be merged with the one above.  You should only do this if you are sure the other keywords represent the same keyword as the one being edited."
+msgstr ""
+
+#: biblio.admin.inc:1511
+msgid "Similar keywords"
+msgstr ""
+
+#: biblio.admin.inc:1539
+msgid "Are you sure you want to delete the keyword: %title from ALL publications?"
+msgstr ""
+
+#: biblio.import.export.inc:46
+msgid "Set user ID of entries in this file to"
+msgstr ""
+
+#: biblio.import.export.inc:65
+msgid "Import file"
+msgstr "Importer fil"
+
+#: biblio.import.export.inc:71
+msgid "File Type"
+msgstr "Filtype"
+
+#: biblio.import.export.inc:74
+msgid "Select type"
+msgstr "Velg type"
+
+#: biblio.import.export.inc:77
+msgid "EndNote 7 XML (and previous versions)"
+msgstr "EndNote 7 XML (og tidligere versjoner)"
+
+#: biblio.import.export.inc:78
+msgid "EndNote 8 XML (and newer versions)"
+msgstr "EndNote 8 XML (og nyere versjoner)"
+
+#: biblio.import.export.inc:79
+msgid "MARC"
+msgstr "MARC"
+
+#: biblio.import.export.inc:80
+msgid "RIS"
+msgstr "RIS"
+
+#: biblio.import.export.inc:85
+msgid "Batch Process"
+msgstr "Satsvis prosess"
+
+#: biblio.import.export.inc:87
+msgid "You should use batch processing if your import file contains more than about 20 records, or if you are experiencing script timeouts during import"
+msgstr "Du bør bruke satsvis prosessering dersom din import-fil inneholder mer enn 20 poster, eller du opplever at skriptet slipper opp for tid under import"
+
+#: biblio.import.export.inc:97
+msgid "Taxonomy Settings"
+msgstr "Taksonomi-innstillinger"
+
+#: biblio.import.export.inc:98
+msgid "Typically you don't have to do anything here, however if you wish, you may select terms to be assigned to imported records. This effectively adds a keyword to all entries being imported."
+msgstr ""
+
+#: biblio.import.export.inc:103
+msgid "<b>NOTE:</b> Keyword \"free tagging\" is turned on, consequently all incomming keywords will be added to the <b>@name</b> vocabulary as specified in the \"Keyword\" section of the !url page."
+msgstr ""
+
+#: biblio.import.export.inc:103;105
+msgid "admin/settings/biblio"
+msgstr "admin/settings/biblio"
+
+#: biblio.import.export.inc:105
+msgid "<b>NOTE:</b> Keyword \"free tagging\" is turned off, consequently keywords will <b>NOT</b> be added to the vocabulary as specified in the Taxonomy section of the !url page."
+msgstr ""
+
+#: biblio.import.export.inc:110
+msgid "Select taxonomy term to be assigned to imported entries"
+msgstr "Velg taksonomi-term som skal tilordnes importerte poster"
+
+#: biblio.import.export.inc:114
+#: biblio.module:955
+msgid "Copy these terms to the biblio keyword database"
+msgstr ""
+
+#: biblio.import.export.inc:122
+msgid "There are currently no vocabularies assigned to the biblio node type, please go the the !url page to fix this"
+msgstr ""
+
+#: biblio.import.export.inc:122
+msgid "admin/content/taxonomy"
+msgstr "admin/content/taxonomy"
+
+#: biblio.import.export.inc:134;166;176
+msgid "Import"
+msgstr "Importer"
+
+#: biblio.import.export.inc:150
+msgid "The uploaded file exceeds the upload_max_filesize directive in php.ini."
+msgstr ""
+
+#: biblio.import.export.inc:152
+msgid "The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in the HTML form."
+msgstr ""
+
+#: biblio.import.export.inc:154
+msgid "The uploaded file was only partially uploaded."
+msgstr ""
+
+#: biblio.import.export.inc:156
+msgid "No file was uploaded."
+msgstr ""
+
+#: biblio.import.export.inc:158
+msgid "Missing a temporary folder."
+msgstr ""
+
+#: biblio.import.export.inc:160
+msgid "Failed to write file to disk."
+msgstr ""
+
+#: biblio.import.export.inc:162
+msgid "File upload stopped by extension."
+msgstr ""
+
+#: biblio.import.export.inc:167
+msgid "You must select a file type"
+msgstr ""
+
+#: biblio.import.export.inc:180
+msgid "@file was uploaded"
+msgstr ""
+
+#: biblio.import.export.inc:212
+msgid "Parsing file..."
+msgstr ""
+
+#: biblio.import.export.inc:213
+msgid "Saving nodes..."
+msgstr "Lagrer noder..."
+
+#: biblio.import.export.inc:228
+msgid "File was NOT successfully uploaded"
+msgstr "Fila ble IKKE riktig lastet opp"
+
+#: biblio.import.export.inc:264
+msgid "Import finished with an error."
+msgstr "Import avsluttet med en feil."
+
+#: biblio.import.export.inc:290
+msgid "Error occurred: Failed to open "
+msgstr ""
+
+#: biblio.import.export.inc:302
+msgid "POT Export"
+msgstr "POT Eksport"
+
+#: biblio.import.export.inc:303
+msgid "Here you may export a \".pot\" file which contains the titles and hints from the database which are not normally captured by translation extractors)"
+msgstr "Here you may export a \".pot\" file which contains the titles and hints from the database which are not normally captured by translation extractors)"
+
+#: biblio.import.export.inc:307;313
+msgid "Export translation data"
+msgstr "Eksporter oversettelse-data"
+
+#: biblio.import.export.inc:340
+msgid "Parsing file"
+msgstr ""
+
+#: biblio.import.export.inc:783
+msgid "Could not open crossref.org for XML input"
+msgstr ""
+
+#: biblio.import.export.inc:261
+msgid "One node saved."
+msgid_plural "@count nodes saved."
+msgstr[0] "One node saved."
+msgstr[1] "@count nodes saved."
+
+#: biblio.pages.inc:287
+msgid "These publications by %author are part of the works listed at %sitename"
+msgstr ""
+
+#: biblio.pages.inc:330
+msgid "These publications, containing the keyword: %keyword, are part of the works listed at %sitename"
+msgstr ""
+
+#: biblio.pages.inc:464
+msgid "Export @count results"
+msgstr "Eksporter @count resultater"
+
+#: biblio.pages.inc:466
+msgid "Found @count results"
+msgstr "Funnet @count resultater"
+
+#: biblio.pages.inc:499;883
+#: biblio_handler_citation.inc:52
+#: biblio_theme.inc:145
+#: biblio.module:1453;1461
+msgid "In Press"
+msgstr "Under utgivelse"
+
+#: biblio.pages.inc:500;884
+#: biblio_handler_citation.inc:53
+#: biblio_theme.inc:148
+#: biblio.module:1454;1462
+msgid "Submitted"
+msgstr "Ikke oppgitt"
+
+#: biblio.pages.inc:512
+msgid "No items found"
+msgstr "Ingen poster funnet"
+
+#: biblio.pages.inc:514
+msgid "!modify_link or !remove_link your filters and try again."
+msgstr ""
+
+#: biblio.pages.inc:514
+msgid "Modify"
+msgstr "Modifiser"
+
+#: biblio.pages.inc:514
+msgid "remove"
+msgstr "fjern"
+
+#: biblio.pages.inc:541
+msgid "Click a second time to reverse the sort order"
+msgstr ""
+
+#: biblio.pages.inc:559
+msgid "!title"
+msgstr "!title"
+
+#: biblio.pages.inc:600
+msgid "Taxonomy term"
+msgstr "Taksonomi-termer"
+
+#: biblio.pages.inc:613
+msgid "Drupal user"
+msgstr "Drupal-bruker"
+
+#: biblio.pages.inc:622
+msgid "First letter of last name"
+msgstr "Første bokstav i etternavn"
+
+#: biblio.pages.inc:626
+msgid "First letter of title"
+msgstr "First letter of title"
+
+#: biblio.pages.inc:636
+msgid "<em> and</em> <strong>%a</strong> is <strong>%b</strong>"
+msgstr "<em> og</em> <strong>%a</strong> er <strong>%b</strong>"
+
+#: biblio.pages.inc:636
+msgid "<strong>%a</strong> is <strong>%b</strong>"
+msgstr "<strong>%a</strong> er <strong>%b</strong>"
+
+#: biblio.pages.inc:639
+msgid "Search results for "
+msgstr "Søk i resultatene for  "
+
+#: biblio.pages.inc:642;646
+msgid "Filters"
+msgstr "Filtre"
+
+#: biblio.pages.inc:660
+msgid "Reset Search"
+msgstr "Nullstill søk"
+
+#: biblio.pages.inc:662
+msgid "Clear All Filters"
+msgstr "Slett Alle Filtre"
+
+#: biblio.pages.inc:714
+msgid "No Keywords"
+msgstr "Ingen Nøkkelord"
+
+#: biblio.pages.inc:782
+msgid "You must include at least one positive keyword with @count characters or more."
+msgstr ""
+
+#: biblio.pages.inc:902
+msgid "Term"
+msgstr "Term"
+
+#: biblio.pages.inc:927
+msgid "Show only items where"
+msgstr "Vis kun elementer hvor"
+
+#: biblio.pages.inc:956;979
+msgid "Refine"
+msgstr "Raffiner"
+
+#: biblio.pages.inc:956;978
+msgid "Filter"
+msgstr "Filter"
+
+#: biblio.pages.inc:958;996
+msgid "Undo"
+msgstr "Angre"
+
+#: biblio.pages.inc:959;999
+msgid "Reset"
+msgstr "Nullstill"
+
+#: biblio.pages.inc:1045
+msgid "Sorry, citekey @cite not found"
+msgstr ""
+
+#: biblio.pages.inc:1085
+msgid " (whose last name starts with the letter \"@letter\") "
+msgstr ""
+
+#: biblio.pages.inc:1143
+msgid " (which start with the letter \"@letter\") "
+msgstr ""
+
+#: biblio.views.inc:44;112;143;174
+#: biblio.module:267
+#: biblio.info:0;0
+msgid "Biblio"
+msgstr "Biblio"
+
+#: biblio.views.inc:54
+msgid "Biblio Citation"
+msgstr ""
+
+#: biblio.views.inc:55
+msgid "Display the complete citation for a given node"
+msgstr ""
+
+#: biblio.views.inc:90
+msgid "Type of Publication"
+msgstr "Publikasjonstype"
+
+#: biblio.views.inc:91
+msgid "The type of publication: Journal, Book, Conference Paper, etc."
+msgstr "Publikasjonstype: Tidsskrift, Bok, Konferanseartikkel, etc."
+
+#: biblio.views.inc:131
+msgid "Contributors"
+msgstr "Bidragsytere"
+
+#: biblio.views.inc:132
+msgid "Filter by any kind of contributor."
+msgstr "Filtrer på type bidragsyter."
+
+#: biblio.views.inc:163
+msgid "Filter by any keyword."
+msgstr "Filtrer på nøkkelord."
+
+#: biblio.views.inc:184
+msgid "Display the keyword from a Biblio node"
+msgstr ""
+
+#: biblio_handler_citation.inc:27
+#: biblio_handler_field_contributor.inc:23
+msgid "Define the layout of author lists."
+msgstr ""
+
+#: biblio_handler_field.inc:33
+msgid "biblio settings"
+msgstr "biblio-innstillinger"
+
+#: biblio_handler_filter_type.inc:15
+msgid "Publication type"
+msgstr "Publikasjonstype"
+
+#: biblio_style_apa.inc:58
+#: biblio_style_cse.inc:56
+msgid "Anonymous"
+msgstr "Anonym"
+
+#: biblio_theme.inc:42
+msgid "Find It Via OpenURL!"
+msgstr ""
+
+#: biblio_theme.inc:113;206
+#: biblio.module:1064
+msgid "Publication Type"
+msgstr "Publikasjonstype"
+
+#: biblio_theme.inc:114
+#: translations/biblio.db.trans.inc:39
+msgid "Authors"
+msgstr "Forfattere"
+
+#: biblio_theme.inc:115
+msgid "Source"
+msgstr "Kilde"
+
+#: biblio_theme.inc:125
+#: translations/biblio.db.trans.inc:56
+msgid "Volume"
+msgstr "Volum"
+
+#: biblio_theme.inc:129
+#: translations/biblio.db.trans.inc:69
+msgid "Issue"
+msgstr "Utgave"
+
+#: biblio_theme.inc:133
+#: translations/biblio.db.trans.inc:57
+msgid "Number"
+msgstr "Antall"
+
+#: biblio_theme.inc:154
+#: translations/biblio.db.trans.inc:102
+msgid "ISBN"
+msgstr "ISBN"
+
+#: biblio_theme.inc:156
+#: translations/biblio.db.trans.inc:48
+msgid "Call Number"
+msgstr "Call Number"
+
+#: biblio_theme.inc:158
+#: translations/biblio.db.trans.inc:46
+msgid "Accession Number"
+msgstr "Accession Number"
+
+#: biblio_theme.inc:160
+msgid "Other Number"
+msgstr "Annet tall"
+
+#: biblio_theme.inc:165
+#: translations/biblio.db.trans.inc:67
+msgid "URL"
+msgstr "URL"
+
+#: biblio_theme.inc:171
+#: translations/biblio.db.trans.inc:62
+msgid "Abstract"
+msgstr "Sammendrag"
+
+#: biblio_theme.inc:175
+#: translations/biblio.db.trans.inc:68
+msgid "Notes"
+msgstr "Noter"
+
+#: biblio_theme.inc:177;276
+#: biblio.module:1179;1185
+msgid "Full Text"
+msgstr "Fulltekst"
+
+#: biblio_theme.inc:269
+msgid "Export"
+msgstr "Eksport"
+
+#: biblio_theme.inc:715
+msgid "and"
+msgstr "og"
+
+#: biblio_theme.inc:715
+msgid "where"
+msgstr "hvor"
+
+#: biblio_theme.inc:720
+msgid "is"
+msgstr "er"
+
+#: biblio_theme.inc:782;785
+msgid "Field Name"
+msgstr "Feltnavn"
+
+#: biblio_theme.inc:782;785
+msgid "Hint"
+msgstr "Hint"
+
+#: biblio_theme.inc:782
+msgid "Visible"
+msgstr "Synlig"
+
+#: biblio_theme.inc:782;785
+msgid "Required"
+msgstr "Obligatorisk"
+
+#: biblio_theme.inc:782;785;910;911
+msgid "Weight"
+msgstr "Vekt"
+
+#: biblio_theme.inc:785
+msgid "Default Title"
+msgstr "Standard-Tittel"
+
+#: biblio_theme.inc:785
+msgid "Common"
+msgstr "Felles"
+
+#: biblio_theme.inc:785
+msgid "Autocomplete"
+msgstr "Autofullfør"
+
+#: biblio_theme.inc:800
+msgid "Download"
+msgstr "Last ned"
+
+#: biblio_theme.inc:852
+msgid "Google Scholar"
+msgstr "Google Scholar"
+
+#: biblio_theme.inc:852;867
+msgid "Click to download the EndNote Tagged formatted file"
+msgstr "Klikk her for å laste ned fila i EndNote Tagged-format"
+
+#: biblio_theme.inc:865;867
+msgid "Tagged"
+msgstr "Tagget"
+
+#: biblio_theme.inc:865
+msgid "Click to get the EndNote Tagged output "
+msgstr ""
+
+#: biblio_theme.inc:881
+msgid "Click to get the BibTEX output "
+msgstr ""
+
+#: biblio_theme.inc:883
+msgid "Click to download the BibTEX formatted file"
+msgstr ""
+
+#: biblio_theme.inc:897;899
+msgid "XML"
+msgstr "XML"
+
+#: biblio_theme.inc:897
+msgid "Click to get the XML output "
+msgstr ""
+
+#: biblio_theme.inc:899
+msgid "Click to download the XML formatted file"
+msgstr ""
+
+#: biblio_theme.inc:910;911
+#: biblio.module:1291
+msgid "Name"
+msgstr "Navn"
+
+#: biblio_theme.inc:911
+msgid "Role"
+msgstr "Rolle"
+
+#: biblio_theme.inc:954;960;966
+msgid "Show ALL"
+msgstr "Vis ALLE"
+
+#: biblio_theme.inc:1031
+msgid "Author Name"
+msgstr "Forfatternavn"
+
+#: biblio_theme.inc:1045
+msgid "There are no orphaned authors in the database."
+msgstr "Det er ingen ubrukte forfattere i databasen."
+
+#: biblio_theme.inc:1075
+msgid "There are no orphaned keywords in the database."
+msgstr "Det er ingen ubrukte nøkkelord i databasen."
+
+#: ris_parser.inc:47
+msgid "Untitled"
+msgstr "Uten tittel"
+
+#: biblio.module:223
+msgid "General:"
+msgstr "General:"
+
+#: biblio.module:224
+msgid "By default, the !url page will list all of the entries in the database sorted by Year in descending order. If you wish to sort by \"Title\" or \"Type\",  you may do so by clicking on the appropriate links at the top of the page.  To reverse the sort order, simply click the link a second time."
+msgstr ""
+
+#: biblio.module:228
+msgid "Filtering Search Results:"
+msgstr "Filtrerer Søkeresultater:"
+
+#: biblio.module:229
+msgid "If you wish to filter the results, click on the \"Filter\" tab at the top of the page.  To add a filter, click the radio button to the left of the filter type you wish to apply, then select the filter criteria from the drop down list on the right, then click the filter button."
+msgstr ""
+
+#: biblio.module:230
+msgid "It is possible to create complex filters by returning to the <i>Filter</i> tab and adding additional filters.  Simply follow the steps outlined above and press the \"Refine\" button."
+msgstr ""
+
+#: biblio.module:231
+msgid "All filters can be removed by clicking the <i>Clear All Filters</i> link at the top of the result page, or on the <i>Filter</i> tab they can be removed one at a time using the <i>Undo</i> button, or you can remove them all using the <i>Clear All</i> button."
+msgstr ""
+
+#: biblio.module:232
+msgid "You may also construct URLs which filter.  For example, /biblio/year/2005 will show all of the entries for 2005.  /biblio/year/2005/author/smith will show all of entries from 2005 for smith."
+msgstr ""
+
+#: biblio.module:233
+msgid "Exporting Search Results:"
+msgstr "Eksporter Søkeresultat:"
+
+#: biblio.module:234
+msgid "Assuming this option has been enabled by the administrator, you can export search results directly into EndNote.  The link at the top of the result page will export all of the search results, and the links on individual entries will export the information related to that single entry."
+msgstr ""
+
+#: biblio.module:235
+msgid "The information is exported in EndNote \"Tagged\" format similar to this..."
+msgstr ""
+
+#: biblio.module:235
+msgid ""
+"\n"
+"                  %0  Book\n"
+"                  %A  John Smith\n"
+"                  %D  1959\n"
+"                  %T  The Works of John Smith\n"
+"                  ..."
+msgstr "\n"
+"                  %0  Bok\n"
+"                  %A  John Smith\n"
+"                  %D  1959\n"
+"                  %T  John Smiths Samlede Verker\n"
+"                  ..."
+
+#: biblio.module:241
+msgid "Clicking on one of the export links should cause your browser to ask you whether you want to Open, or Save To Disk, the file endnote.enw.  If you choose to open it, Endnote should start and ask you which library you would like store the results in.  Alternatively, you can save the file to disk and manually import it into EndNote."
+msgstr ""
+
+#: biblio.module:258
+msgid "Manages a list of scholarly papers on your site"
+msgstr ""
+
+#: biblio.module:261
+msgid "This allows you to add a bibliographic entry to the database"
+msgstr "Dette lar deg legge bibliografiske poster inn i databasen"
+
+#: biblio.module:269
+msgid "Manages bibliographies"
+msgstr "Biblio brukes til å administrere bibliografier."
+
+#: biblio.module:345
+msgid "edit this entry"
+msgstr "rediger denne posten"
+
+#: biblio.module:381
+msgid "You did not supply an associated biblio author."
+msgstr ""
+
+#: biblio.module:946
+msgid "Vocabularies"
+msgstr "Vokabularer"
+
+#: biblio.module:952
+msgid "Select taxonomy terms which will be related to this "
+msgstr ""
+
+#: biblio.module:952
+msgid " entry."
+msgstr " post."
+
+#: biblio.module:1007
+msgid "DOI Lookup"
+msgstr "DOI-oppslag"
+
+#: biblio.module:1017
+msgid " and then enter your CrossRef UserID in the \"<i>CrossRef Login Information</i>\" section of your account profile "
+msgstr ""
+
+#: biblio.module:1023
+#: translations/biblio.db.trans.inc:89
+msgid "DOI"
+msgstr "DOI"
+
+#: biblio.module:1026
+msgid "Enter a DOI name in the form: <b>10.1000/123456</b>"
+msgstr "Skriv inn et DOI-navn på formen: <b>10.1000/123456</b>"
+
+#: biblio.module:1035;1385;1387
+msgid "Populate using DOI"
+msgstr "Legg inn basert på DOI"
+
+#: biblio.module:1041
+msgid "Paste"
+msgstr "Lim inn"
+
+#: biblio.module:1051
+msgid "Paste a BibTex entry here"
+msgstr "Lim inn en post fra BibTex her"
+
+#: biblio.module:1058;1402
+msgid "Populate using BibTex"
+msgstr "Legg inn fra BibTex"
+
+#: biblio.module:1095
+msgid "Other Biblio Fields"
+msgstr "Andre Biblio-felter"
+
+#: biblio.module:1135
+msgid "Separate keywords using the \" @sep \" character"
+msgstr "Skill nøkkelord med tegnet \" @sep \""
+
+#: biblio.module:1189
+msgid "You may enter a full text or HTML version of the publication here."
+msgstr ""
+
+#: biblio.module:1236
+msgid "Enter a single name per line using a format such as \"Smith, John K\" or \"John K Smith\" or \"J.K. Smith\""
+msgstr "Skriv enn ett enkelt navn pr. linje på formatet  \"Smith, John K\" eller \"John K Smith\" eller \"J.K. Smith\""
+
+#: biblio.module:1267
+msgid "More @title"
+msgstr "Flere @title"
+
+#: biblio.module:1268
+msgid "If there aren't enough boxes above, click here to add more."
+msgstr "Dersom det ikke er nok bokser, klikk her for å legge til flere."
+
+#: biblio.module:1398
+msgid "This does not appear to be a valid DOI name, it should start with \"10.\" "
+msgstr ""
+
+#: biblio.module:1408
+msgid "There does not appear to be any bibtex data to work with "
+msgstr ""
+
+#: biblio.module:1437
+msgid "Year of Publication must be a number between 1 and @thisyear or the words \"In Press\" or \"Submitted\" "
+msgstr "Publiseringsår må være et tall mellom 1 og @thisyear, eller 9998 (under publiering) eller 9999 (ikke oppgitt)"
+
+#: biblio.module:1446
+msgid "No single keyword can be greater than 255 characters in length, the word: @kw exceeds this length"
+msgstr ""
+
+#: biblio.module:1601
+msgid "Home"
+msgstr "Hjem"
+
+#: biblio.module:1613
+msgid "Most recent publications"
+msgstr ""
+
+#: biblio.module:1643;1661
+msgid "Recently Added Publications"
+msgstr ""
+
+#: biblio.module:1645
+msgid "more..."
+msgstr "flere..."
+
+#: biblio.module:1663
+msgid "This feed lists the %num most recently added publications on %site"
+msgstr ""
+
+#: biblio.module:1719
+msgid "Citekey @cite not found"
+msgstr ""
+
+#: biblio.module:1734
+msgid "You can cite references directly into texts with <code>&lt;bib&gt;<i>citekey</i>&lt;/bib&gt; <b><i>or</i></b> [bib]<i>citekey</i>[/bib]</code>. This will be replaced with a running number (the publication reference) and the publication referenced by the citekey within the &lt;bib&gt; tags will be printed at the bottom of the page (the reference)."
+msgstr ""
+
+#: biblio.module:1737
+msgid "Use &lt;bib&gt;<i>citekey</i>&lt;/bib&gt; <b><i>or</i></b> [bib]<i>citekey</i>[/bib] to insert automatically numbered references."
+msgstr ""
+
+#: biblio.module:1754
+msgid "Biblio module references &lt;bib&gt; <i>or</i> [bib]"
+msgstr ""
+
+#: biblio.module:1770
+msgid "Use &lt;bib&gt;citekey&lt;/bib&gt; or [bib]citebkey[/bib]to insert automatically numbered references."
+msgstr ""
+
+#: biblio.module:1823
+#: translations/biblio.db.trans.inc:194
+msgid "References"
+msgstr "Referanser"
+
+#: biblio.module:2107
+msgid "Biblio: Publication year"
+msgstr ""
+
+#: biblio.module:2108
+msgid "Biblio: Authors"
+msgstr ""
+
+#: biblio.module:2109
+msgid "Biblio: Type ID (e.g.: 100)"
+msgstr "Biblio: Type-id (f.eks.: 100)"
+
+#: biblio.module:2110
+msgid "Biblio: Type Name (e.g.: book)"
+msgstr "Biblio: Type-navn (f.eks.: bok)"
+
+#: biblio.install:19
+msgid "The biblio module has successfully added its tables to the database."
+msgstr ""
+
+#: biblio.install:22
+msgid "Drupal encountered some errors while attempting to install the database tables for the biblio module."
+msgstr ""
+
+#: biblio.install:148
+msgid "Default"
+msgstr "Standard"
+
+#: biblio.install:149
+msgid "This is the collection that all biblio entries will be a part of if no other collection is selected. Deleting this term will render all your biblio entries inaccessable. (You've been warned!)"
+msgstr ""
+
+#: biblio.install:843
+msgid "Relational table linking keywords to biblio nodes"
+msgstr ""
+
+#: biblio.install:850
+msgid "Primary Key: The {biblio_keyword_data}.kid of the keyword of the node "
+msgstr ""
+
+#: biblio.install:857;925
+msgid "The {node}.nid of the node."
+msgstr ""
+
+#: biblio.install:864;911
+msgid "Primary Key: The {node}.vid of the node."
+msgstr ""
+
+#: biblio.install:875
+msgid "Stores the keywords related to nodes."
+msgstr ""
+
+#: biblio.install:881
+msgid "Primary Key: The id of the keyword assigned to the node "
+msgstr ""
+
+#: biblio.install:888
+msgid "The keyword"
+msgstr ""
+
+#: biblio.install:897
+msgid "Relational table grouping biblio nodes into collections"
+msgstr ""
+
+#: biblio.install:904
+msgid "Primary Key: The {biblio_collection_data}.cid of the collection"
+msgstr ""
+
+#: biblio.install:918
+msgid "The parent id of the collection"
+msgstr ""
+
+#: biblio.install:935
+msgid "Descriptions of the collections."
+msgstr ""
+
+#: biblio.install:942
+msgid "Primary Key: The id of the collection "
+msgstr ""
+
+#: biblio.install:949
+msgid "The name of the collection"
+msgstr ""
+
+#: biblio.install:956
+msgid "The description of the collection"
+msgstr ""
+
+#: biblio.install:965
+msgid "Relational table linking possible duplicate biblio nodes"
+msgstr ""
+
+#: biblio.install:972
+msgid "Primary Key: The {biblio}.nid of the original node "
+msgstr ""
+
+#: biblio.install:979
+msgid "The {biblio}.nid of the newly imported node which may be a duplicate."
+msgstr ""
+
+#: biblio.install:986
+msgid "The type of duplicate 0=biblio, 1=author."
+msgstr ""
+
+#: biblio.install:1007
+msgid "A collection of data to cache."
+msgstr ""
+
+#: biblio.info:0
+msgid "Maintains biblographic lists."
+msgstr "Vedlikeholder biblografiske lister."
+
+#: translations/biblio.db.trans.inc:5
+msgid "Select Type..."
+msgstr "Velg Type..."
+
+#: translations/biblio.db.trans.inc:6
+msgid "Book"
+msgstr "Bok"
+
+#: translations/biblio.db.trans.inc:7
+msgid "Book Chapter"
+msgstr "Bok-kapittel"
+
+#: translations/biblio.db.trans.inc:8
+msgid "Journal Article"
+msgstr "Tidsskriftartikkel"
+
+#: translations/biblio.db.trans.inc:9
+msgid "Conference Paper"
+msgstr "Konferanseartikkel"
+
+#: translations/biblio.db.trans.inc:10
+msgid "Conference Proceedings"
+msgstr "Konferansedokumentasjon"
+
+#: translations/biblio.db.trans.inc:11
+msgid "Newspaper Article"
+msgstr "Avisartikkel"
+
+#: translations/biblio.db.trans.inc:12
+msgid "Magazine Article"
+msgstr "Ukebladartikkel"
+
+#: translations/biblio.db.trans.inc:13
+msgid "Web Article"
+msgstr "Web-side"
+
+#: translations/biblio.db.trans.inc:14
+msgid "Thesis"
+msgstr "Avhandling"
+
+#: translations/biblio.db.trans.inc:15
+msgid "Report"
+msgstr "Rapport"
+
+#: translations/biblio.db.trans.inc:16
+msgid "Film"
+msgstr "Film"
+
+#: translations/biblio.db.trans.inc:17
+msgid "Broadcast"
+msgstr "Kringkasting"
+
+#: translations/biblio.db.trans.inc:18
+msgid "Artwork"
+msgstr "Kunstverk"
+
+#: translations/biblio.db.trans.inc:19
+msgid "Software"
+msgstr "Programvare"
+
+#: translations/biblio.db.trans.inc:20
+msgid "Audiovisual"
+msgstr "Audiovisuellt verk"
+
+#: translations/biblio.db.trans.inc:21
+msgid "Hearing"
+msgstr "Høring"
+
+#: translations/biblio.db.trans.inc:22
+msgid "Case"
+msgstr "Sak"
+
+#: translations/biblio.db.trans.inc:23
+msgid "Bill"
+msgstr "Lov"
+
+#: translations/biblio.db.trans.inc:24
+msgid "Statute"
+msgstr "Forskrift"
+
+#: translations/biblio.db.trans.inc:25
+msgid "Patent"
+msgstr "Patent"
+
+#: translations/biblio.db.trans.inc:26
+msgid "Personal"
+msgstr "Personlig kommunikasjon"
+
+#: translations/biblio.db.trans.inc:27
+msgid "Manuscript"
+msgstr "Manuskript"
+
+#: translations/biblio.db.trans.inc:28
+msgid "Map"
+msgstr "Kart"
+
+#: translations/biblio.db.trans.inc:29
+msgid "Chart"
+msgstr "Diagram"
+
+#: translations/biblio.db.trans.inc:30
+msgid "Unpublished"
+msgstr "Upublisert"
+
+#: translations/biblio.db.trans.inc:31
+msgid "Database"
+msgstr "Database"
+
+#: translations/biblio.db.trans.inc:32
+msgid "Government Report"
+msgstr "Offentlig utredning"
+
+#: translations/biblio.db.trans.inc:33
+msgid "Classical"
+msgstr "Klassisk verk"
+
+#: translations/biblio.db.trans.inc:34
+msgid "Legal Ruling"
+msgstr "Rettslig kjennelse"
+
+#: translations/biblio.db.trans.inc:35
+msgid "Miscellaneous"
+msgstr "Diverse"
+
+#: translations/biblio.db.trans.inc:36
+msgid "Miscellaneous Section"
+msgstr "Diverse-seksjon"
+
+#: translations/biblio.db.trans.inc:37
+msgid "Test Type"
+msgstr "Test-type"
+
+#: translations/biblio.db.trans.inc:38
+msgid "this is a test"
+msgstr "dette er en test"
+
+#: translations/biblio.db.trans.inc:40
+msgid "Secondary Authors"
+msgstr "Medforfattere"
+
+#: translations/biblio.db.trans.inc:41
+msgid "Tertiary Authors"
+msgstr "Tertiærforfattere"
+
+#: translations/biblio.db.trans.inc:42
+msgid "Subsidiary Authors"
+msgstr "Øvrige forfattere"
+
+#: translations/biblio.db.trans.inc:43
+msgid "Corporate Authors"
+msgstr "Firma-forfattere"
+
+#: translations/biblio.db.trans.inc:44
+msgid "Secondary Title"
+msgstr "Undertittel"
+
+#: translations/biblio.db.trans.inc:45
+msgid "Tertiary Title"
+msgstr "Tertiærtittel"
+
+#: translations/biblio.db.trans.inc:47
+msgid "ISBN Number"
+msgstr "ISBN-nummer"
+
+#: translations/biblio.db.trans.inc:49
+msgid "Other Numbers"
+msgstr "Andre nummere"
+
+#: translations/biblio.db.trans.inc:50
+msgid "Other Author Affiliations"
+msgstr "Andre forfatter-tilknytninger"
+
+#: translations/biblio.db.trans.inc:51
+msgid "Publisher"
+msgstr "Utgiver"
+
+#: translations/biblio.db.trans.inc:52
+msgid "Place Published"
+msgstr "Utgiversted"
+
+#: translations/biblio.db.trans.inc:53
+msgid "Year of Publication"
+msgstr "Utgivelseår"
+
+#: translations/biblio.db.trans.inc:54
+msgid "Enter YYYY, Submitted or In Press"
+msgstr "Skriv årstallet (ÅÅÅÅ), 9999 (= ikke oppgitt) eller 9998 (= under utgivelse)"
+
+#: translations/biblio.db.trans.inc:55
+msgid "Edition"
+msgstr "Utgave"
+
+#: translations/biblio.db.trans.inc:58
+msgid "Pagination"
+msgstr "Sider"
+
+#: translations/biblio.db.trans.inc:59
+msgid "Date Published"
+msgstr "Utgivelsedato"
+
+#: translations/biblio.db.trans.inc:60
+msgid "(mm/yyyy)"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:61
+msgid "Publication Language"
+msgstr "Språk"
+
+#: translations/biblio.db.trans.inc:63
+msgid "French Abstract"
+msgstr "Sammendrag på norsk"
+
+#: translations/biblio.db.trans.inc:65
+msgid "Type of Work"
+msgstr "Type verk"
+
+#: translations/biblio.db.trans.inc:66
+msgid "Masters Thesis"
+msgstr "Mastergradavhandling"
+
+#: translations/biblio.db.trans.inc:70
+msgid "Reseach Notes"
+msgstr "Forskningsnotater"
+
+#: translations/biblio.db.trans.inc:71
+msgid "Custom 1"
+msgstr "Felt 1"
+
+#: translations/biblio.db.trans.inc:72
+msgid "Custom 2"
+msgstr "Felt 2"
+
+#: translations/biblio.db.trans.inc:73
+msgid "Custom 3"
+msgstr "Felt 3"
+
+#: translations/biblio.db.trans.inc:74
+msgid "Custom 4"
+msgstr "Felt 4"
+
+#: translations/biblio.db.trans.inc:75
+msgid "Custom 5"
+msgstr "Felt 5"
+
+#: translations/biblio.db.trans.inc:76
+msgid "Custom 6"
+msgstr "Felt 6"
+
+#: translations/biblio.db.trans.inc:77
+msgid "Custom 7"
+msgstr "Felt 7"
+
+#: translations/biblio.db.trans.inc:78
+msgid "Number of Volumes"
+msgstr "Antall bind"
+
+#: translations/biblio.db.trans.inc:79
+msgid "Short Title"
+msgstr "Kort tittel"
+
+#: translations/biblio.db.trans.inc:80
+msgid "Alternate Title"
+msgstr "Alternativ tittel"
+
+#: translations/biblio.db.trans.inc:81
+msgid "Translated Title"
+msgstr "Oversatt tittel"
+
+#: translations/biblio.db.trans.inc:82
+msgid "Original Publication"
+msgstr "Originalutgivelse"
+
+#: translations/biblio.db.trans.inc:83
+msgid "Reprint Edition"
+msgstr "Opptrykk"
+
+#: translations/biblio.db.trans.inc:84
+msgid "Section"
+msgstr "Seksjon"
+
+#: translations/biblio.db.trans.inc:85
+msgid "Citation Key"
+msgstr "Citation-nøkkel"
+
+#: translations/biblio.db.trans.inc:86
+msgid "COinS Data"
+msgstr "COinS Data"
+
+#: translations/biblio.db.trans.inc:87
+msgid "This will be automatically generated"
+msgstr "Dette vil bli generert automatisk"
+
+#: translations/biblio.db.trans.inc:88
+msgid "ISSN Number"
+msgstr "ISSN-nummer"
+
+#: translations/biblio.db.trans.inc:90
+msgid "Author Address"
+msgstr "Forfatterens adresse"
+
+#: translations/biblio.db.trans.inc:91
+msgid "Remote Database Name"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:92
+msgid "Remote Database Provider"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:93
+msgid "Label"
+msgstr "Etikett"
+
+#: translations/biblio.db.trans.inc:94
+msgid "Access Date"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:95
+msgid "City"
+msgstr "Utgivelsested"
+
+#: translations/biblio.db.trans.inc:97
+msgid "Series Title"
+msgstr "Serie-tittel"
+
+#: translations/biblio.db.trans.inc:98
+msgid "Series Editor"
+msgstr "Serie-redaktør"
+
+#: translations/biblio.db.trans.inc:99
+msgid "Performers"
+msgstr "Opptredende"
+
+#: translations/biblio.db.trans.inc:100
+msgid "Extent of Work"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:103
+msgid "Contents"
+msgstr "Innhold"
+
+#: translations/biblio.db.trans.inc:104
+msgid "Cast"
+msgstr "Rolleliste"
+
+#: translations/biblio.db.trans.inc:105
+msgid "Credits"
+msgstr "Krediteringer"
+
+#: translations/biblio.db.trans.inc:106
+msgid "Format"
+msgstr "Format"
+
+#: translations/biblio.db.trans.inc:107
+msgid "Code"
+msgstr "Kode"
+
+#: translations/biblio.db.trans.inc:108
+msgid "Legislative Body"
+msgstr "Lovgivende myndighet"
+
+#: translations/biblio.db.trans.inc:109
+msgid "Sponsor"
+msgstr "Sponsor"
+
+#: translations/biblio.db.trans.inc:110
+msgid "Code Volume"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:111
+msgid "Bill Number"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:112
+msgid "Code Pages"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:113
+msgid "Code Section"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:114
+msgid "Session"
+msgstr "Sesjon"
+
+#: translations/biblio.db.trans.inc:115
+msgid "History"
+msgstr "Historikk"
+
+#: translations/biblio.db.trans.inc:116
+msgid "Translator"
+msgstr "Oversetter"
+
+#: translations/biblio.db.trans.inc:117
+msgid "Abbreviation"
+msgstr "Forkortelse"
+
+#: translations/biblio.db.trans.inc:118
+msgid "Series Volume"
+msgstr "Serie-bind"
+
+#: translations/biblio.db.trans.inc:119
+msgid "Number of Pages"
+msgstr "Antall sider"
+
+#: translations/biblio.db.trans.inc:120
+msgid "Book Title"
+msgstr "Boktittel"
+
+#: translations/biblio.db.trans.inc:121
+msgid "Editor"
+msgstr "Redaktør"
+
+#: translations/biblio.db.trans.inc:122
+msgid "Chapter"
+msgstr "Kapittel"
+
+#: translations/biblio.db.trans.inc:123
+msgid "Reporter"
+msgstr "Reporter"
+
+#: translations/biblio.db.trans.inc:124
+msgid "Abbreviated Case Name"
+msgstr "Forkortet saksnavn"
+
+#: translations/biblio.db.trans.inc:125
+msgid "Counsel"
+msgstr "Rådgiver"
+
+#: translations/biblio.db.trans.inc:126
+msgid "Court"
+msgstr "Rettsinstans"
+
+#: translations/biblio.db.trans.inc:127
+msgid "Reporter Volume"
+msgstr "Reporter-bind"
+
+#: translations/biblio.db.trans.inc:128
+msgid "Reporter Abbreviation"
+msgstr "Reporter-forkortelse"
+
+#: translations/biblio.db.trans.inc:129
+msgid "First Page"
+msgstr "Første side"
+
+#: translations/biblio.db.trans.inc:130
+msgid "Page Cited"
+msgstr "Side sitert"
+
+#: translations/biblio.db.trans.inc:131
+msgid "Date Decided"
+msgstr "Dato avgjort"
+
+#: translations/biblio.db.trans.inc:132
+msgid "ISSN/ISBN"
+msgstr "ISSN/ISBN"
+
+#: translations/biblio.db.trans.inc:133
+msgid "Version"
+msgstr "Versjon"
+
+#: translations/biblio.db.trans.inc:134
+msgid "Computer"
+msgstr "Datamaskin"
+
+#: translations/biblio.db.trans.inc:135
+msgid "Conference Name"
+msgstr "Konferansenavn"
+
+#: translations/biblio.db.trans.inc:136
+msgid "Conference Location"
+msgstr "Konferanselokasjon"
+
+#: translations/biblio.db.trans.inc:137
+msgid "Year of Conference"
+msgstr "Konferanseår"
+
+#: translations/biblio.db.trans.inc:138
+msgid "Image Source Program"
+msgstr "Bildebehandlingsprogram"
+
+#: translations/biblio.db.trans.inc:139
+msgid "Name of File"
+msgstr "Filnavn"
+
+#: translations/biblio.db.trans.inc:140
+msgid "Image Size"
+msgstr "Bildestørrelse"
+
+#: translations/biblio.db.trans.inc:141
+msgid "Type of Image"
+msgstr "Bildetype"
+
+#: translations/biblio.db.trans.inc:142
+msgid "Year Released"
+msgstr "Utgivelsesår"
+
+#: translations/biblio.db.trans.inc:143
+msgid "Series Director"
+msgstr "Serie-regissør"
+
+#: translations/biblio.db.trans.inc:144
+msgid "Producer"
+msgstr "Produsent"
+
+#: translations/biblio.db.trans.inc:145
+msgid "Country"
+msgstr "Land"
+
+#: translations/biblio.db.trans.inc:146
+msgid "Running Time"
+msgstr "Spilletid"
+
+#: translations/biblio.db.trans.inc:147
+msgid "Date Released"
+msgstr "Utgivelsedato"
+
+#: translations/biblio.db.trans.inc:148
+msgid "Medium"
+msgstr "Medium"
+
+#: translations/biblio.db.trans.inc:149
+msgid "Genre"
+msgstr "Sjanger"
+
+#: translations/biblio.db.trans.inc:150
+msgid "Synopsis"
+msgstr "Synopsis"
+
+#: translations/biblio.db.trans.inc:151
+msgid "Department"
+msgstr "Avdeling"
+
+#: translations/biblio.db.trans.inc:152
+msgid "Report Number"
+msgstr "Rapport-nummer"
+
+#: translations/biblio.db.trans.inc:153
+msgid "Government Body"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:154
+msgid "Congress Number"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:155
+msgid "Congress Session"
+msgstr "Kongress-sesjon"
+
+#: translations/biblio.db.trans.inc:156
+msgid "Committee"
+msgstr "Komité"
+
+#: translations/biblio.db.trans.inc:157
+msgid "Document Number"
+msgstr "Dokument-nummer"
+
+#: translations/biblio.db.trans.inc:158
+msgid "Journal"
+msgstr "Tidsskrift"
+
+#: translations/biblio.db.trans.inc:159
+msgid "Alternate Journal"
+msgstr "Alternativt Tidsskrift"
+
+#: translations/biblio.db.trans.inc:160
+msgid "Start Page"
+msgstr "Første side"
+
+#: translations/biblio.db.trans.inc:161
+msgid "Type of Article"
+msgstr "Artikkeltype"
+
+#: translations/biblio.db.trans.inc:162
+msgid "ISSN"
+msgstr "ISSN"
+
+#: translations/biblio.db.trans.inc:163
+msgid "Issuing Organization"
+msgstr "Utgiver-organisasjon"
+
+#: translations/biblio.db.trans.inc:164
+msgid "Rule Number"
+msgstr "Regel-nummer"
+
+#: translations/biblio.db.trans.inc:165
+msgid "Session Number"
+msgstr "Sesjon-nummer"
+
+#: translations/biblio.db.trans.inc:166
+msgid "Section Number"
+msgstr "Seksjon-nummer"
+
+#: translations/biblio.db.trans.inc:167
+msgid "Date of Code Edition"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:168
+msgid "Magazine"
+msgstr "Ukeblad"
+
+#: translations/biblio.db.trans.inc:169
+msgid "Alternate Magazine"
+msgstr "Alternativt Ukeblad"
+
+#: translations/biblio.db.trans.inc:170
+msgid "Frequency"
+msgstr "Frekvens"
+
+#: translations/biblio.db.trans.inc:171
+msgid "Issue Number"
+msgstr "Utgave-nummer"
+
+#: translations/biblio.db.trans.inc:172
+msgid "Collection Title"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:173
+msgid "Library/Archive"
+msgstr "Bibliotek/Arkiv"
+
+#: translations/biblio.db.trans.inc:174
+msgid "Volume/Storage Container"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:175
+msgid "Manuscript Number"
+msgstr "Manuskript-nummer"
+
+#: translations/biblio.db.trans.inc:176
+msgid "Folio Number"
+msgstr "Folio-nummer"
+
+#: translations/biblio.db.trans.inc:177
+msgid "Scale"
+msgstr "Skala"
+
+#: translations/biblio.db.trans.inc:178
+msgid "Newspaper"
+msgstr "Avis"
+
+#: translations/biblio.db.trans.inc:179
+msgid "Issue Date"
+msgstr "Utgivelsedato"
+
+#: translations/biblio.db.trans.inc:180
+msgid "Date Accessed"
+msgstr "Dato lest"
+
+#: translations/biblio.db.trans.inc:181
+msgid "Published Source"
+msgstr "Publisert kilde"
+
+#: translations/biblio.db.trans.inc:182
+msgid "International Title"
+msgstr "Internasjonal Tittel"
+
+#: translations/biblio.db.trans.inc:183
+msgid "International Author"
+msgstr "Internasjonal Forfatter"
+
+#: translations/biblio.db.trans.inc:184
+msgid "Assignee"
+msgstr "Stedfortreder"
+
+#: translations/biblio.db.trans.inc:185
+msgid "Patent Version Number"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:186
+msgid "Application Number"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:187
+msgid "International Patent Number"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:188
+msgid "International Patent Classification"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:189
+msgid "Patent Type"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:190
+msgid "Patent Number"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:191
+msgid "Priority Numbers"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:192
+msgid "Designated States"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:193
+msgid "Attorney/Agent"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:195
+msgid "Legal Status"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:196
+msgid "Recipient"
+msgstr "Mottaker"
+
+#: translations/biblio.db.trans.inc:197
+msgid "Communication Number"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:198
+msgid "Institution"
+msgstr "Institusjon"
+
+#: translations/biblio.db.trans.inc:199
+msgid "Code Number"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:200
+msgid "Statute Number"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:201
+msgid "Public Law Number"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:202
+msgid "Sections"
+msgstr "Seksjoner"
+
+#: translations/biblio.db.trans.inc:203
+msgid "Date Enacted"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:204
+msgid "Academic Department"
+msgstr "Akademisk Avdeling"
+
+#: translations/biblio.db.trans.inc:205
+msgid "Advisor"
+msgstr "Veileder"
+
+#: translations/biblio.db.trans.inc:206
+msgid "University"
+msgstr "Universitet"
+
+#: translations/biblio.db.trans.inc:207
+msgid "Degree"
+msgstr "Grad"
+
+#: translations/biblio.db.trans.inc:208
+msgid "Thesis Type"
+msgstr ""
+
+#: translations/biblio.db.trans.inc:209
+msgid "Access Year"
+msgstr "År lest"
+
+#: translations/biblio.db.trans.inc:210
+msgid "Last Update Date"
+msgstr "Last Update Date"
+
+#: translations/biblio.db.trans.inc:211
+msgid "Type of Medium"
+msgstr "Type medium"
+
+#: translations/biblio.db.trans.inc:213
+msgid "Secondary Author"
+msgstr "Medforfatter"
+
+#: translations/biblio.db.trans.inc:214
+msgid "Tertiary Author"
+msgstr "Tertiær forfatter"
+
+#: translations/biblio.db.trans.inc:215
+msgid "Subsidiary Author"
+msgstr "Øvrig forfatter"
+
+#: translations/biblio.db.trans.inc:216
+msgid "Corporate Author"
+msgstr "Firma-forfatter"
+

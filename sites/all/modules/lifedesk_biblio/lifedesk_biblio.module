@@ -1,0 +1,38 @@
+<?php
+
+function lifedesk_biblio_menu() {
+  $items['biblio'] = array(
+    'title' => t('Bibliography'),
+    'description' => t('View and filter the bibliography'),
+    'page callback' => 'biblio_db_search',
+    'access callback' => 'user_access',
+    'access arguments' => array(
+      'access content'
+    ),
+    'file' => 'biblio.pages.inc',
+    'file path' => drupal_get_path('module','biblio'),
+  );
+  $items['biblio/import'] = array(
+    'title' => t('Import'),
+    'description' => t('Import your bibliography'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('biblio_import_form'),
+    'access arguments' => array('administer biblio'),
+    'file' => 'biblio.import.export.inc',
+    'file path' => drupal_get_path('module','biblio'),
+  );
+  $items['admin/settings/biblio/refparser'] = array(
+    'title'             => 'Parser',
+    'page callback'     => 'drupal_get_form',
+    'page arguments'    => array('lifedesk_biblio_admin_form'),
+    'access arguments'  => array('administer biblio'),
+    'file'              => 'lifedesk_biblio.admin.inc',
+    'type'              => MENU_LOCAL_TASK,
+  );
+  return $items;
+}
+
+function lifedesk_biblio_form_alter(&$form, $form_state, $form_id){
+  if ($form_id == 'user_profile_form') {    unset($form['biblio_fieldset']['biblio_profile']['biblio_my_pubs_menu'],$form['biblio_fieldset']['biblio_profile']['biblio_user_style'], $form['biblio_fieldset']['openurl']);
+  }
+}

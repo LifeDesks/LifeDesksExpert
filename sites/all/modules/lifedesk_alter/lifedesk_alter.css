@@ -1,0 +1,42 @@
+#term-display .item-list {
+	margin-bottom:10px;
+}
+#term-display h3 {
+	display:inline;
+	margin:5px 5px 0px 0px;
+	font-size:1em;
+	line-height:1em;
+}
+
+#term-display ul.vocabulary-list {
+	margin:0px;
+	padding:0px;
+	display:inline;
+}
+
+#term-display ul.vocabulary-list li {
+	display:inline;
+}
+
+.node-type-image .content {
+	position:relative;
+}
+
+.node-type-image .content #term-display {
+   position:absolute;
+   right:20px;
+   top:10px;
+   width:200px; 
+}
+
+.node-type-image .content #term-display h3 {
+   display:block; 
+}
+
+.node-type-image .content #term-display ul.vocabulary-list {
+	display:block;
+}
+
+.node-type-image .content #term-display ul.vocabulary-list li {
+	display:block;
+}

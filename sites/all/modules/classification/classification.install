@@ -1,0 +1,1189 @@
+<?php
+
+/**
+ * Implementation of hook_install()
+ */
+function classification_install() {
+	
+  drupal_install_schema('classification');
+  
+  //make sure all the tables are in place before we add stuff
+  sleep(4);
+
+  $primary_classification = array(
+	 'name' => 'Taxa',
+	 'hierarchy' => 1,
+	 'module' => 'classification',
+	 'description' => t('The primary classification'),
+	 'tags' => 1,
+	 'weight' => -10
+  );
+
+  $deleted_names = array(
+	'name' => 'Deleted Names',
+	'hierarchy' => 0,
+	'module' => 'classification',
+	'description' => t('A reserved (hidden) vocabulary to retain deleted biological names.'),
+	'tags' => 1,
+	'weight' => 99,
+  );
+
+  taxonomy_save_vocabulary($primary_classification);
+  taxonomy_save_vocabulary($deleted_names);
+
+  //set variable for primary classification and deleted names
+  variable_set('classification_primary', $primary_classification['vid']);
+  variable_set('classification_deletions', $deleted_names['vid']);
+
+  //we use taxonomy_override_selector to not kill the rendering of term edit pages
+  variable_set('taxonomy_override_selector',TRUE);
+
+  _classification_install_relationships();
+  _classification_install_ranks();
+  _classification_install_vernaculars();
+
+  //change database engines for relevant tables - schema API doesn't support setting ENGINE so we do it here
+  db_query("ALTER TABLE term_data ENGINE=InnoDB;");
+  db_query("ALTER TABLE term_hierarchy ENGINE=InnoDB;");
+  db_query("ALTER TABLE term_relation ENGINE=InnoDB;");
+  db_query("ALTER TABLE term_relation_has_type ENGINE=InnoDB;");
+  db_query("ALTER TABLE vocabulary ENGINE=InnoDB;");
+  db_query("ALTER TABLE classification_log ENGINE=InnoDB;");
+}
+
+/*
+ * Implementation of hook_uninstall()
+ */
+function classification_uninstall() {
+
+   $vocabs = taxonomy_get_vocabularies();
+
+   foreach($vocabs as $vocab) {
+     if($vocab->module == 'classification_flags' || $vocab->module == 'classification') {
+	   taxonomy_del_vocabulary($vocab->vid);
+     }	
+   }
+
+   variable_del('classification_editor_names');
+   variable_del('classification_viewer_names');
+   variable_del('classification_viewer_canonicals');
+   variable_del('classification_elements_names');
+   variable_del('classification_elements_canonicals');
+   variable_del('classification_autocomplete_size');
+   variable_del('taxonomy_override_selector');
+   variable_del('classification_italicize');
+   
+   drupal_uninstall_schema('classification');
+}
+
+/*
+ * Implementation of hook_schema()
+ */
+function classification_schema() {
+
+  $schema['taxonomy_enhancer_fields'] = array(
+    'fields' => array(
+      'vid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'fid' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+      ),
+      'title' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE
+      ),
+      'module' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'description' => 'taxonomy enhancer field provider module'
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE
+      ),
+      'weight' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'settings' => array(
+        'serialize' => TRUE,
+        'type' => 'text',
+      ),
+    ),
+    'primary key' => array('vid', 'fid'),
+  );
+
+  $schema['taxonomy_enhancer_value_text'] = array(
+    'fields' => array(
+       'tid' => array(
+       'type' => 'int', 
+       'unsigned' => TRUE, 
+       'not null' => TRUE, 
+       'disp-width' => '11',
+      ),
+     'fid' => array(
+       'type' => 'varchar', 
+       'length' => '255',
+       'not null' => TRUE,
+       'default' => '',
+      ),
+     'value' => array(
+       'type' => 'text',
+       'not null' => TRUE,
+      ),
+     'delta' => array(
+       'type' => 'int',
+       'unsigned' => TRUE,
+       'not null' => FALSE,
+       'default' => 0,
+     ),
+     'format' => array(
+       'type' => 'int',
+       'not null' => FALSE,
+       'disp-width' => '11',
+     )
+    ),
+    'primary key' => array('tid', 'fid', 'delta'),
+  );
+
+  $schema['taxonomy_enhancer_value_nodereference'] = array(
+    'fields' => array(
+      'tid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'fid' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+      ),
+      'nid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+     ),
+    'primary key' => array('tid', 'fid', 'nid'),
+  );
+  
+  $schema['term_relation_has_type'] = array(
+    'description' => t('Stores term relation type information.'),
+    'fields' => array(
+      'trid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => t('The {term_relation}.trid'),
+      ),
+      'rtid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => t('The {term_relation_types}.rtid.'),
+      ),
+    ),
+    'primary key' => array('trid', 'rtid'),
+  );
+  
+  $schema['term_relation_types'] = array(
+    'description' => t('Stores definitions for relation types'),
+    'fields' => array(
+      'rtid' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => t('The primary key for relation types'),
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'description' => t('The relation type name.'),
+      ),
+      'namespace' => array( 
+        'type' => 'varchar', 
+        'length' => 128, 
+        'not null' => TRUE,
+        'default' => '',
+        'description' => t('The {term_relation_namespace}.namespaces'), 
+      ),
+      'description' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'description' => t('A description for the relation type.'),
+      ),
+      'vid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => t('The vid of the vocabulary in which the term is inserted.'),
+      ),
+    ),
+    'primary key' => array('rtid'),
+    'unique keys' => array('namespace_name' => array('namespace', 'name')),
+  );
+  
+  $schema['term_relation_types_namespaces'] = array( 
+    'description' => t('Stores namespaces for relation types'), 
+    'fields' => array( 
+      'namespace' => array( 
+        'type' => 'varchar', 
+        'length' => 128,
+        'not null' => TRUE, 
+        'description' => t('The primary key for namespaces'),
+      ),
+      'uri' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => t('The URI for the namespace'),
+      ),
+    ),
+    'primary key' => array('namespace'),
+  );
+
+  $schema['classification_log'] = array(
+	'description' => 'A storehouse for actions taken on biological classifications',
+	'fields' => array(
+      'clid' => array(
+        'description' => 'The primary identifier for a classification log event.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'uid' => array(
+        'description' => 'The {users}.uid that executed taxon name modification event.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0),
+      'vid_from' => array(
+        'description' => 'The {vocabulary}.vid identifier for the source classification.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'vid_to' => array(
+        'description' => 'The {vocabulary}.vid identifier for the destination classification.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'type' => array(
+        'description' => 'The type of action executed on a taxon name.',
+        'type' => 'varchar',
+        'length' => 12,
+        'not null' => TRUE,
+        'default' => ''),
+      'description' => array(
+        'description' => 'Full text description of action taken on a taxon.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''),
+      'action' => array(
+	    'description' => 'Serialized data that records action taken on taxon, parent, vid',
+	    'type' => 'varchar',
+	    'length' => 255,
+	    'default' => '',
+	    'serialize' => TRUE),
+      'created' => array(
+        'description' => 'The Unix timestamp when the taxon name was affected.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0),
+      ),
+      'indexes' => array(
+        'classification_log_created' => array('created'),
+        'classification_log_action'  => array('action'),
+        'uid'  => array('uid'),
+      ),
+      'primary key' => array('clid'),
+  );
+
+  return $schema;
+}
+
+/**
+ * Helper functions
+ */
+function _classification_get_vid($name) {
+  $voc = db_fetch_object(db_query("SELECT vid FROM {vocabulary} WHERE name = '%s'", $name));
+  return $voc->vid;
+}
+
+function _classification_install_relationships(){
+  //we need to eventually get the tid of the term 'vernacular' so set a global variable
+  global $vern_as_term,$new_relations;
+
+  //create the vocabulary
+  $relations_vocab = array(
+	'name' => 'Taxonomic Relationships',
+	'hierarchy' => 0,
+	'module' => 'classification_flags',
+	'description' => t('Terms here describe taxonomic relationships (e.g. synonym of)'),
+  );
+
+  taxonomy_save_vocabulary($relations_vocab);
+
+  db_query("INSERT INTO {term_relation_types} (name,namespace,description,vid) VALUES ('%s','%s','%s',%d)",'taxonomic relationships','taxonomic relationships',t('Taxonomic relationships (e.g. synonym of)'),$relations_vocab['vid']);
+
+  $relationTypes = array(
+    "synonym",
+    "synonym (objective = homotypic)",
+    "synonym (subjective = heterotypic)",
+    "lexical variant",
+    "disputed synonym",
+    "spelling alternative",
+    "incorrect spelling",
+    "incorrect authority information",
+    "vernacular name",
+    "usage reference",
+    "replaced name",
+    "basionym",
+  );
+
+  foreach($relationTypes as $type) {
+	$term = array(
+	  'name' => $type,
+	  'vid' => $relations_vocab['vid'],
+	);
+    taxonomy_save_term($term);
+    $new_relations[$term['name']] = $term['tid'];
+    if($term['name']=='vernacular name') {
+	  $vern_as_term = $term['tid'];
+    }	
+  }
+
+  $message = 'Added new taxonomic relationships vocabulary and an entry in the term_relation_types table';
+
+  return array('success' => TRUE, 'query' => $message);
+
+}
+
+function _classification_update_relationships($vid) {
+     global $new_relations;
+
+     $rtid_relations = db_result(db_query("SELECT rtid FROM {term_relation_types} WHERE name='%s'",'taxonomic relationships'));
+
+     $query = db_query("
+       SELECT
+         tr.tid1, trht.trid, trt.rtid, trt.name
+       FROM
+         {term_relation} tr 
+       INNER JOIN 
+         {term_data} td ON (tr.tid1=td.tid)
+       INNER JOIN 
+         {term_relation_has_type} trht ON (tr.trid=trht.trid) 
+       INNER JOIN
+         {term_relation_types} trt ON (trht.rtid=trt.rtid)
+       WHERE
+         td.vid=%d",$vid);
+
+     while($result = db_fetch_object($query)) {
+       db_query("UPDATE {term_relation_has_type} SET rtid=%d WHERE trid=%d",$rtid_relations,$result->trid);
+       db_query("UPDATE {term_relation} SET tid2=%d WHERE trid=%d AND tid1=%d",$new_relations[$result->name],$result->trid,$result->tid1);
+     }
+
+  $message = 'Adjusted term_relations to deal with taxonomic relationships for vid='.$vid;	
+
+  return array('success' => TRUE, 'query' => $message);
+
+}
+
+function _classification_install_ranks() {
+
+  global $allranks;
+
+  $ranks_vocab = array(
+	'name' => 'Taxonomic Ranks',
+	'hierarchy' => 0,
+	'module' => 'classification_flags',
+	'description' => t('Taxonomic ranks'),
+  );
+
+  taxonomy_save_vocabulary($ranks_vocab);
+
+  db_query("INSERT INTO {term_relation_types} (name,namespace,description,vid) VALUES ('%s','%s','%s',%d)",'taxonomic ranks','taxonomic ranks',t('Taxonomic ranks'),$ranks_vocab['vid']);
+
+	$ranks = array(
+	'superkingdom',
+	'kingdom',
+	'subkingdom',
+	'infrakingdom',
+	'superphylum',
+	'phylum',
+	'subphylum',
+	'superclass',
+	'class',
+	'subclass',
+	'infraclass',
+	'superorder',
+	'order',
+	'suborder',
+	'infraorder',
+	'superfamily',
+	'family',
+	'subfamily',
+	'tribe',
+	'subtribe',
+	'genus',
+	'subgenus',
+	'section',
+	'subsection',
+	'species',
+	'subspecies',
+	'variety',
+	'form',
+  );
+
+  //we better look for ranks in the taxonomy_enhancer_value_text table that once existed to supplement the list in case we're missing some
+
+  if(db_table_exists('taxonomy_enhancer_fields')) {
+    $result = db_result(db_query("SELECT settings from {taxonomy_enhancer_fields} WHERE fid='%s'",'field_rank'));
+    $old_ranks = unserialize($result);
+    if($old_ranks['allowed_values']) {
+	  foreach($old_ranks['allowed_values'] as $extra) {
+	    if(!in_array(strtolower($extra),$ranks)) {
+		  array_push($ranks,strtolower($extra));	
+		}
+	  }
+    }	
+  }
+
+  $italicized_ranks = array('genus','species','subspecies');
+  $italicize = array();
+  
+  $rank_weight = 0;
+
+  foreach($ranks as $rank) {
+    $term = array(
+	  'name' => $rank,
+	  'vid' => $ranks_vocab['vid'],
+	  'weight' => $rank_weight
+	);
+	taxonomy_save_term($term);
+	$rank_weight++;
+	
+	//set an initial set of ranks that should be italicized; these may later be adjusted by users
+	if(in_array($rank,$italicized_ranks)) {
+	  $italicize[$term['tid']] = '';
+	}
+	
+	$allranks[$term['name']] = $term['tid'];
+  }
+
+  variable_set('classification_italicize',$italicize);
+
+  $message = 'Added new taxonomic ranks vocabulary and an entry in the term_relation_types table';
+
+  return array('success' => TRUE, 'query' => $message);
+}
+
+function _classification_update_ranks($vid) {
+   global $allranks;
+
+   $rtid_ranks = db_result(db_query("SELECT rtid FROM {term_relation_types} WHERE name='%s'",'taxonomic ranks'));
+
+   foreach ($allranks as $rank => $tid_rank) {
+		  $query = db_query("
+			SELECT 
+			  tevt.tid, td.name, th.parent
+			FROM 
+			 {taxonomy_enhancer_value_text} tevt 
+			INNER JOIN 
+			 {term_data} td ON (tevt.tid=td.tid) 
+			INNER JOIN 
+			  {term_hierarchy} th ON (td.tid=th.tid) 
+			WHERE tevt.fid='%s' AND tevt.value=LOWER('%s') AND td.vid=%d",'field_rank',$rank,$vid);
+		  while($result = db_fetch_object($query)) {
+			db_query("INSERT INTO {term_relation} (tid1,tid2) VALUES (%d,%d)",$result->tid,$tid_rank);
+			$trid = db_last_insert_id('term_relation','trid');
+			db_query("INSERT INTO {term_relation_has_type} (trid,rtid) VALUES (%d,%d)",$trid,$rtid_ranks);
+		  }		
+  }	
+
+  $message = 'Adjusted term_relations to deal with ranks for vid='.$vid;
+
+  return array('success' => TRUE, 'query' => $message);
+
+}
+
+function _classification_install_vernaculars() {
+
+  global $vern_as_term,$codes;
+
+  $vernacular_vocab = array(
+	'name' => 'Vernacular Language Codes',
+	'hierarchy' => 0,
+	'module' => 'classification_flags',
+	'description' => t('ISO 639-1 Language Codes for vernacular names. See http://www.loc.gov/standards/iso639-2/php/English_list.php. IMPORTANT: Removal and subsequent insertion of language codes MUST take the form Language,language code (e.g. English,en or Anglais,en if the name of the language is not written in English)'),
+  );
+
+  taxonomy_save_vocabulary($vernacular_vocab);
+
+  //insert the new relationships: we need two here, one for the term 'vernacular' (the taxonomic relationship term) to language codes ($vern_term_to_codes) and another between the actual vernacular (e.g. blue whale) to the language code ($vern_names_to_codes)
+
+  db_query("INSERT INTO {term_relation_types} (name,namespace,description,vid) VALUES ('%s','%s','%s',%d)",'vernacular as term to vernacular codes','vernacular as term to vernacular codes',t('A required biological flag to help coordinate the relationship between the term "vernacular name" to the ISO language codes'),0);
+
+  $vern_term_to_codes = db_last_insert_id('term_relation_types','rtid');
+
+  db_query("INSERT INTO {term_relation_types} (name,namespace,description,vid) VALUES ('%s','%s','%s',%d)",'names to vernacular codes','names to vernacular codes',t('A required biological flag to help coordinate the relationship between names and ISO language codes'),$vernacular_vocab['vid']);
+
+  //language,code is not an ideal format for the term, but we have a message for users nto get it right
+  //this might have been an actual use for taxonomy_enhancer_value_text  ;)~
+  $vernaculars = array(
+'Abkhazian,ab',
+'Afar,aa',
+'Afrikaans,af',
+'Akan,ak',
+'Albanian,sq',
+'Amharic,am',
+'Arabic,ar',
+'Aragonese,an',
+'Armenian,hy',
+'Assamese,as',
+'Avaric,av',
+'Avestan,ae',
+'Aymara,ay',
+'Azerbaijani,az',
+'Bambara,bm',
+'Bashkir,ba',
+'Basque,eu',
+'Belarusian,be',
+'Bengali,bn',
+'Bihari,bh',
+'Bislama,bi',
+'Bokm_l Norwegian,nb',
+'Bosnian,bs',
+'Breton,br',
+'Bulgarian,bg',
+'Burmese,my',
+'Castilian,es',
+'Catalan,ca',
+'Central Khmer,km',
+'Chamorro,ch',
+'Chechen,ce',
+'Chewa,ny',
+'Chichewa,ny',
+'Chinese,zh',
+'Chuang,za',
+'Church Slavic,cu',
+'Church Slavonic,cu',
+'Chuvash,cv',
+'Cornish,kw',
+'Corsican,co',
+'Cree,cr',
+'Croatian,hr',
+'Czech,cs',
+'Danish,da',
+'Dhivehi,dv',
+'Divehi,dv',
+'Dutch,nl',
+'Dzongkha,dz',
+'English,en',
+'Esperanto,eo',
+'Estonian,et',
+'Ewe,ee',
+'Faroese,fo',
+'Fijian,fj',
+'Finnish,fi',
+'Flemish,nl',
+'French,fr',
+'Fulah,ff',
+'Gaelic,gd',
+'Galician,gl',
+'Ganda,lg',
+'Georgian,ka',
+'German,de',
+'Gikuyu,ki',
+'Greek Modern,el',
+'Greenlandic,kl',
+'Guarani,gn',
+'Gujarati,gu',
+'Haitian,ht',
+'Haitian Creole,ht',
+'Hausa,ha',
+'Hebrew,he',
+'Herero,hz',
+'Hindi,hi',
+'Hiri Motu,ho',
+'Hungarian,hu',
+'Icelandic,is',
+'Ido,io',
+'Igbo,ig',
+'Indonesian,id',
+'Interlingua,ia',
+'Interlingue,ie',
+'Inuktitut,iu',
+'Inupiaq,ik',
+'Irish,ga',
+'Italian,it',
+'Japanese,ja',
+'Javanese,jv',
+'Kalaallisut,kl',
+'Kannada,kn',
+'Kanuri,kr',
+'Kashmiri,ks',
+'Kazakh,kk',
+'Kikuyu,ki',
+'Kinyarwanda,rw',
+'Kirghiz,ky',
+'Komi,kv',
+'Kongo,kg',
+'Korean,ko',
+'Kuanyama,kj',
+'Kurdish,ku',
+'Kwanyama,kj',
+'Kyrgyz,ky',
+'Lao,lo',
+'Latin,la',
+'Latvian,lv',
+'Letzeburgesch,lb',
+'Limburgan,li',
+'Limburger,li',
+'Limburgish,li',
+'Lingala,ln',
+'Lithuanian,lt',
+'Luba-Katanga,lu',
+'Luxembourgish,lb',
+'Macedonian,mk',
+'Malagasy,mg',
+'Malay,ms',
+'Malayalam,ml',
+'Maldivian,dv',
+'Maltese,mt',
+'Manx,gv',
+'Maori,mi',
+'Marathi,mr',
+'Marshallese,mh',
+'Moldavian,ro',
+'Moldovan,ro',
+'Mongolian,mn',
+'Nauru,na',
+'Navaho,nv',
+'Navajo,nv',
+'Ndebele North,nd',
+'Ndebele South,nr',
+'Ndonga,ng',
+'Nepali,ne',
+'North Ndebele,nd',
+'Northern Sami,se',
+'Norwegian,no',
+'Norwegian Bokm_l,nb',
+'Norwegian Nynorsk,nn',
+'Nuosu,ii',
+'Nyanja,ny',
+'Nynorsk Norwegian,nn',
+'Occidental,ie',
+'Occitan (post 1500),oc',
+'Ojibwa,oj',
+'Old Bulgarian,cu',
+'Old Church Slavonic,cu',
+'Old Slavonic,cu',
+'Oriya,or',
+'Oromo,om',
+'Ossetian,os',
+'Ossetic,os',
+'Pali,pi',
+'Panjabi,pa',
+'Pashto,ps',
+'Persian,fa',
+'Polish,pl',
+'Portuguese,pt',
+'Punjabi,pa',
+'Pushto,ps',
+'Quechua,qu',
+'Romanian,ro',
+'Romansh,rm',
+'Rundi,rn',
+'Russian,ru',
+'Samoan,sm',
+'Sango,sg',
+'Sanskrit,sa',
+'Sardinian,sc',
+'Scottish Gaelic,gd',
+'Serbian,sr',
+'Shona,sn',
+'Sichuan Yi,ii',
+'Sindhi,sd',
+'Sinhala,si',
+'Sinhalese,si',
+'Slovak,sk',
+'Slovenian,sl',
+'Somali,so',
+'Sotho Southern,st',
+'South Ndebele,nr',
+'Spanish,es',
+'Sundanese,su',
+'Swahili,sw',
+'Swati,ss',
+'Swedish,sv',
+'Tagalog,tl',
+'Tahitian,ty',
+'Tajik,tg',
+'Tamil,ta',
+'Tatar,tt',
+'Telugu,te',
+'Thai,th',
+'Tibetan,bo',
+'Tigrinya,ti',
+'Tonga (Tonga Islands),to',
+'Tsonga,ts',
+'Tswana,tn',
+'Turkish,tr',
+'Turkmen,tk',
+'Twi,tw',
+'Uighur,ug',
+'Ukrainian,uk',
+'Urdu,ur',
+'Uyghur,ug',
+'Uzbek,uz',
+'Valencian,ca',
+'Venda,ve',
+'Vietnamese,vi',
+'Volap_k,vo',
+'Walloon,wa',
+'Welsh,cy',
+'Western Frisian,fy',
+'Wolof,wo',
+'Xhosa,xh',
+'Yiddish,yi',
+'Yoruba,yo',
+'Zhuang,za',
+'Zulu,zu',
+);
+
+  //no need to look for existing vernaculars to supplement the array because the above is comprehensive from the ISO list
+
+  $codes = array();
+
+  foreach ($vernaculars as $vernacular) {
+	$term = array(
+	  'name' => $vernacular,
+	  'vid' => $vernacular_vocab['vid'],
+	);
+    taxonomy_save_term($term);
+    $code = explode(",",$term['name']);
+    $codes[$code[1]] = $term['tid'];
+
+    //we don't use the relations element in taxonomy_save_term because we want the relationship to be vernacular (the term) to be tid1 and the newly inserted language code to be tid2
+    db_query("INSERT INTO {term_relation} (tid1,tid2) VALUES (%d,%d)",$vern_as_term,$term['tid']);
+    $last_trid = db_last_insert_id('term_relation','trid');
+
+    db_query("INSERT INTO {term_relation_has_type} (trid,rtid) VALUES (%d,%d)",$last_trid, $vern_term_to_codes);
+
+  }
+  $message = 'Added new vernaculars vocabulary and an entry in the term_relation_types table';
+
+  return array('success' => TRUE, 'query' => $message);
+
+}
+
+function _classification_update_vernaculars($vid) {
+  global $codes;
+
+  $rtid_verns = db_result(db_query("SELECT rtid FROM {term_relation_types} WHERE name='%s'",'names to vernacular codes'));
+
+  foreach($codes as $code => $code_tid) {
+		  $query = db_query("
+			SELECT 
+			  tevt.tid
+			FROM 
+			 {taxonomy_enhancer_value_text} tevt 
+			INNER JOIN 
+			 {term_data} td ON (tevt.tid=td.tid) 
+			WHERE tevt.fid='%s' AND tevt.value=LOWER('%s') AND td.vid=%d",'field_vernacular_language',$code,$vid);
+		  while($result = db_fetch_object($query)) {
+			db_query("INSERT INTO {term_relation} (tid1,tid2) VALUES (%d,%d)",$result->tid,$code_tid);
+			
+			//now we need to know the trid that was just created in the term_relation table
+			$trid = db_last_insert_id('term_relation','trid');
+
+			db_query("INSERT INTO {term_relation_has_type} (trid,rtid) VALUES (%d,%d)",$trid,$rtid_verns);
+		  }	
+  }
+
+  $message = 'Adjusted term_relations to deal with vernaculars for vid='.$vid;
+
+  return array('success' => TRUE, 'query' => $message);
+
+}
+
+function _classification_update_status($count) {
+	//at least 33 success statements should have been logged for the classification_update_6104
+	if($count<33) {
+		return array('success' => FALSE, 'query' => 'Fewer than 33 statements were executed as part of classification_update_6104');
+	}
+	else {
+		return array('success' => TRUE, 'query' => 'classification_update_6104 successfully executed');
+	}
+}
+
+/**
+ * Implementation of update_hook functions
+ */
+function classification_update_6100() {
+  $ret = array();
+
+  $del_vocab = array(
+	'name' => 'alternate_Deleted Names',
+	'hierarchy' => 0,
+	'module' => 'taxonomy',
+  );
+
+  taxonomy_save_vocabulary($del_vocab);
+
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      $ret[] = update_sql("CREATE TABLE {classification_log} (
+          `lid` INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
+          `uid` INTEGER UNSIGNED NOT NULL default '0',
+          `action` longtext NOT NULL default '',
+          `changed` INTEGER(11) NOT NULL default '0',
+          PRIMARY KEY (`lid`),
+          INDEX classification_lid(`lid`)
+        ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+      break;
+    case 'pgsql':
+      $ret[] = update_sql("CREATE TABLE {classification_log} (
+          lid SERIAL,
+          uid int_unsigned NOT NULL default '0',
+          action text NOT NULL default '',
+          changed int_unsigned NOT NULL default '0',
+          PRIMARY KEY (lid)
+        );");
+      $ret[] = update_sql("CREATE INDEX {classification_lid} on {classification}(lid);");
+      break;
+  }
+
+  return $ret;
+}
+
+function classification_update_6101() {
+  $ret = array();
+
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+	  if(db_table_exists('classification_node')) {
+        $ret[] = update_sql("INSERT INTO term_node SELECT * FROM classification_node;");
+	    $ret[] = update_sql("DROP TABLE classification_node;");
+	  }
+      break;
+    case 'pgsql':
+      if(db_table_exists('classification_node')) {
+        $ret[] = update_sql("INSERT INTO term_node SELECT * FROM classification_node;");
+	    $ret[] = update_sql("DROP TABLE classification_node;");
+	  }
+      break;
+  }
+
+  return $ret;
+}
+
+function classification_update_6102() {
+  $ret = array();
+
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+	  	$set_variable = array();
+		$antype = array();
+		$required = 0;
+		$nodetypes = node_get_types();
+  		$taxavid = _classification_get_vid('Taxa');
+	    $active_nodetypes = db_query("SELECT * FROM classification_node_types");
+	
+    	while ($activenodetypes = db_fetch_object($active_nodetypes)) {
+	        db_query("INSERT INTO {vocabulary_node_types} (vid,type) VALUES (%d,'%s')",$taxavid,$activenodetypes->type);
+        	$required = (int)$activenodetypes->required;
+ 	       	$set_variable[$taxavid]['settings'][$activenodetypes->type]['active'] = 1;
+    	    $set_variable[$taxavid]['settings'][$activenodetypes->type]['req'] = $required;
+        	$set_variable[$taxavid]['settings'][$activenodetypes->type]['wt'] = $activenodetypes->weight;
+ 	       	$set_variable[$taxavid]['settings'][$activenodetypes->type]['opt'] = $activenodetypes->select_option == 1 ? 'single' : ($activenodetypes->select_option == 2 ? 'multiple' : 'tree');
+			$antype[] = $activenodetypes->type=="taxon_description" ? $activenodetypes->type="taxon page" : $activenodetypes->type;
+    	}
+  		foreach($nodetypes as $ntype) {
+ 	    	if(!in_array(strtolower($ntype->name), $antype)){
+ 	      		$set_variable[$taxavid]['settings'][$ntype->name]['active'] = 0;
+	        	$set_variable[$taxavid]['settings'][$ntype->name]['req'] = $required;
+    	    	$set_variable[$taxavid]['settings'][$ntype->name]['wt'] = '-10';
+        		$set_variable[$taxavid]['settings'][$ntype->name]['opt'] = 'single';
+ 	 		}
+ 		}
+ 		$alternate_vocabularies = db_query("SELECT vid FROM vocabulary where name like 'alternate_%'");
+    	while ($alternatevocabulary = db_fetch_object($alternate_vocabularies)) {
+        	$set_variable[$alternatevocabulary->vid]=array();
+    	}
+		variable_set("classification_settings",$set_variable); 
+		$ret[] = update_sql("DROP TABLE classification_node_types;");
+  		$ret[] = update_sql("UPDATE vocabulary  SET name = REPLACE(name,'alternate_','');");
+  		$ret[] = update_sql("UPDATE {vocabulary} SET tags = 1, multiple = 1, required = 0, hierarchy = 1 WHERE vid =  " . $taxavid . ";");
+		break;
+    case 'pgsql':
+     	$set_variable = array();
+		$antype = array();
+		$required = 0;
+		$nodetypes = node_get_types();
+  		$taxavid = _classification_get_vid('Taxa');
+    	$active_nodetypes = db_query("SELECT * FROM classification_node_types");
+    	while ($activenodetypes = db_fetch_object($active_nodetypes)) {
+	        db_query("INSERT INTO {vocabulary_node_types} (vid,type) VALUES (%d,'%s')",$taxavid,$activenodetypes->type);
+        	$required = (int)$activenodetypes->required;
+        	$set_variable[$taxavid]['settings'][$activenodetypes->type]['active'] = 1;
+        	$set_variable[$taxavid]['settings'][$activenodetypes->type]['req'] = $required;
+        	$set_variable[$taxavid]['settings'][$activenodetypes->type]['wt'] = $activenodetypes->weight;
+        	$set_variable[$taxavid]['settings'][$activenodetypes->type]['opt'] = $activenodetypes->select_option == 1 ? 'single' : ($activenodetypes->select_option == 2 ? 'multiple' : 'tree');
+			$antype[] = $activenodetypes->type=="taxon_description" ? $activenodetypes->type="taxon page" : $activenodetypes->type;
+    	}
+  		foreach($nodetypes as $ntype) {
+ 	    	if(!in_array(strtolower($ntype->name), $antype)){
+ 	      		$set_variable[$taxavid]['settings'][$ntype->name]['active'] = 0;
+ 		       	$set_variable[$taxavid]['settings'][$ntype->name]['req'] = $required;
+        		$set_variable[$taxavid]['settings'][$ntype->name]['wt'] = '-10';
+        		$set_variable[$taxavid]['settings'][$ntype->name]['opt'] = 'single';
+ 	 		}
+ 		}
+ 		$alternate_vocabularies = db_query("SELECT vid FROM vocabulary where name like 'alternate_%'");
+    	while ($alternatevocabulary = db_fetch_object($alternate_vocabularies)) {
+        	$set_variable[$alternatevocabulary->vid]=array();
+    	}
+		variable_set("classification_settings",$set_variable); 
+		$ret[] = update_sql("DROP TABLE classification_node_types;");
+  		$ret[] = update_sql("UPDATE vocabulary  SET name = REPLACE(name,'alternate_','');");
+  		$ret[] = update_sql("UPDATE {vocabulary} SET tags = 1, multiple = 1, required = 0, hierarchy = 1 WHERE vid =  " . $taxavid . ";");
+		break;
+  }
+  return $ret;
+}
+
+function classification_update_6103() {
+  $ret = array();
+
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+        $ret[] = update_sql("INSERT INTO term_relation_types (rtid,name) VALUES (11,'replaced name');");
+        $ret[] = update_sql("INSERT INTO term_relation_types (rtid,name) VALUES (12,'basionym');");
+      break;
+    case 'pgsql':
+        $ret[] = update_sql("INSERT INTO term_relation_types (rtid,name) VALUES (11,'replaced name');");
+        $ret[] = update_sql("INSERT INTO term_relation_types (rtid,name) VALUES (12,'basionym');");
+      break;
+  }
+
+  return $ret;
+}
+
+function classification_update_6104() {
+  $ret = array();
+
+  //this update results in a massive increase of related terms, thus we set the taxonomy_overide_selector
+  variable_set('taxonomy_override_selector',TRUE);
+
+  //reset the display options for the classification trees because the logic has changed & we don't want to suprise people too much
+  variable_set('classification_editor_names',0);
+
+  //get all the old relation types because we want to trash them
+  $relationTypes = array(
+    "synonym",
+    "synonym (objective = homotypic)",
+    "synonym (subjective = heterotypic)",
+    "lexical variant",
+    "disputed synonym",
+    "spelling alternative",
+    "incorrect spelling",
+    "incorrect authority information",
+    "vernacular name",
+    "usage reference",
+    "replaced name",
+    "basionym",
+  );
+  
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+    case 'pgsql':
+
+         //add all the records into the watchdog table from defunct classification_log table
+         $ret[] = update_sql("INSERT INTO {watchdog} (uid,type,message,variables,severity,link,location,referer,hostname,timestamp) SELECT cl.uid,'classification',cl.action,'a:0:{}',5,'','','','127.0.0.1',cl.changed FROM {classification_log} cl;");
+         $ret[] = update_sql("DROP table {classification_log};");
+
+         $ret[] = update_sql("ALTER TABLE {term_relation_types} ADD COLUMN `vid` INTEGER UNSIGNED NOT NULL DEFAULT 0;");
+         $ret[] = update_sql("ALTER TABLE {term_relation_types} MODIFY COLUMN description varchar(255);");
+
+	     //make a temp table to hold existing relations then use it to kill all the old records
+	     $ret[] = update_sql("CREATE TEMPORARY TABLE term_relation_temp SELECT * FROM {term_relation} INNER JOIN {taxonomy_enhancer_value_text} ON {term_relation}.tid1 = {taxonomy_enhancer_value_text}.tid WHERE {taxonomy_enhancer_value_text}.fid != 'field_vernacular_language';");
+	     $ret[] = _classification_install_relationships();
+	     $ret[] = _classification_install_ranks();
+	     $ret[] = _classification_install_vernaculars();
+
+	     //cannot use variable_get in multisite update so use a raw SQL statement then unserialize it instead
+	     $classification_settings = db_result(db_query("SELECT value FROM {variable} WHERE name='%s'",'classification_settings'));
+
+	     $classifications = ($classification_settings) ? unserialize($classification_settings) : array();
+
+         foreach($classifications as $vid => $settings) {
+		     $ret[] = _classification_update_relationships($vid);
+			 $ret[] = _classification_update_ranks($vid);
+			 $ret[] = _classification_update_vernaculars($vid);
+         }
+
+         //mop-up all the defunct term_relation and taxonomy_enhancer_* entries
+		 $ret[] = update_sql("DELETE FROM {term_relation} USING term_relation_temp INNER JOIN {term_relation} ON ({term_relation}.trid=term_relation_temp.trid);");
+		 $ret[] = update_sql("DROP TABLE term_relation_temp;");
+		 $ret[] = update_sql("DELETE FROM {taxonomy_enhancer_value_text} WHERE fid='field_vernacular_language'");
+         $ret[] = update_sql("DELETE FROM {taxonomy_enhancer_value_text} WHERE fid='field_rank'");
+		 $ret[] = update_sql("DELETE FROM {taxonomy_enhancer_fields} WHERE fid='field_vernacular_language'");
+         $ret[] = update_sql("DELETE FROM {taxonomy_enhancer_fields} WHERE fid='field_rank'");
+
+         //set a necessary variable for the ranks, vernaculars, and the taxonomic relationships
+         $ret[] = _classification_set_variable();
+
+         //trash all the old relation types
+         foreach($relationTypes as $relation) {
+	       $ret[] = update_sql("DELETE FROM term_relation_types WHERE name='".$relation."';");
+         }
+
+         $ret[] = _classification_update_status(count($ret));
+
+      break;
+    }  
+  return $ret;
+}
+
+function classification_update_6105() {
+  $ret = array();
+
+  $classification_primary = _classification_get_vid('Taxa');
+  variable_set('classification_primary',$classification_primary);
+
+  $ret[] = update_sql("UPDATE {vocabulary} SET module='classification', weight=-10 WHERE vid=" . $classification_primary);
+
+  $deletions = _classification_get_vid('Deleted Names');
+  variable_set('classification_deletions', $deletions);
+
+  //deal with user-generated alternate classifications
+  //cannot use variable_get in multisite update so use a raw SQL statement then unserialize it instead
+  $classification_settings = db_result(db_query("SELECT value FROM {variable} WHERE name='classification_settings'"));
+
+  $classifications = ($classification_settings) ? unserialize($classification_settings) : array();
+
+  foreach($classifications as $key => $value) {
+	if($key != $classification_primary) {
+	  unset($classifications[$key]);
+	  $ret[] = update_sql("UPDATE {vocabulary} SET module='classification' WHERE vid=" . $key);	
+	}	
+  }
+
+  variable_set('classification_settings',$classifications);
+
+  $relationships = _classification_get_vid('Taxonomic Relationships');
+  $ret[] = update_sql("UPDATE {vocabulary} SET module='classification_flags' WHERE vid=" . $relationships);
+
+  $ranks = _classification_get_vid('Taxonomic Ranks');
+  $ret[] = update_sql("UPDATE {vocabulary} SET module='classification_flags' WHERE vid=" . $ranks);
+
+  $vern_lang_codes = _classification_get_vid('Vernacular Language Codes');
+  $ret[] = update_sql("UPDATE {vocabulary} SET module='classification_flags' WHERE vid=" . $vern_lang_codes);
+
+  //deal with user-generated flags
+  //cannot use variable_get in multisite update so use a raw SQL statement then unserialize it instead
+  $classification_flags = db_result(db_query("SELECT value FROM {variable} WHERE name='classification_flags'"));
+
+  $flags = ($classification_flags) ? unserialize($classification_flags) : array();
+
+  foreach($flags as $key => $value) {
+    if($key != $relationships && $key != $ranks && $key != $vern_lang_codes) {
+	  $ret[] = update_sql("UPDATE {vocabulary} SET module='classification_flags' WHERE vid=" . $key);
+    }	
+  }
+
+  return $ret;
+}
+
+function classification_update_6106() {
+	$ret = array();
+	$schema = classification_schema();
+    if (!db_table_exists('classification_log')) {
+      db_create_table($ret, 'classification_log', $schema['classification_log']);
+    }
+
+    //migrate all watchdog entries into the new classification_log table
+    //Argh....existing entries not sufficient to populate vid_from and vid_to so have to remain '0' for now
+    $qry = db_query("SELECT uid, message, timestamp FROM {watchdog} WHERE type='classification'");
+    while($result = db_fetch_array($qry)) {
+	
+	  $action = "";
+	  $vid_from = 0;
+	  $vid_to = 0;
+	
+      $message = $result['message'];
+	  if(strpos($message, 'given')) {
+		$action = 'flag';
+	  }
+	  elseif(strpos($message, 'moved')) {
+		$action = "moved";
+	  }
+	  elseif(strpos($message, 'added')) {
+	    $action = "added";
+	  }
+	  elseif(strpos($message, 'changed')) {
+	    $action = "updated";
+	  }
+	  elseif(strpos($message, 'deleted')) {
+	    $action = "deleted";
+	  }
+	  elseif(strpos($message, 'copied')) {
+	    $action = "copied";
+	  }
+	  elseif(strpos($message, 'duplicate')) {
+	    $action = "duplicate";
+	  }
+	  elseif(strpos($message, 'purged')) {
+	    $action ="purged";
+	  }
+	  else {}
+	  $ret[] = update_sql("INSERT INTO {classification_log} (uid, action, description, created) VALUES (".$result['uid'].", '".$action."', '".$message."', ".$result['timestamp'].")");
+    }
+
+    //trash old watchdog entries that will no longer be used
+    $ret[] = update_sql("DELETE FROM {watchdog} WHERE type='classification'");
+
+	return $ret;
+}
+
+function classification_update_6107() {
+	$ret = array();
+	$ret[] = update_sql("UPDATE {classification_log} SET type=action WHERE char_length(action) < 10");
+	$ret[] = update_sql("UPDATE {classification_log} SET action = NULL WHERE char_length(action) < 10");
+	return $ret;
+}
+
+function classification_update_6108() {
+	$ret = array();
+	
+	//convert necessary tables to InnoDB
+	$ret[] = update_sql("ALTER TABLE term_data ENGINE=InnoDB;");
+	$ret[] = update_sql("ALTER TABLE term_hierarchy ENGINE=InnoDB;");
+	$ret[] = update_sql("ALTER TABLE term_relation ENGINE=InnoDB;");
+	$ret[] = update_sql("ALTER TABLE term_relation_has_type ENGINE=InnoDB;");
+	$ret[] = update_sql("ALTER TABLE vocabulary ENGINE=InnoDB;");
+	$ret[] = update_sql("ALTER TABLE classification_log ENGINE=InnoDB;");
+	
+	//update the weight of the Deleted Names vocab
+	$del = unserialize(db_result(db_query("SELECT value FROM variable WHERE name='classification_deletions'")));
+	$ret[] = update_sql("UPDATE vocabulary SET weight=99 WHERE vid=" . $del);
+	return $ret;
+}

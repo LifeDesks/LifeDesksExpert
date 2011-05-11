@@ -1,0 +1,61 @@
+.cmf_links {
+	padding:0px;
+	margin:0px auto;
+	display:inline;
+}
+
+.cmf_links li {
+	list-style:none;
+	background:none;
+	font-size:small;
+	display:inline;
+}
+
+.cmf_links li a {
+	background:none;
+	display: block;
+	line-height: 20px;
+	height: 20px;
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	outline: none;
+	padding: 1px 5px;
+	padding-left: 24px;
+}
+
+.cmf_links li.edit_default a { background-image: url(../images/page_white_edit.gif); }
+.cmf_links li.edit_page a { background-image: url(../images/page_white_edit.gif); }
+.cmf_links li.edit_image a { background-image: url(../images/picture_edit.gif); }
+.cmf_links li.edit_biblio a { background-image: url(../images/book_edit.gif); }
+.cmf_links li.edit_taxon_page a { background-image: url(../images/bug_edit.gif); }
+.cmf_links li.edit_forum a { background-image: url(../images/group_edit.gif); }
+.cmf_links li.edit_poll a { background-image: url(../images/chart_bar_edit.gif); }
+.cmf_links li.edit_simplemappr a { background-image: url(../images/map_edit.png); }
+
+.cmf_links li span {
+	background:none;
+	display: block;
+	line-height: 20px;
+	height: 20px;
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	outline: none;
+	padding: 1px 5px;
+	padding-left: 24px;
+}
+
+.cmf_links li.taxon_page span { background-image: url(../images/bug.gif); }
+.cmf_links li.image span { background-image: url(../images/picture.gif); }
+.cmf_links li.page span { background-image: url(../images/page_white.png); }
+.cmf_links li.biblio span { background-image: url(../images/book.gif); }
+.cmf_links li.forum span { background-image: url(../images/group.gif); }
+.cmf_links li.poll span { background-image: url(../images/chart_bar.gif); }
+.cmf_links li.simplemappr span { background-image: url(../images/map.png); }
+
+span.cmf_published {
+	color:#009900;
+}
+
+span.cmf_draft {
+	color:#FF0000;
+}

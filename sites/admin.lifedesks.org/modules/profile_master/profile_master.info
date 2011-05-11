@@ -1,0 +1,9 @@
+; $Id: announcements.info,v 1.1.4.1 2008/05/20 02:13:55 nancyw Exp $
+name = Profile Master
+description = Creates new installation profiles for Drupal sites.
+core = 6.x
+; Information added by drupal.org packaging script on 2008-08-25
+version = "6.0"
+core = "6.x"
+project = "profile_master"
+

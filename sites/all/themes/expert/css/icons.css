@@ -1,0 +1,396 @@
+/**
+ * Admin section
+ */
+body.section-admin h1.title,
+body.page-admin h1.title {
+  background: url(../images/admin/admin.gif) no-repeat left center;
+  padding-left: 30px;
+}
+
+body.page-admin-content h1.title,
+body.page-admin-content-node h1.title,
+body.page-admin-content-filter h1.title {
+  background: url(../images/admin/admin-content.gif) no-repeat left center;
+}
+
+body.page-admin-content-book h1.title {
+  background: url(../images/admin/admin-content-book.gif) no-repeat left center;
+  padding-left: 30px;
+}
+
+body.page-admin-content-comment h1.title {
+  background: url(../images/admin/admin-content-comment.gif) no-repeat left center;
+}
+
+body.page-admin-content-node-settings h1.title {
+  background: url(../images/admin/admin-content-node_settings.gif) no-repeat left center;
+}
+
+body.page-admin-content-taxonomy h1.title {
+  background: url(../images/admin/admin-content-taxonomy.gif) no-repeat left center;
+}
+
+body.page-admin-content-taxonomy-add-vocabulary h1.title {
+  background: url(../images/admin/admin-content-taxonomy.gif) no-repeat left center;
+}
+
+body.page-admin-content-types h1.title {
+  background: url(../images/admin/admin-content-types.gif) no-repeat left center;
+}
+
+body.page-admin-content-rss-publishing h1.title {
+  background: url(../images/admin/admin-content-rss_publishing.gif) no-repeat left center;
+}
+
+body.page-admin-user h1.title {
+  background: url(../images/admin/admin-user.gif) no-repeat left center;
+}
+
+body.page-admin-user-profile h1.title {
+  background: url(../images/admin/admin-user.gif) no-repeat left center;
+}
+
+body.page-admin-user-invite h1.title {
+  background: url(../images/admin/admin-user-add.png) no-repeat left center;
+}
+
+body.page-admin-user-user-create h1.title {
+  background: url(../images/admin/admin-user-add.png) no-repeat left center;
+}
+
+body.page-admin-user-rules h1.title {
+  background: url(../images/admin/admin-user-rules.gif) no-repeat left center;
+}
+
+body.page-admin-user-permissions h1.title {
+  background: url(../images/admin/admin-user-permissions.gif) no-repeat left center;
+}
+
+body.page-admin-user-roles h1.title {
+  background: url(../images/admin/admin-user-roles.gif) no-repeat left center;
+}
+
+body.page-admin-user-settings h1.title {
+  background: url(../images/admin/admin-user-settings.gif) no-repeat left center;
+}
+
+body.page-admin-user-user h1.title {
+  background: url(../images/admin/admin-user.gif) no-repeat left center;
+}
+
+body.page-admin-reports h1.title {
+  background: url(../images/admin/admin-reports.gif) no-repeat left center;
+}
+
+body.page-admin-reports-dblog h1.title {
+  background: url(../images/admin/admin-settings-logging.gif) no-repeat left center;
+}
+
+body.page-admin-reports-access_denied h1.title {
+  background: url(../images/admin/admin-reports-access_denied.gif) no-repeat left center;
+}
+
+body.page-admin-reports-page_not_found h1.title {
+  background: url(../images/admin/admin-reports-page_not_found.gif) no-repeat left center;
+}
+
+body.page-admin-reports-status h1.title {
+  background: url(../images/admin/admin-reports-status.gif) no-repeat left center;
+}
+
+body.page-admin-reports-updates h1.title {
+  background: url(../images/admin/admin-reports-updates.gif) no-repeat left center;
+}
+
+body.page-admin-build h1.title {
+  background: url(../images/admin/admin-build.gif) no-repeat left center;
+}
+
+body.page-admin-build-block h1.title {
+  background: url(../images/admin/admin-build-block.gif) no-repeat left center;
+}
+
+body.page-admin-build-frontpage h1.title {
+  background: url(../images/admin/admin-content.gif) no-repeat left center;
+}
+
+body.page-admin-build-menu h1.title {
+  background: url(../images/admin/admin-build-menu.gif) no-repeat left center;
+}
+
+body.page-admin-build-menu_customize-navigation h1.title {
+  background: url(../images/admin/admin-build-menu.gif) no-repeat left center;
+}
+
+body.page-admin-build-menu_customize-primary_links h1.title {
+  background: url(../images/admin/admin-build-menu.gif) no-repeat left center;
+}
+
+body.page-admin-build-menu_customize-secondary_links h1.title {
+  background: url(../images/admin/admin-build-menu.gif) no-repeat left center;
+}
+
+body.page-admin-build-menu-customize-primary-links h1.title {
+  background: url(../images/admin/admin-build-menu.gif) no-repeat left center;	
+}
+
+body.page-admin-build-menu-customize-primary-links-add h1.title {
+  background: url(../images/admin/admin-build-menu.gif) no-repeat left center;	
+}
+
+body.page-admin-build-modules h1.title {
+  background: url(../images/admin/admin-build-modules.gif) no-repeat left center;
+}
+
+body.page-admin-build-modules-uninstall h1.title {
+  background: url(../images/admin/admin-build-modules.gif) no-repeat left center;
+}
+
+body.page-admin-build-themes h1.title {
+  background: url(../images/admin/admin-build-themes.gif) no-repeat left center;
+}
+
+body.page-admin-build-themes-settings-expert h1.title {
+  background: url(../images/admin/admin-build-themes.gif) no-repeat left center;
+}
+
+body.page-admin-settings h1.title {
+  background: url(../images/admin/admin-settings.gif) no-repeat left center;
+}
+
+body.page-admin-settings-actions h1.title {
+  background: url(../images/admin/admin-settings-actions.gif) no-repeat left center;
+}
+
+body.page-admin-settings-admin h1.title {
+  background: url(../images/admin/admin-build-themes.gif) no-repeat left center;
+}
+
+body.page-admin-settings-clean_urls h1.title {
+  background: url(../images/admin/admin-settings-clean_urls.gif) no-repeat left center;
+}
+
+body.page-admin-settings-date_time h1.title {
+  background: url(../images/admin/admin-settings-date_time.gif) no-repeat left center;
+}
+
+body.page-admin-settings-error_reporting h1.title {
+  background: url(../images/admin/admin-settings-error_reporting.gif) no-repeat left center;
+}
+
+body.page-admin-settings-file_system h1.title {
+  background: url(../images/admin/admin-settings-file_system.gif) no-repeat left center;
+}
+
+body.page-admin-settings-image_toolkit h1.title {
+  background: url(../images/admin/admin-settings-image_toolkit.gif) no-repeat left center;
+}
+
+body.page-admin-settings-filters h1.title {
+  background: url(../images/admin/admin-settings-filters.gif) no-repeat left center;
+}
+
+body.page-admin-settings-logging h1.title {
+  background: url(../images/admin/admin-settings-logging.gif) no-repeat left center;
+}
+
+body.page-admin-settings-performance h1.title {
+  background: url(../images/admin/admin-settings-performance.gif) no-repeat left center;
+}
+
+body.page-admin-settings-site-information h1.title {
+  background: url(../images/admin/admin-settings-site_information.gif) no-repeat left center;
+}
+
+body.page-admin-settings-site-maintenance h1.title {
+  background: url(../images/admin/admin-settings-site_maintenance.gif) no-repeat left center;
+}
+
+body.page-admin-export h1.title {
+  background: url(../images/admin/eol.gif) no-repeat left center;
+}
+
+body.page-admin-help h1.title {
+  background: url(../images/admin/admin-help.gif) no-repeat left center;
+}
+
+body.page-admin-classification-biological h1.title {
+  background: url(../images/admin/classification-tree.gif) no-repeat left center;
+}
+
+body.page-admin-taxonpage h1.title {
+  background: url(../images/admin/admin-settings-error_reporting.gif) no-repeat left center;
+}
+
+body.page-admin-taxonpage-chapters h1.title {
+  background: url(../images/admin/admin-settings-error_reporting.gif) no-repeat left center;
+}
+
+body.page-admin-taxonpage-chapters-chapters h1.title {
+  background: url(../images/admin/admin-settings-error_reporting.gif) no-repeat left center;
+}
+
+/* Node add section & nodes */
+
+body.section-node-add h1.title,
+body.page-node-add h1.title,
+dl.node-type-list dt a {
+  background: url(../images/admin/node-add.gif) no-repeat left center;
+  padding-left: 30px;
+}
+
+body.page-node-add-image h1.title {
+  background: url(../images/admin/node-add-image.gif) no-repeat left center;
+  padding-left: 30px;
+}
+
+body.page-node-add-biblio h1.title {
+  background: url(../images/admin/node-add-book.gif) no-repeat left center;
+  padding-left: 30px;
+}
+
+body.page-node-add-simplemappr h1.title {
+	background: url(../images/admin/node-add-simplemappr.png) no-repeat left center;
+	padding-left: 30px;
+}
+
+body.page-node-add-poll h1.title {
+  background: url(../images/admin/node-add-poll.png) no-repeat left center;
+  padding-left: 30px;
+}
+
+body.page-node-add-taxon-description h1.title {
+  background: url(../images/admin/node-add-taxon-description.gif) no-repeat left center;
+  padding-left: 30px;
+}
+
+body.page-node-add-taxon-template h1.title {
+  background: url(../images/admin/node-add-taxon-description.gif) no-repeat left center;
+  padding-left: 30px;
+}
+
+body.page-node-add-taxon-template-import h1.title {
+  background: url(../images/admin/node-add-taxon-description.gif) no-repeat left center;
+  padding-left: 30px;
+}
+
+/* Image gallery section */
+body.section-image-gallery h1.title,
+body.page-gallery h1.title, body.section-image h1.title {
+  background: url(../images/admin/pictures.gif) no-repeat left center;
+  padding-left: 30px;
+}
+
+/* SimpleMappr section */
+body.section-simplemappr h1/title,
+body.page-simplemappr h1.title {
+	background: url(../images/admin/map.png) no-repeat left center;
+}
+
+/* Classification section */
+body.section-classification h1.title,
+body.page-classification h1.title {
+	background: url(../images/admin/classification-tree.png) no-repeat left center;
+	padding-left: 30px;
+}
+
+/* Biblio section */
+body.section-biblio h1.title,
+body.page-biblio h1.title {
+  background: url(../images/admin/admin-content-book.gif) no-repeat left center;
+  padding-left: 30px;
+}
+
+/* Taxonomic catalog section */
+body.section-catalog h1.title,
+body.page-catalog h1.title {
+  background: url(../images/admin/admin-build-menu.gif) no-repeat left center;
+  padding-left: 30px;
+}
+
+/* Biological Classification section */
+body.page-admin-classification h1.title {
+  background: url(../images/admin/classification-tree.png) no-repeat left center;
+  padding-left: 30px;
+}
+
+body.page-admin-classification-biological-import h1.title {
+  background: url(../images/admin/node-add.png) no-repeat left center;
+  padding-left: 30px;
+}
+
+body.page-admin-classification-biological-grid h1.title {
+  background: url(../images/admin/admin-build-menu.png) no-repeat left center;
+  padding-left: 30px;
+}
+
+body.page-admin-classification-biological-export h1.title {
+  background: url(../images/admin/admin-content-taxonomy.png) no-repeat left center;
+  padding-left: 30px;
+}
+
+body.page-admin-classification-biological-export-share h1.title {
+  background: url(../images/admin/admin-content-taxonomy.png) no-repeat left center;
+  padding-left: 30px;
+}
+
+body.page-admin-classification-biological-logs h1.title {
+  background: url(../images/admin/admin-reports.png) no-repeat left center;
+  padding-left: 30px;
+}
+
+body.page-admin-classification-biological-logs-filter h1.title {
+  background: url(../images/admin/admin-reports.png) no-repeat left center;
+  padding-left: 30px;
+}
+
+body.page-admin-classification-biological-logs-settings h1.title {
+  background: url(../images/admin/admin-reports.png) no-repeat left center;
+  padding-left: 30px;
+}
+
+/* Taxon pages section */
+body.section-taxa h1.title,
+body.page-taxa h1.title {
+  background: url(../images/admin/admin-settings-error_reporting.gif) no-repeat left center;
+  padding-left: 30px;
+}
+
+/* Members section */
+body.section-members h1.title,
+body.page-members h1.title {
+  background: url(../images/admin/admin-user.gif) no-repeat left center;
+  padding-left: 30px;
+}
+
+/* EOL Partnership section */
+body.page-admin-export-taxon-export-chapters h1.title,
+body.page-admin-export-taxon-export-settings h1.title,
+body.page-admin-export-taxon-export-export h1.title,
+body.page-admin-export-taxon-export-schedule h1.title {
+  background: url(../images/admin/eol.png) no-repeat left center;
+  padding-left: 30px;
+}
+
+/* Invite section */
+body.section-invite h1.title,
+body.page-invite h1.title {
+  background: url(../images/admin/admin-user-add.png) no-repeat left center;
+  padding-left: 30px;
+}
+
+/* User profile */
+body.section-user h1.title {
+  background: url(../images/admin/user.gif) no-repeat left center;
+  padding-left: 30px;
+}
+
+/* Section ?? */
+body.page-help-pages h1.title {
+  background: url(../images/admin/admin-help.gif) no-repeat left center;
+}
+
+/* Section ??? */
+body.page-comment h1.title {
+  background: url(../images/admin/admin-content-comment.gif) no-repeat left center;
+}

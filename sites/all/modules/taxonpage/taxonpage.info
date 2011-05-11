@@ -1,0 +1,17 @@
+name = Taxon Page
+description = "A presentation of relevant content on a taxon page."
+package = "LifeDesk"
+project = "taxonpage"
+
+dependencies[] = biblio
+dependencies[] = classification
+dependencies[] = classification_biblio
+dependencies[] = creativecommons_lite
+dependencies[] = image
+dependencies[] = image_lifedesk
+dependencies[] = simplemappr
+dependencies[] = taxon_description
+
+core = 6.x
+
+version = "6.x-6101"

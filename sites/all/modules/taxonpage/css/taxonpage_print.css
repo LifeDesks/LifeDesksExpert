@@ -1,0 +1,316 @@
+/**
+ * Remove header stuff for printing
+ */
+#header-region,#header,#page-separator-general, h1.title, #left-page-content,.breadcrumb,#breadcrumb,.taxonpage_right,.taxonpage_links,.taxonpage_inline_links,.attachments,.attachments_popup, .taxonpage-tools, #footer  {
+	display:none;
+}
+
+#page {
+	background: none !important;
+}
+
+#page-wrapper {
+	background:none !important;
+	width:100% !important;
+}
+
+#wrapper {
+	background:none !important;
+}
+
+#content {
+	margin:0px !important;
+	padding:0px !important;
+}
+
+#content-area {
+	margin:0px !important;
+}
+
+#page {
+	margin:0px !important;
+	padding: 0px !important;
+}
+
+#main-wrapper {
+	background:none !important;
+}
+
+.region-sidebar-first {
+	display:none;
+}
+
+#uservoice-feedback {
+	display:none;
+}
+
+#container {
+	border-bottom:0px !important;
+	border-left:0px !important;
+	border-right:0px !important;
+}
+
+#wrapper #container {
+	width:95% !important;
+	margin-left:15px !important;
+}
+
+.sidebar-first #content .section {
+	padding-left:0px !important;
+}
+
+.taxonpage_left {
+	width:100%;
+}
+
+#center-page-content {
+  width:95% !important;
+  padding-left:0px !important;
+  padding-right:0px !important;
+}
+
+/***************************************/
+
+body {
+	background-color:none !important;
+	background:none !important;
+	color:#333333 !important;
+	font-family:Arial,Helvetica,sans-serif !important;
+	margin:0px !important;
+	padding:10px !important;
+}
+
+body.not-front {
+	padding:10px !important;
+}
+
+a {
+  text-decoration:none !important;
+  color:#333333 !important;
+}
+
+.breaker {
+	border-bottom: 3px solid #E0E0E0;
+	padding-top: 10px;
+}
+
+.taxonpage_wrapper {
+	padding:10px 10px 10px 20px;
+}
+
+.taxonpage_overview {
+	-moz-border-radius-bottomleft:0px;
+	-moz-border-radius-bottomright:0px;
+	-moz-border-radius-topleft:0px;
+	-moz-border-radius-topright:0px;
+	background:none;
+	border:0px;
+	padding:0px;
+}
+
+.taxonpage_overview h2{
+	padding-top:0px;
+	margin-top:0px;
+}
+
+p.taxonpage_images {
+	font-size:12px;
+}
+
+.chapter-content {
+	padding-bottom: 3px;
+	font-size:12px;
+}
+
+.draft {
+   background-color:#F5F5F5;	
+}
+
+.chapter-author {
+}
+
+.sub-chapter {
+	text-align: justify;
+	padding-left: 10px;
+	padding-right: 20px;
+}
+h1.taxonpage {
+	font-size:24px;
+	line-height:34px;
+}
+
+h2.taxonpage {
+	font-size:20px;
+	border-bottom: 2px solid #E0E0E0;
+	margin-bottom:0px;
+}
+
+h3.taxonpage {
+	font-size:16px;
+	margin-bottom:5px;
+}
+
+.taxonpage_ancestry {
+	list-style:none;
+	margin-left:0px;
+	padding-left:0px;
+	font-size:16px;
+}
+
+.taxonpage_ancestry li {
+	list-style:none;
+}
+
+ul.taxonpage_ancestry li.taxonpage_rank_0 {margin-left:0px;}
+ul.taxonpage_ancestry li.taxonpage_rank_1 {margin-left:5px;}
+ul.taxonpage_ancestry li.taxonpage_rank_2 {margin-left:10px;}
+ul.taxonpage_ancestry li.taxonpage_rank_3 {margin-left:15px;}
+ul.taxonpage_ancestry li.taxonpage_rank_4 {margin-left:20px;}
+ul.taxonpage_ancestry li.taxonpage_rank_5 {margin-left:25px;}
+ul.taxonpage_ancestry li.taxonpage_rank_6 {margin-left:30px;}
+ul.taxonpage_ancestry li.taxonpage_rank_7 {margin-left:35px;}
+ul.taxonpage_ancestry li.taxonpage_rank_8 {margin-left:40px;}
+ul.taxonpage_ancestry li.taxonpage_rank_9 {margin-left:45px;}
+ul.taxonpage_ancestry li.taxonpage_rank_10 {margin-left:50px;}
+ul.taxonpage_ancestry li.taxonpage_rank_11 {margin-left:55px;}
+ul.taxonpage_ancestry li.taxonpage_rank_12 {margin-left:60px;}
+ul.taxonpage_ancestry li.taxonpage_rank_13 {margin-left:65px;}
+ul.taxonpage_ancestry li.taxonpage_rank_14 {margin-left:70px;}
+ul.taxonpage_ancestry li.taxonpage_rank_15 {margin-left:75px;}
+ul.taxonpage_ancestry li.taxonpage_rank_16 {margin-left:80px;}
+
+.taxonpage_image_status {
+  text-align:right;
+}
+
+.taxonpage_image {
+}
+
+h3.taxonpage_image_title {
+	padding:0px;
+	margin:0px auto;
+}
+
+.taxonpage_image_credit {
+	height:15px;
+	line-height:15px;
+	text-align:right;
+	padding-right:10px;
+}
+
+.taxonpage_image_credit img {
+ 	vertical-align:middle;
+}
+
+.chapter-heading {
+  text-transform: uppercase; 
+  font-weight: bold;
+	border-bottom: 2px solid #E0E0E0;
+	padding-bottom: 4px;
+}
+
+.taxon_description {
+}
+
+.taxonpage_publishstatus {
+	text-align:right;
+	padding-right:5px;
+}
+
+.taxonpage_draft {
+	color:#D8D8D8;
+	font-family:Impact,"Arial Narrow",Helvetica,sans-serif;
+	font-size:50px;
+	font-weight:bold;
+	height:0;
+	line-height:1;
+	overflow:visible;
+	text-align:center;
+	text-transform:uppercase;
+}
+
+.taxonpage_author {
+	height:15px;
+	line-height:15px;
+	margin-bottom:10px;
+}
+
+.taxonpage_author img {
+	vertical-align:middle;
+}
+
+.taxonpage_rightsholder_wrapper {
+  text-align:right;
+}
+
+.taxonpage_rightsholder {
+	display:block;
+}
+
+.taxonpage_taxonomy {
+	list-style:none;
+  	list-style-image:none;
+	list-style-position:outside;
+	list-style-type:none;
+	margin-left:0px;
+	margin-top:5px;
+	padding-left:0px;
+	font-size:12px;
+}
+
+.taxonpage_taxonomy li {
+	list-style:none;
+	list-style-image:none;
+	list-style-position:outside;
+	list-style-type:none;
+}
+
+.taxonpage_vernaculars {
+	list-style:none;
+  	list-style-image:none;
+	list-style-position:outside;
+	list-style-type:none;
+	margin-left:0px;
+	margin-top:5px;
+	padding-left:0px;
+	font-size:12px;
+}
+
+.taxonpage_vernaculars li {
+	list-style:none;
+	list-style-image:none;
+	list-style-position:outside;
+	list-style-type:none;
+}
+
+.taxonpage_reference {
+  font-size:12px;
+  margin-bottom:2px;	
+}
+
+.taxonpage_images {
+	height:auto !important;
+	min-height:0px !important;
+	margin-bottom:15px;
+}
+
+/* Gallery for taxonpage */
+.gallery {display:block !important; list-style:none; margin:0px; padding:0px;}
+.gallery li {list-style:none;display:inline;margin:5px;}
+.galleria{list-style:none;width:460px}
+.galleria_wrapper{width:460px;margin:0px auto;height:auto;min-height:350px;}
+.galleria_container {text-align:center;margin-bottom:5px;min-height:415px;}
+.galleria li{display:block;width:70px;height:70px;overflow:hidden;float:left;margin:0 5px 10px 0}
+.galleria li a{display:none}
+.galleria li div{position:absolute;display:none;top:0;left:180px}
+.galleria li div img{cursor:pointer}
+.galleria li.active div img,.galleria li.active div{display:block}
+.galleria li img.thumb{cursor:pointer;top:auto;left:auto;display:block;width:auto;height:auto;}
+.caption{display:block;padding-top:.5em;height:40px}
+* html .galleria li div span{width:400px} /* MSIE bug */
+
+/* Biblio */
+.biblio-entry {
+   text-indent:-2em;
+   margin:0.5em 0 0 2em;	
+}

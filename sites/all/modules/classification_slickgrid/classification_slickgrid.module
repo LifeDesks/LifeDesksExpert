@@ -1,0 +1,536 @@
+<?php
+
+/**
+ * Implementation of hook_menu
+ */
+function classification_slickgrid_menu() {
+
+  $items['admin/classification/biological/grid'] = array(
+    'title' => t('Grid Editor'),
+    'description' => t('Edit your names using an online spreadsheet editor.'),
+    'type' => MENU_NORMAL_ITEM,
+    'access arguments' => array('edit classification'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('classification_slickgrid_form',4),
+    'weight' => 1,
+  );
+
+  $items['classification_slickgrid'] = array(
+	'page callback' => 'classification_slickgrid_data',
+	'access arguments' => array('edit classification'),
+	'type' => MENU_CALLBACK, 
+  );
+
+  $items['classification_slickgrid_autocomplete'] = array(
+	'page callback' => 'classification_slickgrid_autocomplete',
+	'access arguments' => array('edit classification'),
+	'type' => MENU_CALLBACK, 
+  );
+
+  $items['classification_slickgrid_getflag'] = array(
+	'page callback' => 'classification_slickgrid_getflag',
+	'access arguments' => array('edit classification'),
+	'type' => MENU_CALLBACK, 
+  );
+
+  $items['classification_slickgrid_update_flag'] = array(
+	'page callback' => 'classification_slickgrid_update_flag',
+	'access arguments' => array('edit classification'),
+	'type' => MENU_CALLBACK, 
+  );
+
+  $items['classification_slickgrid_update_name'] = array(
+	'page callback' => 'classification_slickgrid_update_name',
+	'access arguments' => array('edit classification'),
+	'type' => MENU_CALLBACK, 
+  );
+
+  return $items;
+}
+
+function classification_slickgrid_form(&$form_state, $vid=1) {
+
+  $session = &$_SESSION['classification_slickgrid_filter'];
+  $session = is_array($session) ? $session : array();
+	
+  $form = array();
+
+  $sitename = variable_get('site_name', t('LifeDesks'));
+
+  if(!$vid) {
+    $vid = CLASSIFICATION_PRIMARY;	
+  }
+
+  $vocabulary = taxonomy_vocabulary_load($vid);
+
+  if($vocabulary->module != 'classification' || $vid == CLASSIFICATION_DELETIONS || $vid == CLASSIFICATION_LOST_FOUND) {
+  	$message = t('Sorry, this grid editor cannot be used to edit vocabularies other than classifications.');
+  	$form['message'] = array(
+  	  '#type' => 'markup',
+  	  '#value' => '<div class="messages error">' . $message . '</div>',
+  	);
+  	return $form;
+  }
+
+  $module_path = drupal_get_path('module', 'classification_slickgrid') . '/';
+
+  drupal_add_css($module_path . 'css/slick.grid.css');
+  drupal_add_css($module_path . 'css/slick.columnpicker.css');
+
+  //slickgrid is not truly jQuery so order of files is important
+  drupal_add_js($module_path . 'js/firebugx.js');
+  drupal_add_js($module_path . 'js/jquery.rule-1.0.1-min.js');
+  drupal_add_js($module_path . 'js/jquery.event.drag.custom.js');
+  drupal_add_js($module_path . 'js/jquery.jsonp-1.1.0.min.js');
+  drupal_add_js($module_path . 'js/slick.formatter.js');
+  drupal_add_js($module_path . 'js/slick.editors.js');
+  drupal_add_js($module_path . 'js/slick.remotemodel.js');
+  drupal_add_js($module_path . 'js/slick.grid.js');
+  drupal_add_js($module_path . 'js/slick.columnpicker.js');
+  drupal_add_js($module_path . 'js/slick.validators.js');
+  drupal_add_js($module_path . 'js/slick.globaleditorlock.js');
+  drupal_add_js($module_path . 'js/jquery.autocomplete.js');
+  drupal_add_js($module_path . 'js/slick.config.js');
+
+  jquery_ui_add(array('ui.resizable','ui.sortable','ui.draggable','effects.highlight'));
+
+  //add the slickgrid columns
+  $vocabs = taxonomy_get_vocabularies();
+
+  $flags = array();
+  $classifications = array();
+
+  foreach($vocabs as $vocab) {
+    switch ($vocab->module) {
+	  case 'classification_flags':
+	    $flags[$vocab->vid] = $vocab;
+	  break;
+	
+	  case 'classification':
+	    if($vocab->vid == CLASSIFICATION_PRIMARY) {
+		  $classifications[$vocab->vid] = (strlen($sitename) > 30) ? substr($sitename, 0, 30) . '...' : $sitename;
+	    }
+	    else {
+		  $classifications[$vocab->vid] = (strlen(check_plain($vocab->name)) > 30) ? substr($vocab->name, 0, 30) . '...' : $vocab->name;
+	    }
+	  break;
+    }	
+  }
+
+  unset($classifications[CLASSIFICATION_DELETIONS], $classifications[CLASSIFICATION_LOST_FOUND]);
+
+  $settings = array();
+
+  $settings[$primary] = array(
+    'id' => 'name',
+    'name' => t('Taxon'),
+    'field' => 'name',
+    'width' => 300,
+    'minWidth' => 300,
+    'formatter' => 'nameFormatter',
+    'cssClass' => 'vid-' . $vid,
+	'editor' => 'NameCellEditor',
+	'setDataHandler' => 'nameDataHandler',
+	'validator' => 'requiredFieldValidator',
+	'sortable' => true,
+  );
+  
+  //flags to remove
+  foreach($flags as $flag) {
+    if($flag->name == t('Taxonomic Relationships')) {
+	  unset($flags[$flag->vid]);
+    }	
+  }
+
+  $minWidth = 50;
+
+  if(isset($_SESSION['classification_slickgrid_filter']['filter']) && $_SESSION['classification_slickgrid_filter']['filter']) {
+    $flag = $_SESSION['classification_slickgrid_filter']['filter'];
+    $flag_name = str_replace(" ", "",strtolower($flags[$flag]->name));
+    $len = (strlen($flags[$flag]->name) < 10) ? 50 : strlen($flags[$flag]->name)*7.5;
+    $settings[$flag] = array(
+      'id' => 'flag'.$flag,
+      'name' => $flags[$flag]->name,
+      'field' => 'flag'.$flag,
+      'width' => $len,
+      'minWidth' => $midWidth,
+      'cssClass' => 'vid-' . $flag,
+      'editor' => 'FlagCellEditor',
+      'setDataHandler' => 'flagDataHandler',
+      'sortable' => true,
+    );
+  }
+  else {
+    foreach($flags as $key => $value) {
+      $strlen = '';
+      $vocab = taxonomy_vocabulary_load($key);
+      $flag_name = str_replace(" ", "",strtolower($vocab->name));
+      $len = (strlen($vocab->name) < 10) ? 50 : strlen($vocab->name)*7.5;
+      $settings[$key] = array(
+        'id' => 'flag'.$vocab->vid,
+        'name' => $vocab->name,
+        'field' => 'flag'.$vocab->vid,
+        'width' => $len,
+        'minWidth' => $minWidth,
+        'cssClass' => 'vid-' . $key,
+        'editor' => 'FlagCellEditor',
+        'setDataHandler' => 'flagDataHandler',
+        'sortable' => true,
+      );
+    }	
+  }
+
+  $settings = array_values($settings);
+
+  drupal_add_js(array('classification_slickgrid_vid' => $vid),'setting');
+  drupal_add_js(array('classification_slickgrid_columns' => $settings),'setting');
+
+  $form['filter'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Filter'),
+    '#collapsible' => true,
+    '#collapsed' => true,
+  );
+
+  foreach($flags as $flag) {
+    $opt[$flag->vid] = $flag->name;	
+  }
+
+  $form['filter']['filter'] = array(
+    '#type' => 'radios',
+    '#title' => t('Show names with missing'),
+    '#options' => $opt,
+    '#default_value' => isset($_SESSION['classification_slickgrid_filter']['filter']) ? $_SESSION['classification_slickgrid_filter']['filter'] : array(),
+    '#attributes' => array('class' => 'flag-filters'),
+  );
+
+  $form['filter']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+
+  $form['filter']['delete'] = array(
+    '#type' => 'submit',
+    '#value' => t('Remove'),
+  );
+
+  $form['grid'] = array(
+    '#type' => 'markup',
+    '#value' => "",
+    '#prefix' => '<div style="width:740px;margin-top:5px">',
+    '#suffix' => '</div>',
+  );
+
+  $classification_list = '';
+  foreach($classifications as $key => $value) {
+	if($value != $classifications[$vid]) {
+	  $classification_list .= '<li rel="' . $key . '">' . l($value, 'admin/classification/biological/grid/'.$key) . '</li>' . "\n";	
+	}
+  }
+
+  $selector  = '<ul class="classification_topnav">';
+  $selector .= '<li>
+			<a href="#" onclick="javascript:return false">' . $classifications[$vid] . '</a>
+			<ul class="classification_subnav">' . $classification_list . '</ul>';
+  $selector .= (count($classifications) > 1) ? '<span></span>' : '';
+  $selector .= '</li>';
+  $selector .= '</ul>';
+
+  $form['grid']['search'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Taxon'),
+    '#prefix' => '<div class="grid-header" style="width:100%">' . $selector,
+	'#default_value' => isset($_SESSION['classification_slickgrid_filter']['search']) ? $_SESSION['classification_slickgrid_filter']['search'] : '',
+	'#attributes' => array('class' => 'txtSearch'),
+	'#size' => 20, 
+	'#suffix' => '</div>',
+  );
+
+  $form['grid']['grid'] = array(
+    '#type' => 'markup',
+    '#value' => '<div id="myGrid" style="width:100%;height:700px;"></div>',
+  );
+
+  return $form;
+}
+
+function classification_slickgrid_form_submit($form, &$form_state) {
+  $_SESSION['classification_slickgrid_filter'] = array();
+  switch($form_state['values']['op']) {
+    case t('Submit'):
+      $_SESSION['classification_slickgrid_filter']['filter'] = $form_state['values']['filter'];
+    break;
+
+    case t('Remove'):
+      $_SESSION['classification_slickgrid_filter']['filter'] = "";
+    break;
+	
+  }
+  if($form_state['values']['search']) {
+    $_SESSION['classification_slickgrid_filter']['search'] = $form_state['values']['search'];	
+  }
+  else {
+    $_SESSION['classification_slickgrid_filter']['search'] = "";	
+  }
+}
+
+/*
+ * Here we need to figure out how to construct a proper count and adjustments for the query to filter
+*/
+function  classification_slickgrid_data($vid=0,$offset=0,$count=50) {
+  drupal_set_header('Content-Type: text/plain; charset=utf-8');
+  drupal_set_header('Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0');
+  drupal_set_header('Pragma: no-cache');
+  drupal_set_header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
+
+  $callback = ($_GET['callback']) ? htmlspecialchars($_GET['callback']) : 'jsonp';
+
+  $sort_col = ($_GET['sort']) ? $_GET['sort'] : 'name';
+  $sort_dir = ($_GET['sortdir'] && $_GET['sortdir'] == -1) ? 'DESC' : 'ASC';
+
+  $search = ($_GET['search']) ? $_GET['search'] : '';
+
+  if(!$search) {
+    $total = db_result(db_query("SELECT COUNT(*) FROM {term_data} WHERE vid=%d",$vid));	
+  }
+  else {
+	$total = db_result(db_query("SELECT COUNT(*) FROM {term_data} WHERE vid=%d AND name LIKE LOWER('%%%s%%')",$vid, $search));
+  }
+
+  $vocabs = taxonomy_get_vocabularies();
+
+  $not_in = "";
+
+  foreach($vocabs as $vocab) {
+    if($vocab->module == 'classification_flags') {
+	  if($vocab->name == t('Taxonomic Relationships')) {
+	    $flags[] = '(SELECT td' . $vocab->vid . '.name FROM {term_data} td' . $vocab->vid . ' INNER JOIN {term_relation} tr' . $vocab->vid . ' ON (td' . $vocab->vid . '.tid = tr' . $vocab->vid . '.tid2) WHERE tr' . $vocab->vid . '.tid1 = td.tid AND td' . $vocab->vid . '.vid=' . $vocab->vid . ') AS taxonomicrelationships';
+	  }
+	  else {
+          $flags[] = '(SELECT td' . $vocab->vid . '.name FROM {term_data} td' . $vocab->vid . ' INNER JOIN {term_relation} tr' . $vocab->vid . ' ON (td' . $vocab->vid . '.tid = tr' . $vocab->vid . '.tid2) WHERE tr' . $vocab->vid . '.tid1 = td.tid AND td' . $vocab->vid . '.vid=' . $vocab->vid . ') AS flag' . $vocab->vid;
+	  }
+    }	
+  }
+
+  	if(isset($_SESSION['classification_slickgrid_filter']['filter']) && $_SESSION['classification_slickgrid_filter']['filter']) {
+	  $vocab = taxonomy_vocabulary_load($_SESSION['classification_slickgrid_filter']['filter']);
+      $not_in = ' AND td.tid NOT IN (SELECT tr' . $vocab->vid . '.tid1 FROM {term_relation} tr' . $vocab->vid . ' INNER JOIN {term_data} td' . $vocab->vid . ' ON (tr' . $vocab->vid . '.tid2 = td' . $vocab->vid . '.tid) WHERE td' . $vocab->vid . '.vid = ' . $vocab->vid . ') ';	  
+	  }
+
+  $flags = implode(',', $flags);
+
+  $qry = db_query("
+	    SELECT
+	     td.tid as tid,
+	     td.name as name,
+	     " . $flags . "
+	   FROM
+	    {term_data} td
+	   WHERE
+	     td.vid=%d
+	   " . $not_in . "
+	   ORDER BY %s %s
+	   LIMIT %d, %d", $vid, $sort_col, $sort_dir, $offset, $count);
+	
+  if($search) {
+	  $qry = db_query("
+		    SELECT
+		     td.tid as tid,
+		     td.name as name,
+		     " . $flags . "
+		   FROM
+		    {term_data} td
+		   WHERE
+		     td.vid=%d AND td.name LIKE LOWER('%%%s%%')
+		   " . $not_in . "
+		   ORDER BY %s %s
+		   LIMIT %d, %d", $vid, strtolower($search), $sort_col, $sort_dir, $offset, $count);
+  }
+
+  $metadata = array();
+
+  while($row = db_fetch_array($qry)) {
+	foreach($row as $key => $value) {
+	  if($value) {
+	    $metadata[$row['tid']][$key] = $value;	
+	  }
+	}
+  }
+
+  $metadata = array_values($metadata);
+
+  echo $callback . '({"names" : ' . json_encode($metadata) . ',"total":"' . $total . '", "offset" : "' . $offset . '", "count" : "' . $count . '"});';
+
+}
+
+/**
+ * Autocomplete callback for node types that require it
+ */
+function classification_slickgrid_autocomplete($vid,$string='') {
+
+  drupal_set_header('Content-Type: text/html; charset=utf-8');
+
+  $regexp = '%(?:^|,\ *)("(?>[^"]*)(?>""[^"]* )*"|(?: [^",]*))%x';
+  preg_match_all($regexp, $string, $matches);
+  $array = $matches[1];
+
+  $last_string = trim(array_pop($array));
+  $matches = array();
+
+  $output = '';
+
+  if (strlen($last_string) >= 1 ) {
+    $result = db_query(db_rewrite_sql("SELECT t.tid,t.name FROM {term_data} t WHERE t.vid = %d AND LOWER(t.name) LIKE LOWER('%s%%')", 't', 'tid'), $vid, $last_string);
+
+    while ($tag = db_fetch_object($result)) {
+      $output .= check_plain($tag->name) . '|' . $tag->tid . "\n";
+    }
+
+    echo $output;
+  }
+
+}
+
+function classification_slickgrid_getflag($vid=0,$string='') {
+  $flag_tid = db_result(db_query("SELECT tid FROM {term_data} WHERE vid=%d AND name=LOWER('%s')", $vid, strtolower($string)));
+  drupal_json(array('status' => true, 'flag_tid' => $flag_tid));	
+}
+
+function classification_slickgrid_update_flag() {
+	global $user, $NAMES;
+	
+	$txn = new Transaction();
+	
+	$form = array(
+      '#post' => $_POST,
+      '#programmed' => FALSE,
+    );
+
+    $value = $_REQUEST['value'];
+    $tid = $_REQUEST['tid'];
+    $flag_tid = $_REQUEST['flag_tid'];
+    $flag_vid = $_REQUEST['flag_vid'];
+
+    //get all existing flags first
+    $flags = classification_get_flags($tid);
+
+    //get the original flag in question
+    $old_flag = $flags[$flag_vid];
+
+    //get the new flag
+    $new_flag = taxonomy_get_term($flag_tid); 
+
+    //get the affected taxon
+    $taxon = taxonomy_get_term($tid);
+    $check_italicize = classification_check_italicize($tid);
+    $taxon_name = ($check_italicize) ? $NAMES->italicized_form($taxon->name) : $taxon->name;
+
+    //check if relation already present for that vid and update as necessary
+    $result = db_result(db_query("SELECT tr.trid FROM {term_relation} tr INNER JOIN {term_data} td ON (tr.tid2=td.tid) WHERE tr.tid1=%d AND td.vid=%d",$tid,$flag_vid));
+
+    if($value) {
+	    if($result) {
+		  db_query("UPDATE {term_relation} tr SET tr.tid2=%d WHERE tr.trid=%d",$flag_tid,$result);
+		  //log the event
+		  if($new_flag->name != $old_flag->name) {
+		    $message = t('!name changed from !old_flag to !new_flag for !flag_type', array('!name' => $taxon_name, '!old_flag' => $old_flag->name, '!new_flag' => $new_flag->name, '!flag_type' => strtolower($old_flag->vocab)));
+		    $classification_log = array(
+			  'uid' => $user->uid,
+			  'action' => 'flag',
+			  'vid_from' => 0,
+			  'vid_to' => $taxon->vid,
+			  'description' => $message,
+			  'created' => time(),
+			);
+            drupal_write_record('classification_log', $classification_log);
+		  }
+		  drupal_json(array('status' => TRUE,'message' => t('Updated flag')));
+	    }
+	    else {
+		  db_query("INSERT INTO {term_relation} (tid1,tid2) VALUES (%d,%d)",$tid,$flag_tid);
+		  $last = db_last_insert_id('term_relation','trid');
+		  $rtid = db_result(db_query("SELECT trt.rtid FROM {term_relation_types} trt WHERE trt.vid=%d",$flag_vid));
+		  db_query("INSERT INTO {term_relation_has_type} (rtid,trid) VALUES (%d,%d)",$rtid,$last);
+		
+		  //log the event (need the vocab name in this case)
+		  $vocab = taxonomy_vocabulary_load($flag_vid);
+		  $message = t('!name given !new_flag for !flag_type', array('!name' => $taxon->name, '!new_flag' => $new_flag->name, '!flag_type' => strtolower($vocab->name)));
+		  $classification_log = array(
+			'uid' => $user->uid,
+			'action' => 'flag',
+			'vid_from' => 0,
+			'vid_to' => $taxon->vid,
+			'description' => $message,
+			'created' => time(),
+		  );
+          drupal_write_record('classification_log', $classification_log);
+
+		  drupal_json(array('status' => TRUE,'message' => t('Inserted flag')));
+	    }
+    }
+    else {
+	  db_query("DELETE FROM {term_relation} WHERE trid=%d",$result);
+	  db_query("DELETE FROM {term_relation_has_type} WHERE trid=%d",$result);
+	
+	  //log the event
+	  $message = t('!name had flag removed for !flag_type', array('!name' => $taxon, '!flag_type' => strtolower($old_flag->vocab)));
+	  $classification_log = array(
+		'uid' => $user->uid,
+		'action' => 'flag',
+		'vid_from' => 0,
+		'vid_to' => $taxon->vid,
+		'description' => $message,
+		'created' => time(),
+	   );
+       drupal_write_record('classification_log', $classification_log);
+
+	   drupal_json(array('status' => TRUE,'message' => t('Flag deleted')));
+    }
+}
+
+function classification_slickgrid_update_name() {
+	global $NAMES;
+	
+	$txn = new Transaction();
+	
+	$form = array(
+      '#post' => $_POST,
+      '#programmed' => FALSE,
+    );
+
+    $value = $_REQUEST['value'];
+    $tid = $_REQUEST['tid'];
+    $vid = $_REQUEST['vid'];
+
+    if($value) {
+	  $old_term = taxonomy_get_term($tid);
+	  $parent = db_result(db_query("SELECT parent FROM {term_hierarchy} WHERE tid = %d", $tid));
+	  $new_term = array(
+	    'tid' => $tid,
+	    'name' => $value,
+	    'vid' => $vid,
+	    'parent' => $parent,
+	  );
+	  taxonomy_save_term($new_term);
+	
+	  $check_italicize = classification_check_italicize($tid);
+	  $old_name = ($check_italicize) ? $NAMES->italicized_form($old_term->name) : $old_term->name;
+	  $new_name = ($check_italicize) ? $NAMES->italicized_form($new_term['name']) : $new_term['name'];
+
+	  //log the action
+	  if($old_term->name != $new_term['name']) {
+	    $message = t('!oldname renamed to !newname', array('!oldname' => $old_name, '!newname' => $new_name));
+	    $classification_log = array(
+			'uid' => $user->uid,
+			'action' => 'update',
+			'vid_from' => 0,
+			'vid_to' => $taxon->vid,
+			'description' => $message,
+			'created' => time(),
+		 );
+	     drupal_write_record('classification_log', $classification_log);
+	  }
+	
+      drupal_json(array('status' => TRUE,'message' => t('Name updated')));
+    }
+}

@@ -1,0 +1,1064 @@
+<?php
+/* $Id:$ */
+
+/**
+ * @file classification.module
+ * This module makes it possible to import and edit names and classifications
+ */
+define('CLASSIFICATION_PRIMARY', variable_get('classification_primary',''));
+define('CLASSIFICATION_DELETIONS', variable_get('classification_deletions',''));
+define('CLASSIFICATION_RANKS', classification_get_vid('Taxonomic Ranks'));
+define('CLASSIFICATION_VERNS', classification_get_vid('Vernacular Language Codes'));
+define('CLASSIFICATION_RELATIONS', classification_get_vid('Taxonomic Relationships'));
+define('CLASSIFICATION_LOST_FOUND', variable_get('classification_lost_found',''));
+
+/**
+ * Implementation of hook_help
+ */
+function classification_help($path, $arg) {
+  switch($path) {
+   case 'help#classification':
+     $output = t('The Classification module provides the ability to import and edit the classification you use to organize your content.');
+     return $output;
+  }
+}
+
+/**
+ * Implementation of hook_perm
+ */
+function classification_perm() {
+  return array(
+    'access classification pages',
+    'create classification',
+    'edit classification',
+    'delete classification',
+    'settings for classification'
+  );
+}
+
+/**
+ * Implementation of hook_init to add some js
+ */
+function classification_init() {
+
+  $module_path = base_path().drupal_get_path('module', 'classification');
+  drupal_add_js(array('classification_module_path' => $module_path), 'setting');
+  drupal_add_js(array('classification_callback_base_url' => base_path().'classification'), 'setting');
+  drupal_add_js(array('classification_callback_jstree' => base_path().'classification/js_tree/'), 'setting');
+  drupal_add_js(array('classification_callback_jstree_viewer' => base_path().'classification/js_tree_viewer/'), 'setting');
+  drupal_add_js(array('classification_callback_jstree_elements' => base_path().'classification/js_tree_elements/'), 'setting');
+
+  module_load_include('php', 'classification', 'includes/classification_functions.class');
+
+  //let's get some important vocabs so we reduce the number of queries
+  global $NAMES, $NAMES_OPTIONS, $VID_EXTRAS;
+
+  $NAMES = new Names;
+  $NAMES_OPTIONS = variable_get('classification_editor_names',0);
+  $NAMES_OPTIONS_ELEMENTS = variable_get('classification_elements_names',1);
+  $VID_EXTRAS = array(CLASSIFICATION_RANKS,CLASSIFICATION_VERNS,CLASSIFICATION_RELATIONS);
+}
+
+/**
+ * Implementation of hook_theme()
+ */
+function classification_theme() {
+  return array(
+    'classification_tree' => array(
+      'arguments' => array('element'),
+    ),
+    'classification_tree_elements' => array(
+      'arguments' => array('element'),
+    ),
+    'classification_logs_form' => array(
+      'arguments' => array('form' => NULL),
+    ),
+    'classification_block_page' => array(
+      'arguments' => array('content' => NULL),
+      'file' => 'includes/classification.default.inc',
+  ),
+  );
+}
+
+/**
+ * Implementation of hook_user
+ */
+function classification_user($type, &$edit, &$user, $category = NULL) {
+  if ($type == 'form' && $category == 'account' ) {
+  if (user_access('edit classification')) {
+      $form['classification_fieldset'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Classification settings'),
+        '#weight' => 5,
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+      $form['classification_fieldset']['classification_show_messages'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Show scrolling notifications in the classification editing interface and update the tree when there are multiple, simultaneous users'),
+      '#default_value' => isset($user->classification_show_messages) ? $user->classification_show_messages : 1,
+    );
+    return $form;
+  }
+  }
+}
+
+/**
+ * Implementation of hook_block
+ */
+function classification_block($op = 'list', $delta = 0) {
+  if (user_access('access content')) {
+    if ($op == 'list') {
+      $blocks[0]['info'] = t('Classification Navigator');
+      return $blocks;
+    }
+    else {
+      if ($op == 'view') {
+        // Retrieve the tree
+          $block['subject'] = t('Classification Navigator');
+          $block['content'] = '<div id="classification_tree_block">';
+
+          $classification_settings = variable_get('classification_settings',array());
+
+          $result = db_fetch_object(db_query("SELECT td.tid FROM {term_data} td INNER JOIN {term_hierarchy} th ON (td.tid=th.tid) WHERE vid = %d LIMIT 1",CLASSIFICATION_PRIMARY));
+          $path = drupal_get_path('module', 'classification') . '/';
+          if(!$result) {
+              if(user_access('import classification')){
+                $block['content'] .= l('<img src="' . $path . 'images/classification.gif" style="float:left;margin-top:5px;" class="temporary-image" alt="' . t('Edit your classification') . '" title="' . t('Edit your classification') . '">','admin/classification/biological/import', array('html' => TRUE));
+              }
+              else {
+                $block['content'] .= '<img src="' . $path . 'images/classification.gif" style="float:left;margin-top:5px;" class="temporary-image" alt="' . t('Coming Soon!') . '" title="' . t('Coming Soon!') . '">';
+              }
+          }
+          else {
+
+        $jstree_files = array(
+          'jquery.listen',
+          'sarissa',
+          'sarissa_ieemu_xpath',
+          'jquery.xslt',
+          'jquery.scrollTo',
+        );
+
+            jstree_add($jstree_files);
+
+            drupal_add_css($path .'css/classification_viewer.css');
+            drupal_add_js($path .'js/classification_viewer.js');
+            drupal_add_js(drupal_get_path('module', 'jquery_update') .'/replace/autocomplete.js');
+            drupal_add_js(array('classification_tags' => array('vid' => CLASSIFICATION_PRIMARY)), 'setting');
+
+            global $base_url;
+
+            $domain_classification_path = url($base_url, array('absolute' => TRUE)) . '/classification/';
+
+      $block['content'] .= '<div class="classification_tree_search">';
+            $block['content'] .= '<input id="edit-classification-search-' . CLASSIFICATION_PRIMARY . '" type="text" class="form-text form-autocomplete classification-search-form-text" maxlength="128" size="20" value="" title="' . t('Search for name') . '" autocomplete="OFF" />';
+      $block['content'] .= '<a href="#" onclick="javascript:return false;"><img src="/' . $path . 'images/magnifier.gif" alt="' . t('Search') . '" title="' . t('Search') . '" id="edit-classification-submit-' . CLASSIFICATION_PRIMARY . '" /></a>';
+            $block['content'] .= '<input id="edit-classification-search-' . CLASSIFICATION_PRIMARY . '-autocomplete" class="autocomplete" type="hidden" disabled="disabled" value="' . $domain_classification_path . 'autocomplete/' . CLASSIFICATION_PRIMARY . '" />';
+            $block['content'] .= '</div>';
+            $block['content'] .= '<div class="tree_wrapper_viewer">';
+            $block['content'] .= '<div id="classification_tree_viewer"></div>';
+            $block['content'] .= '</div>';
+          }
+          $block['content'] .= '</div>';
+      }
+      return $block;
+    }
+  }
+ }
+
+
+/**
+* Implementation of hook_data_monitoring_api().
+*/
+function classification_data_monitoring_api() {
+  return array(
+    'path' => drupal_get_path('module', 'classification') .'/data_monitoring',
+  );
+}
+
+
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function classification_form_alter(&$form, $form_state, $form_id) {
+  if($form['#id'] == 'node-form') {
+    unset($form['taxonomy'][CLASSIFICATION_DELETIONS]);
+  }
+
+
+}
+
+/**
+ * Helper function to convert terms after a preview.
+ */
+function classification_preview_terms($node) {
+  $classification = array();
+  if (isset($node->classification)) {
+    foreach ($node->classification as $key => $term) {
+      unset($node->classification[$key]);
+      // A 'Multiple select' and a 'Free tagging' field returns an array.
+      if (is_array($term)) {
+        foreach ($term as $tid) {
+          if ($key == 'name_tags') {
+            // Free tagging; the values will be saved for later as strings
+            // instead of objects to fill the form again.
+            $classification['name_tags'] = $term;
+          }
+          else {
+            $classification[$tid] = taxonomy_get_term($tid);
+          }
+        }
+      }
+      // A 'Single select' field returns the term id.
+      elseif ($term) {
+        $classification[$term] = taxonomy_get_term($term);
+      }
+    }
+  }
+  return $classification;
+}
+
+/**
+ * Find all taxon names associated with the given node.
+ */
+function classification_node_get_terms($node,$key = 'tid') {
+  static $terms;
+
+  if (!isset($terms[$node->vid][$key])) {
+    $result = db_query(db_rewrite_sql('SELECT t.tid,t.vid,t.name FROM {term_node} r INNER JOIN {term_data} t ON r.tid = t.tid INNER JOIN {vocabulary} v ON t.vid = v.vid WHERE r.vid = %d ORDER BY t.name', 't', 'tid'), $node->vid);
+    $terms[$node->vid][$key] = array();
+    while ($term = db_fetch_object($result)) {
+      $terms[$node->vid][$key][$term->$key] = $term;
+    }
+  }
+
+  return $terms[$node->vid][$key];
+}
+
+
+function classification_menu() {
+
+/**
+ * Menu items
+ */
+
+    $items['admin/settings/classification'] = array(
+      'title' => t('Classification settings'),
+      'description' => 'Configure behavior of the classification module.',
+      'type' => MENU_NORMAL_ITEM,
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('classification_admin_settings'),
+      'access arguments' => array('settings for classification'),
+      'file' => 'classification.admin.inc',
+    );
+
+    $items['admin/classification'] = array(
+    'title' => t('Classifications & Tags'),
+    'description' => t('Add, import and edit your tags and classifications'),
+      'position' => 'left',
+      'page callback' => 'system_admin_menu_block_page',
+      'access arguments' => array('access administration pages'),
+      'file' => 'system.admin.inc',
+      'file path' => drupal_get_path('module', 'system'),
+  );
+
+    $items['admin/classification/biological'] = array(
+    'title' => t('Biological Classification'),
+    'description' => t('Manage your biological classification(s)'),
+    'type' => MENU_NORMAL_ITEM,
+    'access arguments' => array('access classification pages'),
+    'page callback' => 'classification_block_page',
+    'file' => 'includes/classification.default.inc',
+  );
+
+    $items['admin/classification/biological/edit'] = array(
+       'title' => t('Tree Editor'),
+       'description' => t('Edit your site\'s classification, assign ranks, maintain name relationships, <em>etc.</em> using a drag/drop tree.'),
+       'type' => MENU_NORMAL_ITEM,
+       'page callback' => 'drupal_get_form',
+       'page arguments' => array('classification_edit_form', 4, 5),
+       'access arguments' => array('edit classification'),
+       'weight' => 2,
+       'file' => 'includes/classification.edit.inc',
+    );
+
+    $items['admin/classification/biological/logs'] = array(
+      'title' => t('Activity Logs'),
+      'description' => t('View the activity in the classification editor performed by users with appropriate permissions.'),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('classification_logs_form'),
+      'access arguments' => array('access classification pages'),
+      'weight' => 10,
+      'file' => 'includes/classification.logs.inc',
+    );
+
+    $items['admin/classification/biological/logs/list'] = array(
+    'title' => t('List'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10
+  );
+
+  $items['admin/classification/biological/logs/filter'] = array(
+    'title'             => t('Filter'),
+    'page callback'     => 'drupal_get_form',
+    'page arguments'    => array('classification_logs_filter_form'),
+    'access callback' => 'user_access',
+    'access arguments'  => array('access classification pages'),
+    'type'              => MENU_LOCAL_TASK,
+    'weight'            => -9,
+    'file'              => 'includes/classification.logs.inc',
+  );
+
+  $items['admin/classification/biological/logs/settings'] = array(
+    'title'             => t('Settings'),
+    'page callback'     => 'drupal_get_form',
+    'page arguments'    => array('classification_logs_settings_form'),
+    'access callback' => 'user_access',
+    'access arguments'  => array('settings for classification'),
+    'type'              => MENU_LOCAL_TASK,
+    'weight'            => -8,
+    'file'              => 'includes/classification.logs.inc',
+  );
+
+  $items['admin/classification/biological/logs/filter/clear'] = array(
+    'title'             => '',
+    'page callback'     => 'classification_logs_filter_clear',
+    'access callback'   => 'user_access',
+    'access arguments'  => array('access classification pages'),
+    'type'              => MENU_CALLBACK,
+    'file'              => 'includes/classification.logs.inc',
+  );
+
+/**
+ * Callbacks
+ */
+     $items['classification/logs/rss'] = array(
+      'page callback' => 'classification_logs_rss',
+      'access arguments' => array('access content'),
+      'type' => MENU_CALLBACK,
+      'file' => 'includes/classification.logs.inc',
+     );
+
+     $items['classification/autocomplete'] = array(
+      'page callback' => 'classification_autocomplete',
+      'type' => MENU_CALLBACK,
+      'access arguments' => array('access content'),
+      'file' => 'includes/classification.default.inc',
+     );
+
+     $items['classification/autocomplete_vernaculars'] = array(
+      'page callback' => 'classification_autocomplete_vernaculars',
+      'type' => MENU_CALLBACK,
+      'access arguments' => array('access content'),
+      'file' => 'includes/classification.default.inc',
+    );
+
+    $items['classification/checkterm'] = array(
+      'page callback' => 'classification_checkterm',
+      'type' => MENU_CALLBACK,
+      'access arguments' => array('access content'),
+      'file' => 'includes/classification.default.inc',
+    );
+
+    $items['classification/checkterms'] = array(
+      'page callback' => 'classification_checkterms',
+      'type' => MENU_CALLBACK,
+      'access arguments' => array('edit classification'),
+      'file' => 'includes/classification.edit.inc',
+    );
+
+    $items['classification/addflags'] = array(
+      'page callback' => 'classification_addflags',
+      'type' => MENU_CALLBACK,
+      'access arguments' => array('edit classification'),
+      'file' => 'includes/classification.edit.inc',
+    );
+
+    $items['classification/bulkadd'] = array(
+      'page callback' => 'classification_bulkadd',
+      'type' => MENU_CALLBACK,
+      'access arguments' => array('edit classification'),
+      'file' => 'includes/classification.edit.inc',
+    );
+
+    $items['classification/checkterm_simple'] = array(
+      'page callback' => 'classification_checkterm_simple',
+      'type' => MENU_CALLBACK,
+      'access arguments' => array('access content'),
+      'file' => 'includes/classification.default.inc',
+    );
+
+    $items['classification/buildnames'] = array(
+      'page callback' => 'classification_buildnames',
+      'type' => MENU_CALLBACK,
+      'access arguments' => array('access content'),
+      'file' => 'includes/classification.default.inc',
+    );
+
+    $items['classification/autocomplete_tree'] = array(
+      'page callback' => 'classification_autocomplete_tree',
+      'access arguments' => array('edit classification'),
+      'type' => MENU_CALLBACK,
+      'file' => 'includes/classification.edit.inc',
+    );
+
+     $items['classification/js_tree'] = array(
+      'page callback' => 'classification_js_tree',
+      'access arguments' => array('access content'),
+      'type' => MENU_CALLBACK,
+      'file' => 'includes/classification.edit.inc',
+    );
+
+     $items['classification/js_tree_viewer'] = array(
+      'page callback' => 'classification_js_tree',
+      'access arguments' => array('access content'),
+      'type' => MENU_CALLBACK,
+      'file' => 'includes/classification.viewer.inc',
+    );
+
+    $items['classification/js_tree_elements'] = array(
+      'page callback' => 'classification_js_tree',
+      'access arguments' => array('access content'),
+      'type' => MENU_CALLBACK,
+      'file' => 'includes/classification.elements.inc',
+    );
+
+    $items['classification/js_tree_checked'] = array(
+      'page callback' => 'classification_js_tree_checked',
+      'access arguments' => array('access content'),
+      'type' => MENU_CALLBACK,
+      'file' => 'includes/classification.elements.inc',
+     );
+
+     $items['classification/get_metadata'] = array(
+      'page callback' => 'classification_get_metadata',
+      'access arguments' => array('access content'),
+      'type' => MENU_CALLBACK,
+      'file' => 'includes/classification.edit.inc',
+     );
+
+     $items['classification/look_content'] = array(
+      'page callback' => 'classification_look_content',
+      'access arguments' => array('access content'),
+      'type' => MENU_CALLBACK,
+      'file' => 'includes/classification.edit.inc',
+     );
+
+     $items['classification/get_parent'] = array(
+      'page callback' => 'classification_get_parent',
+      'access arguments' => array('edit classification'),
+      'type' => MENU_CALLBACK,
+      'file' => 'includes/classification.edit.inc',
+     );
+
+    $items['classification/get_parents'] = array(
+      'page callback' => 'classification_get_parents',
+      'access arguments' => array('edit classification'),
+      'type' => MENU_CALLBACK,
+      'file' => 'includes/classification.edit.inc',
+     );
+
+    $items['classification/count_children'] = array(
+    'page callback' => 'classification_count_children',
+    'access arguments' => array('edit classification'),
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/classification.edit.inc',
+  );
+
+     $items['classification/update_metadata'] = array(
+      'page callback' => 'classification_update_metadata',
+      'access arguments' => array('edit classification'),
+      'type' => MENU_CALLBACK,
+      'file' => 'includes/classification.edit.inc',
+    );
+
+    $items['classification/edit_name'] = array(
+       'page callback' => 'classification_edit_name',
+       'access arguments' => array('edit classification'),
+       'type' => MENU_CALLBACK,
+       'file' => 'includes/classification.edit.inc',
+    );
+
+    $items['classification/add_name'] = array(
+       'page callback' => 'classification_add_name',
+       'access arguments' => array('edit classification'),
+       'type' => MENU_CALLBACK,
+       'file' => 'includes/classification.edit.inc',
+    );
+
+    $items['classification/add_term'] = array(
+       'page callback' => 'classification_add_term',
+       'access arguments' => array('edit classification'),
+       'type' => MENU_CALLBACK,
+       'file' => 'includes/classification.default.inc',
+    );
+
+    $items['classification/delete_name'] = array(
+       'page callback' => 'classification_delete_name',
+       'access arguments' => array('edit classification'),
+       'type' => MENU_CALLBACK,
+       'file' => 'includes/classification.edit.inc',
+    );
+
+    $items['classification/delete_name_data'] = array(
+      'page callback' => 'classification_delete_name_data',
+      'access arguments' => array('edit classification'),
+      'type' => MENU_CALLBACK,
+      'file' => 'includes/classification.edit.inc',
+    );
+
+    $items['classification/delete_classification'] = array(
+      'page callback' => 'classification_delete_classification',
+      'access arguments' => array('delete classification'),
+      'type' => MENU_CALLBACK,
+      'file' => 'includes/classification.edit.inc',
+    );
+
+    $items['classification/purge_deletions'] = array(
+    'page callback' => 'classification_purge_deletions',
+    'access arguments' => array('edit classification'),
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/classification.edit.inc',
+  );
+
+    $items['classification/check_status'] = array(
+      'title' => t('Check Status'),
+      'page callback' => 'classification_check_status',
+      'access arguments' => array('edit classification'),
+      'type' => MENU_CALLBACK,
+      'file' => 'includes/classification.edit.inc',
+    );
+
+    $items['classification/move_name'] = array(
+       'page callback' => 'classification_move_name',
+       'access arguments' => array('edit classification'),
+       'type' => MENU_CALLBACK,
+       'file' => 'includes/classification.edit.inc',
+    );
+
+    $items['classification/copy_name'] = array(
+       'page callback' => 'classification_copy_name',
+       'access arguments' => array('edit classification'),
+       'type' => MENU_CALLBACK,
+       'file' => 'includes/classification.edit.inc',
+    );
+
+    $items['classification/pinger'] = array(
+     'page callback' => 'classification_pinger',
+     'access arguments' => array('edit classification'),
+     'type' => MENU_CALLBACK,
+     'file' => 'includes/classification.pinger.inc',
+  );
+
+  $items['classification/check_destination'] = array(
+    'page callback' => 'classification_check_destination',
+    'access arguments' => array('edit classification'),
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/classification.edit.inc',
+  );
+
+  return $items;
+}
+
+
+/******************************************
+ * CLASSIFICATION FORM ELEMENT DEFINITION
+ *
+ * how to use:
+ *
+ * $css_file = drupal_get_path('module', 'classification_demo') . '/classification_demo.css';
+ *
+ * $form['name'] = array(
+ *   '#type' => 'classification_tree',
+ *   '#css_file' => $css_file,
+ * );
+ *
+ * Optional parameters:
+ *   #voc_name: specify the vocabulary name to use for the tree
+ ******************************************/
+
+/**
+ * Implementation of hook_elements
+ */
+function classification_elements() {
+  $type['classification_tree'] = array(
+    '#input' => TRUE,
+    '#process' => array('classification_tree_process_elements'),
+    '#tree' => TRUE,
+  );
+
+  return $type;
+}
+
+/**
+ * Processes the classification form element
+ *
+ * @param $element
+ * @return the classification element
+ */
+function classification_tree_process_elements($element) {
+
+  $jstree_files = array(
+    'jquery.listen',
+    'sarissa',
+    'sarissa_ieemu_xpath',
+    'jquery.xslt',
+    'jquery.scrollTo',
+  );
+
+  jstree_add($jstree_files);
+
+  $module_path = drupal_get_path('module', 'classification') .'/';
+
+  drupal_add_js($module_path . 'js/classification_element.js');
+  drupal_add_js(drupal_get_path('module', 'jquery_update') .'/replace/autocomplete.js');
+
+  $domain_classification_path = url($base_url, array('absolute' => TRUE)) . '/classification/';
+
+  $element['#voc_name'] = isset($element['#voc_name']) ? $element['#voc_name'] : 'Taxa';
+  $vid = classification_get_vid($element['#voc_name']);
+
+  $element['#css_file'] = isset($element['#css_file']) ? drupal_add_css($element['#css_file']) : drupal_add_css($module_path .'css/classification_element.css');
+  $element['#tree'] = TRUE;
+
+  $tree  = '<div class="classification_tree_panel">';
+  $tree .= '<div class="classification_tree_div">';
+  $tree .= '<ul class="front_page_links_expand"><li class="expand"><a href="#" onclick="javascript:return false">&nbsp;</a></li><li class="contract"><a href="#" onclick="javascript:return false">&nbsp;</a></li></ul>';
+  $tree .= '<div class="classification_tree_search"><input id="edit-classification-search-' . $vid . '" type="text" class="form-text form-autocomplete classification-search-form-text" maxlength="128" size="20" value="" title="' . t('Search for name') . '" /><a href="#" onclick="javascript:return false;"><img src="/' . $module_path . 'images/magnifier.gif" alt="' . t('Search') . '" title="' . t('Search') . '" id="edit-classification-submit-' . $vid . '" /></a><input id="edit-classification-search-'.$vid.'-autocomplete" class="autocomplete" type="hidden" disabled="disabled" value="' . $domain_classification_path . 'autocomplete/' . $vid . '" /></div>';
+
+  $element['#prefix'] = $tree;
+  $element['#suffix'] = '</div></div>';
+
+  return $element;
+}
+
+/*
+ * Implementation of hook_term_path to point to taxonpage for primary classification
+ */
+function classification_term_path($term) {
+  if($term->vid == CLASSIFICATION_PRIMARY) {
+    return 'pages/' . $term->tid;
+  }
+}
+
+/*
+ * Implementation of hook_taxonomy to purge classification log table when a vocab has been deleted
+ */
+function classification_taxonomy($op, $type, $edit = NULL) {
+  $edit = (array)$edit;
+
+  switch ("$type/$op") {
+    case "vocabulary/delete":
+      $qry = db_query("DELETE FROM {classification_log} WHERE vid_to = %d", $edit['vid']);
+    break;
+  }
+}
+
+/**
+ * theme function for tree
+ *
+ * @param $element
+ * @return html output
+ */
+function theme_classification_tree($element) {
+  $tree = theme('classification_tree_elements', $element['#elements']);
+  return $tree;
+}
+
+function theme_classification_tree_elements($element) {
+
+  $element['#voc_name'] = isset($element['#voc_name']) ? $element['#voc_name'] : 'Taxa';
+  $vid = classification_get_vid($element['#voc_name']);
+
+  $output .= '<div class="tree_wrapper_viewer">';
+  $output .= '<div id="classification_tree_viewer_' . $vid . '" class="classification_tree_viewer"></div>';
+  $output .= '</div>';
+  return $output;
+}
+
+/**
+ * Provides category information for RSS feeds.
+ */
+function classification_rss_item($node) {
+  $output = array();
+  foreach ($node->classification as $term) {
+    $output[] = array('key'   => 'category',
+                      'value' => check_plain($term->name),
+                      'attributes' => array('domain' => url('taxonomy/term/'. $term->tid, array('absolute' => TRUE))));
+  }
+  return $output;
+}
+
+/**
+ * Function is somewhat equivalent to taxonomy_get_tree but assumes that terms have a single parent, thus 'parents' is not an array.
+ * @params $tid (required)
+ */
+function classification_get_tree($vid,$tid,$level=0,$a=array()) {
+  $childcountqry = "(SELECT COUNT(*) FROM {term_hierarchy} WHERE parent=th.tid) AS childcount";
+  $qry = db_query("SELECT th.tid,th.parent,td.name,$childcountqry,$level AS depth " .
+         "FROM {term_hierarchy} th INNER JOIN {term_data} td ON (th.tid=td.tid) " .
+         "WHERE th.parent=$tid AND td.vid=$vid ORDER BY childcount<>0,th.tid");
+  while($row = db_fetch_object($qry)) {
+    $a[$row->tid] = $row;
+    if($row->childcount > 0) {
+    $a = classification_get_tree($vid,$row->tid,$level+1,$a);
+    }
+  }
+  return $a;
+}
+
+/**
+ * Function similar to above but does an additional term_node count
+ * @param $full = true produces the full object, otherwise is filtered to produce only those terms with associated content
+ */
+function classification_find_nodes($vid,$tid,$full=false,$level=0,$a=array()) {
+  $childcountqry = "(SELECT COUNT(*) FROM {term_hierarchy} WHERE parent=th.tid) AS childcount";
+  $contentqry = "(SELECT COUNT(*) FROM {term_node} WHERE tid=th.tid) AS contentcount";
+  $qry = db_query("SELECT th.tid,th.parent,td.name,$childcountqry,$contentqry,$level AS depth " .
+         "FROM {term_hierarchy} th INNER JOIN {term_data} td ON (th.tid=td.tid) " .
+         "WHERE th.parent=$tid AND td.vid=$vid ORDER BY childcount<>0,th.tid");
+  while($row = db_fetch_object($qry)) {
+  if(!$full) {
+    if($row->contentcount > 0) {
+      $a[] = $row;
+    }
+  }
+  else {
+    $a[] = $row;
+  }
+    if($row->childcount > 0) {
+    $a = classification_find_nodes($vid,$row->tid,$full,$level+1,$a);
+    }
+  }
+
+  return $a;
+}
+
+/**
+ * Get all the relationships (i.e. biological flags) associated with a term
+ * @param = $tid which, specifically is the taxonomic name as tid1 in the term_relation table
+ * @param = $vocab if passed will produce an output with all known keys
+ */
+function classification_get_flags($tid) {
+
+    $query = db_query("
+      SELECT
+        v.name as vocab,
+        v.vid,
+        td.tid,
+        td.name,
+        td.description,
+        trht.rtid
+      FROM
+      {term_data} td
+    INNER JOIN
+      {term_relation} tr ON (td.tid=tr.tid2)
+    INNER JOIN
+      {term_relation_has_type} trht ON (tr.trid=trht.trid)
+    INNER JOIN
+      {vocabulary} v ON (td.vid=v.vid)
+    WHERE tr.tid1=%d",$tid);
+
+  $flag = array();
+  while($result = db_fetch_object($query)) {
+    $flag[$result->vid] = $result;
+  }
+
+  return $flag;
+}
+
+/**
+ * Get the necessary vocabulary id for various forms
+ * @param $name = the name of the vocabulary
+ */
+function classification_get_vid($name) {
+  $vid = db_result(db_query("SELECT vid FROM {vocabulary} WHERE name = '%s'", $name));
+  return $vid;
+}
+
+function classification_get_rtid($name) {
+  $vid = db_result(db_query("SELECT vid FROM {term_relation_types} WHERE name = '%s'", $name));
+  return $vid;
+}
+
+/**
+ * Discover if a name has a relationship to its parent & spit back what it is
+ * @param $tid
+ */
+function classification_has_relationship_type($tid) {
+
+  $query = db_query("
+    SELECT
+      td.name as name,
+      td2.name as relation_type,
+      td3.tid as parent,
+      td3.name as parent_name
+    FROM
+      {term_data} td
+    INNER JOIN
+      {term_relation} tr ON (td.tid = tr.tid1)
+    INNER JOIN
+      {term_data} td2 ON (tr.tid2 = td2.tid)
+    INNER JOIN
+      {term_hierarchy} th ON (td.tid = th.tid)
+    INNER JOIN
+       {term_data} td3 ON (th.parent = td3.tid)
+    WHERE td.tid = %d and td2.vid=%d", $tid, CLASSIFICATION_RELATIONS);
+
+   return db_fetch_object($query);
+}
+
+/**
+ * Produce a synonym object given a tid
+ * @param $tid
+ */
+function classification_get_synonyms($tid) {
+
+    $query = db_query("
+      SELECT td.tid, td.vid, td.name as name, td2.name as type
+      FROM {term_data} td
+      INNER JOIN {term_hierarchy} th ON ( td.tid = th.tid )
+      INNER JOIN {term_relation} tr ON ( td.tid = tr.tid1 )
+      INNER JOIN {term_data} td2 ON ( tr.tid2 = td2.tid )
+      INNER JOIN {term_relation_has_type} trht ON ( tr.trid = trht.trid )
+      INNER JOIN {term_relation_types} trt ON ( trht.rtid = trt.rtid AND trt.vid=%d )
+      WHERE th.parent=%d AND td2.name <> 'vernacular name'",CLASSIFICATION_RELATIONS,$tid);
+
+  $output = array();
+
+  while($result = db_fetch_object($query)) {
+    $output[$result->tid] = $result;
+  }
+
+  return $output;
+}
+
+/**
+ * Produce an object of vernacular names and their ISO language code given the parent tid
+ * @param $tid
+ */
+function classification_get_vernaculars($tid) {
+
+    $query = db_query("
+    SELECT td.tid, td.name AS name, td.vid, td3.name AS language
+    FROM {term_data} td
+    INNER JOIN {term_hierarchy} th ON ( td.tid = th.tid )
+    INNER JOIN {term_relation} tr ON ( td.tid = tr.tid1 )
+    INNER JOIN {term_data} td2 ON ( tr.tid2 = td2.tid AND td2.vid = %d )
+    LEFT JOIN (
+    {term_relation} tr3
+    INNER JOIN {term_data} td3 ON ( tr3.tid2 = td3.tid AND td3.vid = %d )
+    ) ON ( td.tid = tr3.tid1 )
+    WHERE th.parent = %d AND td2.name = 'vernacular name'",CLASSIFICATION_RELATIONS, CLASSIFICATION_VERNS, $tid);
+
+  $output = array();
+
+  while($result = db_fetch_object($query)) {
+  $lang = explode(',',$result->language);
+    $output[$result->tid] = $result;
+    $output[$result->tid]->language = $lang[0];
+    $output[$result->tid]->iso = $lang[1];
+  }
+
+  return $output;
+}
+
+function classification_get_rank($tid) {
+
+  $output = array();
+  $result = db_fetch_object(db_query("
+  SELECT
+    td.tid,
+    td.name
+  FROM
+    {term_data} td
+  INNER JOIN
+    {term_relation} tr ON (td.tid=tr.tid2)
+  WHERE
+    tr.tid1 = %d AND td.vid = %d",$tid,CLASSIFICATION_RANKS));
+  $output[$tid] = array(
+    'tid' => $tid,
+    'tid_rank' => $result->tid,
+    'rank' => check_plain($result->name),
+  );
+  return $output;
+}
+
+function classification_get_valid_children($tid, $vid) {
+	$children = array();
+	$query = db_query("
+       SELECT
+         td.tid,
+         td.name,
+         td.vid
+       FROM
+         {term_data} td
+       INNER JOIN
+         {term_hierarchy} th ON (td.tid=th.tid) 
+       LEFT JOIN
+         ({term_relation} tr
+          INNER JOIN
+          {term_data} td2 ON (tr.tid2=td2.tid)
+         ) ON (tr.tid1=td.tid AND td2.vid = %d)
+     WHERE
+       th.parent=%d AND td.vid=%d AND ISNULL(td2.name)
+     ORDER BY
+       td.name",CLASSIFICATION_RELATIONS,$tid,$vid);
+
+  while($result = db_fetch_object($query)) {
+    $children[] = $result;  
+  }
+
+  return $children;
+}
+
+/**
+ * Check if a term should be italicized
+ * @param $tid
+ */
+function classification_check_italicize($tid) {
+
+  $italic = '';
+
+  //check what may have been user-specified
+  $italicized_ranks = variable_get('classification_italicize',array());
+  $italic = db_result(db_query("SELECT tid2 FROM {term_relation} WHERE tid1=%d",$tid));
+
+  if($italic && array_key_exists($italic,$italicized_ranks)) {
+    return TRUE;
+  }
+  else {
+    //apply italicized if a synonym but not a vernacular
+    $result = db_result(db_query("
+      SELECT
+          td.name
+      FROM
+      {term_data} td
+      INNER JOIN
+      {term_relation} tr ON (td.tid=tr.tid2)
+      WHERE tr.tid1=%d AND (td.vid=%d)",$tid,CLASSIFICATION_RELATIONS));
+
+    if($result && $result != 'vernacular name') {
+    return TRUE;
+    }
+    else {
+    return FALSE;
+    }
+   }
+}
+
+/**
+ * Return counts and kinds of media nodes
+ */
+function classification_term_count_media($tid) {
+  $output = array();
+  $result = db_query("
+  SELECT
+    n.nid, n.type, COUNT(*) AS count
+  FROM {node} n
+  JOIN {term_node} tn ON (n.nid=tn.nid)
+  WHERE tn.tid = %d
+  GROUP BY type",$tid);
+
+  while ($row = db_fetch_object($result)) {
+    $output[$row->type] = $row->count;
+  }
+
+  return $output;
+}
+
+
+function _classification_update_lists($fid,$title,$list) {
+  $list_arr = explode(" ",$list);
+  foreach ($list_arr as $item) {
+  $opt[] = $item;
+  }
+  $field = array(
+    'vid' => CLASSIFICATION_PRIMARY,
+    'fid' => 'field_' . $fid,
+    'title' => $title,
+    'module' => 'classification',
+    'type' => 'options',
+    'weight' => 0,
+    'settings' => array(),
+  );
+  $field['settings']['allowed_values'] = $opt;
+  $field['settings']['options_type'] = 'select';
+
+  db_query("INSERT INTO {taxonomy_enhancer_fields} (vid,fid,title,module,type,weight,settings) VALUES (%d,'%s','%s','%s','%s',%d,'%s')",$field['vid'],$field['fid'],$field['title'],$field['module'],$field['type'],$field['weight'],serialize($field['settings']));
+
+}
+
+function classification_cron() {
+  $time = variable_get('classification_logs_delete_interval',4);
+  db_query("DELETE FROM {classification_log} WHERE timestamp <= %d",time()-$time*604800);
+
+  //delete the classification_lost_found vocab if it's empty
+  if(CLASSIFICATION_LOST_FOUND) {
+    $count = db_result(db_query("SELECT COUNT(td.tid) FROM {term_data} td INNER JOIN {vocabulary} v ON (td.vid = v.vid) WHERE v.vid = %d", CLASSIFICATION_LOST_FOUND)); //JOIN to vocabulary table for better performance
+    if($count == 0) {
+    taxonomy_del_vocabulary(CLASSIFICATION_LOST_FOUND);
+    variable_del('classification_lost_found');
+    }
+  }
+
+  //if the classification_status_semaphore is older than 1 hour, delete it and reset the classification_status variable to ready
+  if(time() - variable_get('classification_status_semaphore', time()) > 1 * 60 * 60) {
+    variable_del('classification_status_semaphore');
+    variable_set('classification_status', 1);
+  }
+}
+
+/**
+ * Helper function to lock classification editing.
+ * @return
+ *    Array
+ *    - success Boolean, TRUE if classification locked.
+ *    - feedback (optional) message for user if success = FALSE.
+ */
+function _classification_lock_classification($wait = 20000) {
+
+  //set the classification status semaphore
+  variable_set('classification_status_semaphore', time());
+
+  // Don't use cached variable_get.
+  $classification_status = db_result(db_query("SELECT value FROM {variable} WHERE name = '%s'", 'classification_status'));
+  if (!$classification_status) {
+  // Lock classification to prevent further edits.
+    variable_set('classification_status', 0);
+    return TRUE;
+  }
+  elseif (unserialize($classification_status) > 0) {
+    // Lock classification to prevent further edits.
+    variable_set('classification_status', 0);
+    return TRUE;
+  }
+  elseif (is_numeric($wait) && $wait > 0) { // Classification is busy.
+    timer_start('classification_status_check');
+    while (timer_read('classification_status_check') < $wait) { // Keep checking for max 20 seconds
+      // Check db directly for classification_status, as variable_get is value cached from bootstrap.
+      if (unserialize(db_result(db_query("SELECT value FROM {variable} WHERE name = '%s'", 'classification_status'))) > 0) { // Classification is ready.
+        // Classification is ready to use so, lock it while we import to prevent further edits.
+        variable_set('classification_status', 0);
+        timer_stop('classification_status_check'); // Don't need it anymore.
+        return TRUE;
+      }
+      else {
+        sleep(2); // Sleep for 2 seconds, before checking again.
+      }
+    }
+    timer_stop('classification_status_check');
+  }
+  // If we get here we couldn't lock the classification it was busy.
+  return FALSE;
+}
+/**
+ * Helper function to unlock classification editing.
+ * @return unknown_type
+ */
+function _classification_unlock_classification() {
+  variable_set('classification_status', 1);
+  variable_del('classification_status_semaphore');
+}

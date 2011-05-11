@@ -1,0 +1,11 @@
+name = Modify Account
+description = "Adds Given Name and Surname fields to the users table and makes them required."
+package = "LifeDesk"
+project = "modify_account"
+
+dependencies[] = profile
+dependencies[] = token
+
+core = 6.x
+
+version = "6.x-6109"

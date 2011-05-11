@@ -1,0 +1,14 @@
+<?php
+// $Id
+
+function front_page_install() {
+}
+
+function front_page_uninstall() {
+  for($i=1;$i<=6;$i++) {
+    variable_del('front_' . $i . '_php');
+    variable_del('front_' . $i . '_redirect');
+    variable_del('front_' . $i . '_text');
+    variable_del('front_' . $i . '_type');
+  }
+}

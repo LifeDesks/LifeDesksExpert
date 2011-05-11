@@ -1,0 +1,8 @@
+name = LifeDesk Footer
+description = "Puts a footer on all pages."
+package = "LifeDesk"
+project = "lifedesk_foot"
+
+core = 6.x
+
+version = "6.x-1.0"

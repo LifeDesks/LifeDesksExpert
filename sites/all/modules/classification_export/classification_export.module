@@ -1,0 +1,1183 @@
+<?php
+/* $Id:$ */
+
+/** 
+ * @file classification_export.module
+ * This module makes it possible to export classification(s)
+ */
+
+/**
+ * Implementation of hook_perm
+ */
+function classification_export_perm() {
+  return array(
+    'export classification',
+    'share classification',
+  );
+}
+
+function classification_export_menu() {
+
+/**
+ * Menu items
+ */
+
+    $items['admin/classification/biological/export'] = array(
+       'title' => t('Download & Publish'),
+       'description' => t('Export and publish your classification.'),
+       'page callback' => 'drupal_get_form',
+       'page arguments' => array('classification_export_form'),
+       'access arguments' => array('export classification'),
+       'weight' => 9,
+    );
+
+    $items['admin/classification/biological/export/export'] = array(
+      'title' => t('Download'),
+      'description' => t('Download your classification(s).'),
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'weight' => 0,
+    );
+
+    $items['admin/classification/biological/export/share'] = array(
+      'title' => t('Publish'),
+      'description' => t('Share your classification.'),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('classification_export_share_form'),
+      'access arguments' => array('share classification'),
+      'type' => MENU_LOCAL_TASK,
+      'weight' => 1,
+      'parent' => 'admin/classification/biological/export',
+    );
+
+    $items['admin/classification/biological/export/share/unpublish'] = array(
+	    'title' => t('Unpublish'),
+	    'page callback' => 'drupal_get_form',
+	    'page arguments' => array('classification_export_share_delete_confirm'),
+	    'access arguments' => array('share classification'),
+	    'weight' => 1,
+	    'type' => MENU_CALLBACK
+    );
+
+    $items['admin/settings/classification_export'] = array(
+	  'title' => t("Classification Export settings"),
+	  'description' => t('Configure the behavior of the classification export module.'),
+	  'page callback' => 'drupal_get_form',
+	  'page arguments' => array('classification_export_settings_form'),
+	  'access arguments' => array('settings for classification'),
+	  'file' => 'classification_export.admin.inc',
+	);
+
+    $items['classification/export_generator'] = array(
+      'page callback' => 'classification_export_generator',
+      'access arguments' => array('access content'),
+      'type' => MENU_CALLBACK,
+    );
+
+    $items['classification.tar.gz'] = array(
+      'access arguments' => array('access content'),
+      'type' => MENU_CALLBACK,
+      'page callback' => 'classification_export_fetch',
+    );
+
+    $items['classification'] = array(
+	  'title' => t('Classification'),
+	  'description' => t('Published classification'),
+	  'access arguments' => array('access content'),
+	  'page callback' => 'classification_export_page',
+	);
+
+  return $items;
+}
+
+function classification_export_form(){
+
+  $module_path = drupal_get_path('module', 'classification_export') . '/';
+  drupal_add_css($module_path . 'css/classification_export.css');
+  drupal_add_js($module_path . 'js/classification_export.js');
+
+  $form = array();
+
+  $term = db_fetch_object(db_query("SELECT COUNT(*) as sum FROM term_data WHERE vid = %d", CLASSIFICATION_PRIMARY));
+  
+  if($term->sum < 1) {
+  	$message = t('Sorry, before you can export your primary classification, you must first import your names.');
+  	$form['message'] = array(
+  	  '#type' => 'markup',
+  	  '#value' => '<div class="messages error">' . $message . '</div>',
+  	);
+  	return $form;
+  }
+    
+  $form['file_export'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Classification Download'),
+  );
+
+  $vocabs = taxonomy_get_vocabularies();
+
+  foreach($vocabs as $vocab) {
+  if($vocab->module == 'classification') {
+		if($vocab->vid == CLASSIFICATION_PRIMARY) {
+		  $opt[$vocab->vid] = variable_get('site_name', 'Taxa') . ' classification';	
+		}
+		elseif ($vocab->name != 'Deleted Names') {
+		  $opt[$vocab->vid] = $vocab->name;
+		}
+	}	
+  }
+
+  if(count($opt) > 1) {
+    $form['file_export']['vid'] = array(
+      '#type' => 'radios',
+      '#title' => t('Classification'),
+      '#options' => $opt,
+      '#default_value' => CLASSIFICATION_PRIMARY,
+    );
+  }
+  else {
+  	$form['file_export']['vid'] = array(
+  		'#type' => 'hidden',
+  		'#value' => CLASSIFICATION_PRIMARY,
+  		);
+  }
+  
+  $ifopts = array(
+	'parentchild-txt' => t("Parent/Child, tab-delimited (.txt)"),
+	'parentchild-xls' => t("Parent/Child, Excel (.xls)"),
+	'parentchild-xlsx' => t("Parent/Child, Excel 2007 (.xlsx)"),
+	'fullhierarchy-txt' => t("Full hierarchy, tab-delimited (.txt)"),
+	'fullhierarchy-xls' => t("Full hierarchy, Excel (.xls)"),
+	'fullhierarchy-xlsx' => t("Full hierarchy, Excel 2007 (.xlsx)"),
+	'tcs' => t("Taxon Concept Schema (.xml)"),
+	'dwc' => t("DarwinCore (.xml)")
+  );
+  
+  $form['file_export']['export_format'] = array(
+	'#title' => t('File format'),
+	'#description' => t('Parent/Child and Full Hierarchy formats are identical to those required for !import where examples are provided', array('!import' => l(t('import'), 'admin/classification/biological/import'))),
+    '#type' => 'select',
+    '#options' => $ifopts,
+  );
+
+  $form['warning'] = array(
+    '#type' => 'markup',
+    '#value' => '<div class="messages warning">' . t('WARNING: producing a classification for download is computationally expensive. It will take approximately one minute per 40,000 names to produce your chosen format prior to being prompted with a download.') . '</div>',
+   );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Download'),
+    '#attributes' => array('class' => 'classification-buttons export'),
+  );
+  
+  return $form;
+}
+
+/**
+ * Export the vocabulary
+**/
+function classification_export_form_submit($form, &$form_state) {
+	     
+  $vid = $form_state['values']['vid'];
+
+  //bump up the execution time to 30 minutes for really big classifications
+  set_time_limit(1800);
+
+  switch($form_state['values']['export_format']) {
+	
+    case 'parentchild-txt':
+
+      module_load_include("inc", "classification_export", "formats/classification_export.parentchild");
+
+      $currname = gmdate("Ymd_Gi_") . variable_get('shortname', 'classification') . '_' . $vid . '_export.txt';
+	  header('Content-Type: text/plain; charset=utf-8');
+	  header('Content-Disposition: attachment; filename='.$currname);
+	
+	  _classification_export_parentchild(_classification_tree_export($vid));
+	
+    break;
+
+    case 'parentchild-xls':
+ 
+      $count = db_result(db_query("SELECT COUNT(*) FROM {term_data} WHERE vid=%d",$vid));
+      if($count>65500) {
+	    drupal_set_message(t("Sorry, the number of names in your classification will exceed the 65,500 row limit in Excel. Please choose a different export format."), "warning");
+	    return;
+      }
+
+      module_load_include("inc", "classification_export", "formats/classification_export.parentchild");
+
+      $sitename = variable_get('site_name','');
+
+      $objPHPExcel = _classification_export_parentchild_excel(_classification_tree_export($vid));
+
+	  $filename = gmdate("Ymd_Gi_") . variable_get('shortname', 'classification') . '_' . $vid . '_export.xls';
+
+	  header('Content-Type: application/vnd.ms-excel');
+	  header('Content-Disposition: attachment; filename='.$filename);
+	  header('Cache-Control: max-age=0');
+
+	  $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5');
+	  $objWriter->save('php://output');
+	
+    break;
+
+    case 'parentchild-xlsx':
+
+      module_load_include("inc", "classification_export", "formats/classification_export.parentchild");
+
+      $sitename = variable_get('site_name','');
+
+      $objPHPExcel = _classification_export_parentchild_excel(_classification_tree_export($vid));
+
+	  $filename = gmdate("Ymd_Gi_") . variable_get('shortname', 'classification') . '_' . $vid . '_export.xlsx';
+
+	  header('Content-Type: application/vnd.ms-excel');
+	  header('Content-Disposition: attachment; filename='.$filename);
+	  header('Cache-Control: max-age=0');
+
+	  $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel2007');
+	  $objWriter->save('php://output');
+	
+    break;
+
+    case 'fullhierarchy-txt':
+
+      module_load_include("inc", "classification_export", "formats/classification_export.fullhierarchy");
+
+      $currname = gmdate("Ymd_Gi_") . variable_get('shortname', 'classification') . '_' . $vid . '_export.txt';
+	  header('Content-Type: text/plain; charset=utf-8');
+	  header('Content-Disposition: attachment; filename='.$currname);
+     _classification_export_fullhierarchy(_classification_tree_export($vid,true));
+	
+    break;
+
+    case 'fullhierarchy-xls':
+
+      $count = db_result(db_query("SELECT COUNT(*) FROM {term_data} WHERE vid=%d",$vid));
+      if($count>65500) {
+	     drupal_set_message(t("Sorry, the number of names in your classification will exceed the 65,500 row limit in Excel. Please choose a different export format."), "warning");
+	     return;
+      }
+
+      module_load_include("inc", "classification_export", "formats/classification_export.fullhierarchy");
+
+      $sitename = variable_get('site_name','');
+
+      $objPHPExcel = _classification_export_fullhierarchy_excel(_classification_tree_export($vid));
+
+	  $filename = gmdate("Ymd_Gi_") . variable_get('shortname', 'classification') . '_' . $vid . '_export.xls';
+
+	  header('Content-Type: application/vnd.ms-excel');
+	  header('Content-Disposition: attachment; filename='.$filename);
+	  header('Cache-Control: max-age=0');
+
+	  $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5');
+	  $objWriter->save('php://output');
+	
+    break;
+
+    case 'fullhierarchy-xlsx':
+
+      module_load_include("inc", "classification_export", "formats/classification_export.fullhierarchy");
+
+      $sitename = variable_get('site_name','');
+
+      $objPHPExcel = _classification_export_fullhierarchy_excel(_classification_tree_export($vid));
+
+	  $filename = gmdate("Ymd_Gi_") . variable_get('shortname', 'classification') . '_' . $vid . '_export.xlsx';
+
+	  header('Content-Type: application/vnd.ms-excel');
+	  header('Content-Disposition: attachment; filename='.$filename);
+	  header('Cache-Control: max-age=0');
+
+	  $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel2007');
+	  $objWriter->save('php://output');
+
+    break;
+
+    case 'tcs':
+      module_load_include("inc", "classification_export", "formats/classification_export.tcs");
+			
+	  global $conf;
+	  $sitename = variable_get('site_name','');
+	  $shortname = variable_get('shortname' ,'');
+	
+	  ob_start();
+	  echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+	  echo <<<END
+<DataSet 
+xmlns="http://www.tdwg.org/schemas/tcs/1.01" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://www.tdwg.org/schemas/tcs/1.01 http://www.tdwg.org/standards/117/files/TCS101/v101.xsd">
+END;
+	  echo "\n" . "<MetaData>" . "\n";
+	  echo "<Simple>LifeDesk: ".$sitename."; http://".$shortname."." . $conf['_lifedesks_domain'] . "/</Simple>" . "\n";
+	  echo "</MetaData>" . "\n";
+	
+	  _classification_export_tcs(_classification_tree_export($vid,false));
+
+	  echo "</DataSet>";
+	  $out = ob_get_contents();
+	  ob_end_clean();
+
+	  $constant_name = variable_get('shortname','classification') . '_' . $vid . '_last_export_tcs.xml.gz';
+	  $currname = gmdate("Ymd_Gi_") . variable_get('shortname','classification') . '_' . $vid . '_export_tcs.xml';
+	
+	  header('Content-type: text/xml');
+	  header('Content-Disposition: attachment; filename='.$currname);
+	  echo ($out);
+    break;
+
+    case 'dwc':
+      module_load_include("inc", "classification_export", "formats/classification_export.dwc");
+
+      global $conf;
+	  $sitename = variable_get('site_name','');
+	  $shortname = variable_get('shortname' ,'');
+	
+	  ob_start();
+	  echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+	  echo <<<END
+<dwr:DarwinRecordSet 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://rs.tdwg.org/dwc/dwcrecord/  http://rs.tdwg.org/dwc/xsd/tdwg_dwc_classes.xsd"
+xmlns:dcterms="http://purl.org/dc/terms/"
+xmlns:dwc="http://rs.tdwg.org/dwc/terms/"
+xmlns:dwr="http://rs.tdwg.org/dwc/dwcrecord/">
+END;
+
+	  _classification_export_dwc(_classification_tree_export($vid,false),$shortname);
+	
+	  echo "</dwr:DarwinRecordSet>" . "\n";
+	
+	  $out = ob_get_contents();
+	  ob_end_clean();
+
+	  $constant_name = variable_get('shortname','classification') . '_' . $vid . '_last_export_dwc.xml.gz';
+	  $currname = gmdate("Ymd_Gi_") . variable_get('shortname','classification') . '_' . $vid . '_export_dwc.xml';
+	
+	  header('Content-type: text/xml');
+	  header('Content-Disposition: attachment; filename='.$currname);
+	  echo ($out);
+      
+    break;	
+  }
+}
+
+function classification_export_share_form(&$form_state) {
+
+	$form = array();
+	
+	_classification_export_check_settings();
+	
+	$module_path = drupal_get_path('module', 'classification_export') . '/';
+	drupal_add_css($module_path . 'css/classification_export.css');
+	
+	$term = db_fetch_object(db_query("SELECT COUNT(*) as sum FROM term_data WHERE vid = %d", CLASSIFICATION_PRIMARY));
+
+    if($term->sum < 1) {
+  	  $message = t('Sorry, before you can publish your primary classification, you must first import your names.');
+  	  $form['message'] = array(
+  	    '#type' => 'markup',
+  	    '#value' => '<div class="messages error">' . $message . '</div>',
+  	  );
+  	  return $form;
+    }
+	
+	$creativecommons_lite_path = '/' . drupal_get_path('module', 'creativecommons_lite') .'/images/buttons_large/';
+	$cc_link = 'http://creativecommons.org/licenses/';
+	$cc_version = '3.0';
+	
+	$classification_export = variable_get('classification_export', array());
+
+    $submitted = ($form_state['storage']['classification_export']) ? ' classification-export-success' : '';
+
+	  $form['description'] = array(
+	    '#type' => 'markup',
+	    '#value' => '<div class="messages status' . $submitted . '"><img src="/' . drupal_get_path('module', 'classification_export') . '/images/gna.gif" alt="Global Names" align="right" style="margin:10px">' . 
+	
+	t('Use this form to publish your primary classification for eventual inclusion in the !link where it will be available for consumption by the Encyclopedia of Life, other biodiversity data aggregators, and by people. More details about the Global Names Architecture may be accessed !gnadoc. Your published package will consist of a zipped folder with a metadata file containing your desired attribution (see form below), a full hierarchy version of your classification in Excel 2007, and two csv-based Darwin Core Archive files: one for your hierarchy and the other for your vernacular names (if present). When further edits are made to your classification, you may return to this form and publish a new version.
+	<p><strong>We recommend that you produce no more than four versions per year each with a distinct version number. As currently envisioned, versions of your published classifications will be retained in their entirety in the Global Names Architecture as independent entities.</strong></p>
+	<p>By default, your classification will have a Creative Commons !cc0 for maximum portability and reuse of your work.</p>
+	<p>Please be aware that you should not publish a classification that you obtained from another source. For example, if you imported a hierarchy from ITIS or the Catalogue of Life partnership and made few changes, then you should not publish the classification. In fact, you should acknowledge somewhere on your LifeDesk the source of your classification.</p>
+	<p>If you have made substantial improvements to a classification, then you are encouraged to offer this classification to the Encyclopedia of Life to be used as an alternate browsing hierarchy. If you have registered as an EOL Content Partner, please go to the !CPR and in the same form where you provided your resource URL you can also provide the URL to your classification. The Encyclopedia of Life team will review it and determine if it is appropriate to be shown as an alternate browsing hierarchy and a source of related names.</p>', 
+	array(
+		'!cc0' => l(t('No Copyright'), $cc_link . 'publicdomain/zero/1.0/', array('absolute' => true, 'attributes' => array('target' => '_blank'))), 
+		'!link' => l(t('Global Names Architecture'), 'http://www.globalnames.org/', array('absolute' => true, 'attributes' => array('target' => '_blank'))), 
+		'!gnadoc' => l(t('here (PDF)'), 'http://help.lifedesks.org/files/help/gna.pdf', array('absolute' => true)), '!license' => '<img src="' . $creativecommons_lite_path . 'publicdomain.png" alt="public domain" />', 
+		'!CPR' => l(t('Content Partner Registry'), 'http://www.eol.org/content_partner', array('absolute' => true, 'attributes' => array('target' => '_blank')))
+		)) . '</div>',
+	  );
+
+	$form['classification_export_title'] = array(
+	  '#title' => t('Title'),
+	  '#description' => t('The title of the classification without authorship or additional information. <em>e.g.</em> The world spider classification.'),
+	  '#type' => 'textfield',
+	  '#size' => 100,
+	  '#maxlength' => 400,
+	  '#default_value' => $classification_export['title'],
+	  '#required' => true,
+	);
+	
+	//editor, administrator, owner
+	$ld_support = variable_get("lifedesk_support", 0);
+	$primary_authors = array('' => t('--Choose--'));
+	$perms = "'" . implode("','", user_roles(true,'share classification')) . "'";
+	$qry = db_query("SELECT u.uid, u.givenname, u.surname FROM {users} u INNER JOIN {users_roles} ur ON (u.uid=ur.uid) INNER JOIN {role} r ON (r.rid=ur.rid) WHERE r.name IN ($perms) AND u.uid > 1 AND u.uid !=".$ld_support);
+	while($result = db_fetch_array($qry)) {
+	  $primary_authors[$result['uid']] = $result['surname'].", ".$result['givenname'];
+	}
+
+	$form['classification_export_primary_author'] = array(
+	  '#title' => t('Primary Author'),
+	  '#description' => t('Choose the primary author of the classification. Individuals presented are those with editor or administrator roles'),
+	  '#type' => 'select',
+	  '#options' => $primary_authors,
+	  '#default_value' => $classification_export['primary_author'],
+	  '#required' => true,
+	);
+		
+	$form['classification_export']['classification_export_citation']['content'] = array(
+	  '#title' => t('Desired citation format'),
+	  '#description' => t('<em>e.g.</em> Smith, John and Mary Jackson. !year. The !site classification. !link', array('!year' => gmdate("Y",time()), '!site' => variable_get('site_name', t('World Spider')),'!link' => 'http://' . $_SERVER['HTTP_HOST'] . '.')),
+	  '#type' => 'textarea',
+	  '#rows' => 2,
+	  '#default_value' => $classification_export['citation'],
+	  '#required' => true,
+	  '#parents' => array('classification_export_citation'),
+	);
+	
+	$form['classification_export']['classification_export_citation']['format'] = filter_form(FILTER_FORMAT_DEFAULT, NULL, array('classification_export', 'classification_export_citation'));
+	
+	$form['classification_export_version'] = array(
+	  '#title' => t('Version'),
+	  '#description' => t('<em>e.g.</em> 2.0'),
+	  '#type' => 'textfield',
+	  '#size' => 10,
+	  '#default_value' => $classification_export['version'],
+	  '#required' => true,
+	);
+
+	$form['classification_export']['classification_export_description']['content'] = array(
+	  '#title' => t('Abstract'),
+	  '#description' => t('Recommended good practice is to describe the taxonomic scope, frequency of new revisions and the rules you used to construct your classification.'),
+	  '#type' => 'textarea',
+	  '#rows' => 3,
+	  '#default_value' => $classification_export['description'],
+	  '#required' => true,
+	  '#parents' => array('classification_export_description'),
+	);
+	
+	$form['classification_export']['classification_export_description']['format'] = filter_form(FILTER_FORMAT_DEFAULT, NULL, array('classification_export', 'classification_export_description'));
+	
+	$form['classification_export_license'] = array(
+	  '#title' => t('License'),
+	  '#type' => 'radios',
+	  '#options' => _classification_export_license(),
+	  '#required' => true,
+	  '#default_value' => ($classification_export['license']) ? $classification_export['license'] : 'cc0',
+	  '#attributes' => array('class' => 'cc-license-list'),
+	);
+
+	if(!$classification_export['published']) {
+		$form['classification_export_publish'] = array(
+		  '#title' => t('Publish to the Global Names Architecture'),
+		  '#type' => 'checkbox',
+		  '#default_value' => ($classification_export['published']) ? $classification_export['published'] : 0,
+		  '#description' => t('If this checkbox is not selected, your classification will still be presented on the LifeDesks Classification list at !link.<br>Once you publish to the GNA, your classification cannot be unpublished.', array('!link' => l('http://www.lifedesks.org/classifications', array('absolute' => true)))),
+		);
+	}
+	else {
+		$form['classification_export_publish'] = array(
+			'#type' => 'hidden',
+			'#value' => 1,
+		);
+	}
+	
+	$form['buttons']['submit'] = array(
+	  '#type' => 'submit',
+	  '#value' => (!$classification_export) ? t('Submit') : t('Update'),
+	  '#submit' => array('classification_export_share_form_submit'),
+	);
+
+	if($classification_export && !$classification_export['published']) {
+		$form['buttons']['delete'] = array(
+		  '#type' => 'submit',
+		  '#value' => t('Unpublish'),
+		  '#submit' => array('classification_export_share_delete_submit'),
+		  '#access' => user_access('share classification'),
+		);
+	}
+	elseif ($classification_export && $classification_export['published']) {
+		$form['buttons']['delete'] = array(
+		  '#type' => 'submit',
+		  '#value' => t('Unpublish'),
+		  '#submit' => array('classification_export_share_delete_submit'),
+		  '#access' => user_access('administer site configuration'),
+		);
+	}
+	else {}
+
+	return $form;
+}
+
+function classification_export_share_form_submit($form, &$form_state) {
+
+	global $base_url, $user;
+
+    $values = $form_state['values'];
+
+    $classification_export = array(
+	  'primary_author' => $values['classification_export_primary_author'],
+	  'title' => $values['classification_export_title'],
+	  'citation' => $values['classification_export_citation'],
+	  'version' => $values['classification_export_version'],
+	  'description' => $values['classification_export_description'],
+	  'license' => $values['classification_export_license'],
+	  'published' => $values['classification_export_publish'],
+	  'updated' => time(),
+	  'success' => false,
+	);
+	
+	variable_set('classification_export', $classification_export);
+
+    $req = _classification_export_do_post_request(url('classification/export_generator', array('absolute' => true)), 'uid='.$user->uid.'&sid='.$user->sid);
+
+	drupal_set_message(t('Your classification is in the process of being created and wrapped-up. You will soon receive an email notification that will contain a link to download and preview the package.'));
+	$form_state['storage']['classification_export'] = true;
+}
+
+function classification_export_share_delete_confirm(&$form_state) {
+  $form = array();
+  return confirm_form($form,
+    t('Are you sure you want to unpublish your classification?'),
+    isset($_GET['destination']) ? $_GET['destination'] : 'admin/classification/biological/export/share',
+    t('Your settings will be removed and your export package deleted.'),
+    t('Unpublish'),
+    t('Cancel')
+  );
+}
+
+function classification_export_share_delete_confirm_submit($form, &$form_state) {
+  if ($form_state['values']['confirm']) {
+	$filename = variable_get('shortname','') . '.tar.gz';
+    variable_del('classification_export');
+    $classification_export_path = file_create_path('classification_export');
+    $current = rtrim($classification_export_path, '/') .'/shared/' . $filename;
+    file_delete($current);
+    db_query("DELETE FROM {files} WHERE filename='%s'", $filename);
+  }
+
+  menu_link_delete(NULL, 'classification');
+  drupal_flush_all_caches();
+
+  $form_state['redirect'] = '<front>';
+}
+
+function classification_export_share_delete_submit($form, &$form_state) {
+  $form_state['redirect'] = array('admin/classification/biological/export/share/unpublish');
+}
+
+function _classification_export_check_settings() {
+  // File paths
+  $classification_export_path = file_create_path('classification_export');
+
+  $current = rtrim($classification_export_path, '/') .'/current';
+  $archive = rtrim($classification_export_path, '/') .'/archive';
+  $shared = rtrim($classification_export_path, '/') . '/shared';
+
+  if (!file_check_directory($classification_export_path, FILE_CREATE_DIRECTORY)) {
+    return false;
+  }
+  if (!file_check_directory($current, FILE_CREATE_DIRECTORY)) {
+    return false;
+  }
+  if (!file_check_directory($archive, FILE_CREATE_DIRECTORY)) {
+    return false;
+  }
+  if (!file_check_directory($shared, FILE_CREATE_DIRECTORY)) {
+    return false;
+  }
+
+  return true;
+}
+
+function _classification_tree_export($vid, $sort=true) {
+
+  //bump-up the memory limit
+  ini_set('memory_limit','1000M');
+
+	  $qry = db_query("
+	    SELECT 
+	      td.tid,
+	      td.name,
+	      td.description,
+	      td2.name as status,
+	      th.parent as parent
+	    FROM
+	      {term_data} td 
+	    INNER JOIN 
+	      {term_hierarchy} th ON (td.tid = th.tid) 
+	    LEFT JOIN ( 
+	     {term_relation} tr 
+	     INNER JOIN {term_data} td2 ON (tr.tid2 = td2.tid AND td2.vid = %d) 
+	    ) ON (td.tid = tr.tid1)   
+	    WHERE 
+	      td.vid = %d", CLASSIFICATION_RELATIONS, $vid);
+
+  $names = array();
+
+  while($result = db_fetch_object($qry)) {
+    $rank = classification_get_rank($result->tid);
+	$result->rank = $rank[$result->tid]['rank'];
+	$result->synonyms = classification_get_synonyms($result->tid);
+	$result->vernaculars = classification_get_vernaculars($result->tid);
+	$names[$result->tid] = $result;	
+  }
+
+  //will be memory intensive with lots of names
+  if($sort) uasort($names, '_classification_export_sort_parent');
+
+  return $names;
+}
+
+/**
+ * Helper function to sort by the parent
+ */
+function _classification_export_sort_parent($a,$b) {
+	return $a->parent-$b->parent;
+}
+
+/**
+ * Helper function to do htmlentities
+ */
+function _classification_export_encode($string) {
+  return str_replace("&", "&amp;", $string);
+}
+
+
+function _classification_export_do_post_request($url, $data) {
+  $output = '';
+  $context = stream_context_create(array(
+    'http' => array(
+    'method'  => 'POST',
+    'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
+    'content' => $data,
+    'timeout' => 5,
+    ),
+  ));
+
+  $output = file_get_contents($url, NULL, $context); 
+
+  return $output;
+}
+
+/**
+ * Callback function to generate the export package
+ * Accepts the user object as posted parameters, so use this to check the sessions table
+ */
+function classification_export_generator() {
+
+	/// script can run for 30 minutes
+	set_time_limit(1800);
+	
+    $uid = $_POST['uid'];
+    $sid = $_POST['sid'];
+
+    $time = time();
+
+    $classification_export_path = file_create_path('classification_export');
+	$newArchiveDir = rtrim($classification_export_path, '/') .'/archive/' . $time;
+
+    $result = db_result(db_query("SELECT uid FROM {sessions} WHERE uid=%d AND sid='%s'", $uid, $sid));
+  
+    if(!$result) {
+	  drupal_not_found();
+	  return;
+    }
+
+	/// continue running once client disconnects
+	ignore_user_abort(true);
+	session_write_close();
+
+    $response = t("Execution is underway...");
+
+	/// tell the client the request has finished processing
+	header('Connection: close');
+	header("Content-Length: " . mb_strlen($response));
+    echo $response;
+	flush();
+
+	/* this is where code that will be executed
+	* after the client disconnects will run
+	*/
+	_classification_export_generator_async($uid, $time);
+
+	$user = user_load($uid);
+	$superadmin = user_load(1);
+	
+	$accounts[$user->uid] = $user;
+	$accounts[$superadmin->uid] = $superadmin;
+	
+	if(file_exists($newArchiveDir . '.tar.gz')) {
+	  classification_export_notify($accounts);	
+	}
+	else {
+	  classification_export_notify($accounts[$superadmin->uid],false);
+	}
+}
+
+function _classification_export_generator_async($uid, $time) {
+  global $base_url;
+
+  //clear out dirty names first if there are any
+  module_load_include('inc', 'classification', 'includes/classification.edit');
+
+  //delete names whose parent is the same as their child
+  $qry = db_query("SELECT td.tid, td.name FROM {term_data} td INNER JOIN {term_hierarchy} th ON (td.tid=th.tid) WHERE th.tid=th.parent AND td.vid=%d", CLASSIFICATION_PRIMARY);
+
+  while($term = db_fetch_object($qry)) {
+    _classification_export_garbage_collect($term);	
+  }
+
+  //delete names without a corresponding row in the term_hierarchy table
+  $qry = db_query("SELECT td.tid, td.name FROM {term_data} td LEFT JOIN {term_hierarchy} th ON (td.tid = th.tid) WHERE th.tid IS NULL AND td.vid=%d",CLASSIFICATION_PRIMARY);
+
+  while($term = db_fetch_object($qry)) {
+    _classification_export_garbage_collect($term);
+  }
+
+  //find names whose parent is in wrong vocab or does not have a root with th.parent = 0
+  $qry = db_query("SELECT td.tid FROM {term_data} td INNER JOIN {term_hierarchy} th ON (td.tid = th.tid) WHERE td.vid=%d", CLASSIFICATION_PRIMARY);
+
+  while($term = db_fetch_object($qry)) {
+    $paths = taxonomy_get_parents_all($term->tid);
+	$last = array_pop($paths);
+	$last->parent = db_result(db_query("SELECT parent FROM {term_hierarchy} WHERE tid=%d",$last->tid));
+	if($last->vid != CLASSIFICATION_PRIMARY || $last->parent != 0) {
+	  foreach($paths as $path) {
+	    _classification_export_garbage_collect($path);	
+	  }
+	  _classification_export_garbage_collect($last);
+	}
+  }
+  //finished clearing out dirty names, now we can get started
+
+  //make the new time-stamped directory
+  $classification_export_path = file_create_path('classification_export');
+  $newArchiveDir = rtrim($classification_export_path, '/') .'/archive/' . $time;
+  file_check_directory($newArchiveDir, FILE_CREATE_DIRECTORY);
+
+  $classification_export_var = variable_get('classification_export', array());
+
+  $version = ($classification_export_var['version']) ? htmlspecialchars($classification_export_var['version']) : '';
+  $citation = ($classification_export_var['citation']) ? htmlspecialchars($classification_export_var['citation']) : '';
+  $description = ($classification_export_var['description']) ? htmlspecialchars($classification_export_var['description']) : '';
+  $license = ($classification_export_var['license']) ? $classification_export_var['license'] : 'cc0';
+  $published = ($classification_export_var['published']) ? true : false;
+
+  $shortname = variable_get('shortname', 'classification');
+
+  $clusterNew[0] = 'metadata.txt';  //human-readable text file
+  $clusterNew[1] = $shortname . '.xlsx';  //Excel 2007 full hierarchy
+  $clusterNew[2] = $shortname . '.xml';  //DarwinCore xml file
+  $clusterNew[3] = 'eml.xml'; //Ecological Markup xml file
+  $clusterNew[4] = 'meta.xml';  //Darwin Core Archive meta file
+  $clusterNew[5] = 'DarwinCore.txt'; //Darwin Core Archive classification, similar to parent-child
+  $clusterNew[6] = 'VernacularName.txt'; //Darwin Core Archive vernaculars 
+
+  $clusterArch[0] = 'metadata_' . $time . '.txt';
+  $clusterArch[1] = $shortname . '_' . $time . '.xlsx';
+  $clusterArch[2] = $shortname . '_' . $time . '.xml';
+  $clusterArch[3] = 'eml_' . $time . '.txt';
+  $clsuterArch[4] = 'meta_' . $time . '.xml';
+  $clusterArch[5] = 'DarwinCore_' . $time . '.txt';
+  $clusterArch[6] = 'VernacularName_' . $time . '.txt';
+
+  $site_directory = getcwd() . base_path() . file_create_path('classification_export');
+
+  $textfile  = 'URL:::' . $base_url . "\n";
+  $textfile .= 'UNIXTIMEUPDATED:::' . $time . "\n";
+  $textfile .= 'VERSION:::' . $version . "\n";
+  $textfile .= 'CITATION:::' . $citation . "\n";
+  $textfile .= 'DESCRIPTION:::' . $description . "\n";
+  $textfile .= 'LICENSE:::' . $license;
+
+  //save the metadata readme file for humans
+  file_save_data($textfile, 'classification_export/current/' . $clusterNew[0], FILE_EXISTS_REPLACE);
+  file_save_data($textfile, 'classification_export/archive/' . $time . '/' . $clusterArch[0], FILE_EXISTS_REPLACE);
+
+  //save the Darwin Core archive tab-delimited files for the classification and for the vernaculars
+  module_load_include("inc", "classification_export", "formats/classification_export.dwctab");
+  $dwc = _classification_export_dwc_tab(_classification_tree_export(CLASSIFICATION_PRIMARY),$shortname);
+
+  file_save_data($dwc['classification'], 'classification_export/current/' . $clusterNew[5], FILE_EXISTS_REPLACE);
+  file_save_data($dwc['vernaculars'], 'classification_export/current/' . $clusterNew[6], FILE_EXISTS_REPLACE);
+
+  file_save_data($dwc['classification'], 'classification_export/archive/' . $time . '/' . $clusterArch[5], FILE_EXISTS_REPLACE);
+  file_save_data($dwc['vernaculars'], 'classification_export/archive/' . $time . '/' . $clusterArch[6], FILE_EXISTS_REPLACE);
+
+  //save the Excel file for humans
+  module_load_include("inc", "classification_export", "formats/classification_export.fullhierarchy");
+  $objPHPExcel = _classification_export_fullhierarchy_excel(_classification_tree_export(CLASSIFICATION_PRIMARY));
+  $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel2007');
+  $objWriter->save($site_directory . '/current/' . $clusterNew[1]);
+  $objWriter->save($site_directory . '/archive/' . $time . '/' . $clusterArch[1]);
+
+  //make the Ecolological Markup Language file. See: http://knb.ecoinformatics.org/software/eml/eml-2.0.1/index.html
+  ob_start();
+  echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+  echo <<<END
+<eml:eml
+packageId="eml.1.1" system="knb"
+xmlns:eml="eml://ecoinformatics.org/eml-2.1.0"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="eml://ecoinformatics.org/eml-2.1.0 eml.xsd">
+END;
+  echo "\n" . "<dataset id=\"" . $shortname . ":version:" . $version . "\">" . "\n";
+  echo "<title>" . variable_get('site_name', 'LifeDesks') . " " . t('Classification') . "</title>" . "\n";
+  
+  //find all users that can edit classification to build the attribution
+  $roles = user_roles(true,'edit classification');
+  $owner = 1;
+  $valid_users = array();
+  foreach($roles as $key => $role) {
+    $qry = db_query("SELECT uid FROM {users_roles} WHERE rid=%d",$key);
+    while($result = db_fetch_array($qry)) {
+	  $valid_users[$result['uid']] = $result['uid'];
+	}
+  }
+  //remove the LifeDesks Support account from list
+  $ldsupport = variable_get('lifedesk_support',0);
+  unset($valid_users[$ldsupport]);
+  foreach($valid_users as $valid_user) {
+	  $loaded_user = user_load($valid_user);
+	  if(array_search('owner', $loaded_user->roles)) $owner = $loaded_user->uid;
+	  echo "<creator id=\"" . $loaded_user->uid . "\" scope=\"document\">" . "\n";
+	  echo "<individualName>" . "\n";
+	  if($loaded_user->surname && $loaded_user->givenname) {
+		echo "<givenName>" . $loaded_user->givenname . "</givenName>" . "\n";
+	    echo "<surName>" . $loaded_user->surname . "</surName>" . "\n";	
+	  }
+	  else {
+	    echo "<userId>" . $loaded_user->name . "</userId>" . "\n";	
+	  }
+	  echo "</individualName>" . "\n";
+	  echo "<electronicMailAddress>" . $loaded_user->mail . "</electronicMailAddress>" . "\n";
+	  echo "</creator>" . "\n";
+  }
+
+  echo "<metadataProvider>" . "\n";
+  echo "<organizationName>Encyclopedia of Life: LifeDesks (http://www.lifedesks.org)</organizationName>" . "\n";
+  echo "</metadataProvider>" . "\n";
+  echo "<pubDate>" . gmdate('c', $time) . "</pubDate>" . "\n";
+  echo "<abstract>" . htmlspecialchars($description) . "</abstract>" . "\n";
+  echo "<intellectualRights>Creative Commons: " . $license . "</intellectualRights>" . "\n";
+  echo "<distribution>" . "\n";
+  echo "<online>" . "\n";
+  echo "<url function=\"download\">" . $base_url . "/" . "classification.tar.gz</url>" . "\n";
+  echo "</online>" . "\n";
+  echo "</distribution>" . "\n";
+  echo "<contact>" . "\n";
+  echo "<references>" . $owner . "</references>" . "\n";
+  echo "</contact>" . "\n";
+  echo "<publisher>" . "\n";
+  echo "<organizationName>The Marine Biological Laboratory</organizationName>" . "\n";
+  echo "</publisher>" . "\n";
+  echo "</dataset>" . "\n";
+  echo "<additionalMetadata>" . "\n";
+  echo "<metadata>" . "\n";
+  echo "<citation>" . htmlspecialchars($citation) . "</citation>" . "\n";
+  echo "</metadata>" . "\n";
+  echo "</additionalMetadata>" . "\n";
+  echo "</eml:eml>";
+  $eml = ob_get_contents();
+  ob_end_clean();
+
+  //save the Ecological Markup Language file
+  file_save_data($eml, 'classification_export/current/' . $clusterNew[3], FILE_EXISTS_REPLACE);
+  file_save_data($eml, 'classification_export/archive/' . $time . '/' . $clusterArch[3], FILE_EXISTS_REPLACE);
+
+  //create the meta.xml Darwin Core Archive descriptor file. See: http://code.google.com/p/gbif-ecat/wiki/DwCArchive#Meta_%28Descriptor%29_file_%28meta.xml%29
+  ob_start();
+  echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+  echo <<<END
+<archive xmlns="http://rs.tdwg.org/dwc/text/" 
+	     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	     xsi:schemaLocation="http://rs.tdwg.org/dwc/text/ http://rs.tdwg.org/dwc/text/tdwg_dwc_text.xsd">
+<core encoding="UTF-8" fieldsTerminatedBy="\\t" linesTerminatedBy="\\n" fieldsEnclosedBy="" ignoreHeaderLines="1" rowType="http://rs.tdwg.org/dwc/terms/Taxon">
+<files>
+<location>$clusterNew[5]</location>
+</files>
+<id index="0" term="http://rs.tdwg.org/dwc/terms/taxonID"></id>
+<field index="1" term="http://purl.org/dc/terms/source"></field>
+<field index="2" term="http://rs.tdwg.org/dwc/terms/scientificName"></field>
+<field index="3" term="http://rs.tdwg.org/dwc/terms/parentNameUsageID"></field>
+<field index="4" term="http://rs.tdwg.org/dwc/terms/taxonRank"></field>
+<field index="5" term="http://rs.tdwg.org/dwc/terms/taxonomicStatus"></field>
+</core>
+<extension encoding="UTF-8" fieldsTerminatedBy="\\t" linesTerminatedBy="\\n" fieldsEnclosedBy="" ignoreHeaderLines="1" rowType="http://rs.gbif.org/ipt/terms/1.0/VernacularName">
+<files>
+<location>$clusterNew[6]</location>
+</files>
+<coreid index="0" term="http://rs.tdwg.org/dwc/terms/taxonID"></coreid>
+<field index="1" term="http://rs.tdwg.org/dwc/terms/vernacularName"></field>
+<field index="2" term="http://purl.org/dc/terms/language"></field>
+</extension>
+</archive>
+END;
+  $eml = ob_get_contents();
+  ob_end_clean();
+
+  //save the eml.xml file
+  file_save_data($eml, 'classification_export/current/' . $clusterNew[4], FILE_EXISTS_REPLACE);
+  file_save_data($eml, 'classification_export/archive/' . $time . '/' . $clusterArch[4], FILE_EXISTS_REPLACE);
+
+  //create ther server commands
+  $commandNew = "cd $site_directory/current
+		      tar cfz ../shared/$shortname.tar.gz *.*";
+  $commandArch = "cd $site_directory/archive
+			  tar cfz $shortname_$time.tar.gz $time/
+			  rm -rf $time";
+
+  _classification_export_gz($commandNew);
+  _classification_export_gz($commandArch);
+
+  //put file entry in the files table if it doesn't already exist
+  $result = db_result(db_query("SELECT fid FROM {files} WHERE filename='%s'", $shortname.'.tar.gz'));
+
+  $fileNew = array(
+	'fid' => $result,
+    'uid' => $uid,
+	'filename' => $shortname . '.tar.gz',
+	'filepath' => file_create_path('classification_export') . '/shared/' . $shortname . '.tar.gz',
+	'filemime' => 'application/x-gzip',
+	'filesize' => filesize($site_directory . '/shared/'.$shortname.'.tar.gz'),
+	'status' => FILE_STATUS_PERMANENT,
+	'timestamp' => $time,
+  );
+
+  $primary_key = ($result) ? array('fid') : array();
+  drupal_write_record('files', $fileNew, $primary_key);
+
+  //save the archived file to the files table as well
+  $fileArch = array(
+    'uid' => $uid,
+    'filename' => $shortname . '_' . $time . '.tar.gz',
+    'filepath' => file_create_path('classification_export') . '/archive/' . $shortname . '_' . $time . '.tar.gz',
+    'filemime' => 'application/x-gzip',
+    'filesize' => filesize($site_directory . '/archive/' . $shortname . '_' . $time . '.tar.gz'),
+    'status' => FILE_STATUS_PERMANENT,
+    'timestamp' => $time,
+  );
+  drupal_write_record('files', $fileArch);
+
+  $mlid = db_result(db_query("SELECT mlid FROM {menu_links} WHERE module='classification_export' AND menu_name='primary-links'"));
+
+  if(!$mlid) {
+      $link = array(
+        'menu_name'     => 'primary-links',
+        'weight'        => -8,
+        'link_title'    => t('Classification'),
+        'module'        => 'classification_export',
+        'link_path'     => drupal_get_normal_path('classification'),
+        'hidden'        => 0,
+        'has_children'  => 0,
+        'expanded'      => 0,
+        'customized'    => 0,
+        'updated'       => 0,
+      );
+
+      menu_link_save($link);
+      drupal_flush_all_caches();	
+  }
+
+  //send the file to GNA if user selected "publish" & also add the menu item
+  if($published) {
+	  $post_data = array(
+		'uuid' => variable_get('classification_export_gna_uuid', ''),
+		'file' => '@'.$_SERVER['DOCUMENT_ROOT'] . '/' . file_create_path('classification_export') . '/shared/' . $shortname . '.tar.gz',
+		'submit' => 'Upload',
+	  );
+
+	  $ch = curl_init();
+	  curl_setopt($ch, CURLOPT_URL, variable_get('classification_export_gna_url', 'http://gnaclr.globalnames.org/classifications'));
+	  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	  curl_setopt($ch, CURLOPT_POST, 1);
+	  curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+	  $response = curl_exec($ch);
+	  curl_close($ch);	
+  }
+
+}
+
+function _classification_export_garbage_collect($term) {
+	
+    $media = classification_term_count_media($term->tid);
+	if(empty($media)) {
+	  $res = db_query("SELECT trid FROM {term_relation} WHERE tid1 = %d",$term->tid);
+	  while ($relation = db_fetch_object($res)) {
+		db_query("DELETE FROM {term_relation_has_type} WHERE trid = %d", $relation->trid);
+	  }
+	  //delete the term
+	  taxonomy_del_term($term->tid);
+	}
+	else {
+	  $term_content = array(
+	    'tid' => $term->tid,
+	    'name' => $term->name,
+		'parent' => 0,
+		'vid' => CLASSIFICATION_DELETIONS
+	  );
+	  taxonomy_save_term($term_content);
+	}
+}
+
+function _classification_export_gz($command) {
+  $proc = proc_open($command, array(0=>array('pipe', 'r'), 1=>array('pipe', 'w'), 2=>array('pipe', 'w')), $pipes);
+  fwrite($pipes[0], '');
+  fclose($pipes[0]);
+  $stdout = stream_get_contents($pipes[1]);
+  fclose($pipes[1]);
+  $stderr = stream_get_contents($pipes[2]);
+  fclose($pipes[2]);
+  $rtn = proc_close($proc);
+}
+
+function classification_export_notify($accounts, $status = true) {
+  global $base_url;
+  foreach ($accounts as $account) {
+    $params['account'] = $account;
+    $params['givenname'] = ($account->givenname) ? $account->givenname : '';
+    $params['surname'] = ($account->surname) ? $account->surname : '';
+    $params['fileurl'] = $base_url . "/classification.tar.gz";
+    if($status) {
+	  drupal_mail('classification_export', 'notice', $account->mail, user_preferred_language($account), $params);
+    }
+    else {
+	  drupal_mail('classification_export', 'failed', $account->mail, user_preferred_language($account), $params);
+    }
+  }
+}
+
+/**
+ * Implementation of hook_mail
+ */
+function classification_export_mail($key, &$message, $params) {
+  $language = $message['language'];
+  $variables = user_mail_tokens($params['account'], $language);
+  $variables['!user'] = ($params['givenname'] && $params['surname']) ? $params['givenname'] . ' ' . $params['surname'] : $variables['!username'];
+  $variables['!surname'] = $params['account']->surname;
+  $variables['!link'] = $params['fileurl'];
+
+  switch($key) {
+    case 'notice':
+    $message['subject'] = t('LifeDesks: Classification package ready on !site', $variables, $language->language);
+    $message['body'][] = t("Dear !user\n\nYour classification package has been produced and is now accessible at !link. If you are a Windows user, you will need a third party application to extract this file such as WinZip or WinRAR.\n\nIf you have not already done so, you will need to check the 'Publish' checkbox on the classification publishing form if you wish to provide your classification to the Global Names Architecture and to the Encyclopedia of Life.\n\nThanks,\n\nThe LifeDesks Team.", $variables, $language->language);
+    break;
+
+    case 'failed':
+    $message['subject'] = t('LifeDesks: !site failed to Publish Classification', $variables, $language->language);
+    $message['body'][] = t("An attempted classification publishing event failed for !site", $variables, $language->language);
+    break;
+  }
+}
+
+function classification_export_fetch() {
+
+  $filename = variable_get('shortname','') . '.tar.gz';
+  $classification_export_path = file_create_path('classification_export');
+  $current = rtrim($classification_export_path, '/') .'/shared/' . $filename;
+
+  $headers = array(
+    'Content-Type: application/x-gzip'
+     );
+
+  if(file_exists($current)) {
+	  file_transfer($current, $headers);
+  }
+  else {
+    drupal_not_found();
+  }
+
+}
+
+function _classification_export_license($license = '') {
+	
+	$creativecommons_lite_path = '/' . drupal_get_path('module', 'creativecommons_lite') .'/images/buttons_large/';
+	$cc_link = 'http://creativecommons.org/licenses/';
+	$cc_version = '3.0';
+	
+	$licenses = array(
+	  'cc0' => l(t('Creative Commons No copyright'), $cc_link . '/publicdomain/zero/1.0/', array('absolute' => true, 'attributes' => array('target' => '_blank'))),
+	  'publicdomain' => '<img src="' . $creativecommons_lite_path . 'publicdomain.png" alt="' . t('Public Domain') . '" /> ' . l(t('Public Domain'), $cc_link . 'publicdomain', array('absolute' => true, 'attributes' => array('target' => '_blank'))),
+	  'by' => '<img src="' . $creativecommons_lite_path . 'by.png" alt="' . t('Attribution') . '" /> ' . l(t('Attribution'), $cc_link . 'by/' . $cc_version, array('absolute' => true, 'attributes' => array('target' => '_blank'))),
+	  'by-nc-sa' => '<img src="' . $creativecommons_lite_path . 'by-nc-sa.png" alt="' . t('Attribution Non-commercial Share Alike') . '" /> ' . l(t('Attribution Non-commercial Share Alike'), $cc_link . 'by-nc-sa/' . $cc_version, array('absolute' => true, 'attributes' => array('target' => '_blank'))),
+	  'by-sa' => '<img src="' . $creativecommons_lite_path . 'by-sa.png" alt="' . t('Attribution Share Alike') . '" /> ' . l(t('Attribution Share Alike'), $cc_link . 'by-sa/' . $cc_version, array('absolute' => true, 'attributes' => array('target' => '_blank'))),
+	);
+	
+	if($license) $licenses = $licenses[$license];
+	return $licenses;
+}
+
+/*
+ * Implementation of hook form_alter
+ */
+function classification_export_form_alter($form, &$form_state) {
+
+	if($form['#id'] == 'menu-edit-item') {
+		if($form['menu']['#item']['module'] == 'classification_export') {
+			$form['menu']['enabled']['#type'] = 'hidden';
+			$form['menu']['#item']['enabled']['#value'] = 1;
+		}
+	}
+	
+	if($form['#id'] == 'menu-overview-form') {
+	  $mlid = db_result(db_query("SELECT mlid FROM {menu_links} WHERE module='classification_export' AND menu_name='primary-links'"));
+          if($mlid) {
+      $form['mlid:'.$mlid]['hidden']['#disabled'] = true;
+          }
+	}
+}
+
+/*
+ * Public-facing classification download page
+ */
+function classification_export_page() {
+	
+	drupal_add_css(drupal_get_path('module', 'classification_export') .'/css/classification_export.css');
+	
+	$output = '';
+	
+	$metadata = variable_get('classification_export', array());
+	
+	if($metadata) {
+		$output  = '<div id="classification-page">' . "\n";
+		$output .= '<div id="classification-page-citation">' . check_markup($metadata['citation'], FILTER_FORMAT_DEFAULT) . '</div>' . "\n";
+		$output .= '<div id="classification-page-authors"></div>' . "\n";
+		$output .= '<div id="classification-page-abstract"><strong>' . t('Abstract') . '</strong><div id="description">' . check_markup($metadata['description'], FILTER_FORMAT_DEFAULT) . '</div></div>' . "\n";
+		$output .= '<div id="classification-page-license">' . _classification_export_license($metadata['license']) . '</div>' . "\n";
+		$output .= '<div id="classification-page-download"><strong>' . t('Download Current Version') . '</strong>: ' . l('classification.tar.gz', 'classification.tar.gz') . ' (' . t('Darwin Core Archive, version !version, updated !date)', array('!version' => $metadata['version'], '!date' => gmdate('d M, Y', $metadata['updated']))). '</div>' . "\n";
+		$output .= '<div id="classification-page-versions"><strong>' . t('Past Versions') . '</strong><div id="classification-page-versions-list"><div>' . _classification_export_get_xml_files() . '</div></div></div>' . "\n";
+		$output .= '</div>';
+	}
+	else {
+		drupal_not_found();
+	}
+	
+	return $output;
+	
+}
+
+function _classification_export_get_xml_files(){
+  $xml_files = "";
+  $xml_prefix = file_create_url('classification_export/archive');
+  $xml_files_array = file_scan_directory(file_create_path('classification_export/archive'), '.gz');
+  arsort($xml_files_array);
+  foreach ($xml_files_array as $file) {
+	$xml_files.= '<a href='.$xml_prefix.'/'.$file->basename.'>'.$file->basename.'</a> (' . gmdate('d M, Y - H:i:s', str_replace(".tar.gz", "", $file->basename)) . ')<br />';
+  }
+  if ($xml_files == "") $xml_files = t('Sorry, you must first export your site\'s content before a list of exports will be made available for download.');
+  return $xml_files;
+}

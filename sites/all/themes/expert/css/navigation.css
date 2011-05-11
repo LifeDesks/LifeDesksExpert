@@ -1,0 +1,69 @@
+/* $Id: navigation.css,v 1.5 2009/11/04 19:42:41 johnalbin Exp $ */
+
+/**
+ * @file
+ * Navigation Styling
+ */
+
+
+/*
+ * The active item in a Drupal menu
+ */
+li a.active {
+  color: #000;
+}
+
+/*
+ * Navigation bar
+ */
+#navigation {
+}
+
+.region-navigation {
+}
+
+/*
+ * Primary and Secondary menu links
+ */
+#main-menu {
+}
+
+#secondary-menu {
+}
+
+/*
+ * Menu blocks
+ */
+.block-menu {
+}
+
+/*
+ * "Menu block" blocks. See http://drupal.org/project/menu_block
+ */
+.block-menu_block {
+}
+
+/*
+ * Action Links
+ */
+#block-menu-menu-action-links {
+
+}
+
+#block-menu-menu-action-links ul.menu li a {
+	border:0px;
+	background:none no-repeat scroll 6px center transparent;
+	display:block;
+	height:20px;
+	line-height:20px;
+	outline:medium none;
+	padding:1px 5px 1px 24px;
+}
+
+#block-menu-menu-action-links ul.menu li a.user-- { background-image:url("../images/user.png"); }
+#block-menu-menu-action-links ul.menu li a.user--cmf { background-image:url("../images/page_white_text.png"); }
+#block-menu-menu-action-links ul.menu li a.node-add { background-image:url("../images/page_add.png"); }
+#block-menu-menu-action-links ul.menu li a.invite { background-image:url("../images/group_add.png"); }
+#block-menu-menu-action-links ul.menu li a.admin-classification-biological { background-image:url("../images/classification-tree.png"); }
+#block-menu-menu-action-links ul.menu li a.admin { background-image:url("../images/cog.png"); }
+#block-menu-menu-action-links ul.menu li a.logout { background-image:url("../images/key.png"); }

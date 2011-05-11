@@ -1,0 +1,9 @@
+<?php
+// $Id: piclens.install,v 1.1.4.6 2008/06/20 18:02:51 swentel Exp $
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function piclens_uninstall() {
+  variable_del('piclens_logo');
+}

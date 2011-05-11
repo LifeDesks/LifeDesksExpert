@@ -1,0 +1,450 @@
+<?php
+// $Id$
+/**
+ * @file
+ * Companion to data monitoring module allowing aggregation of site reports.
+ *
+ * This is the module file for the Data monitoring multisite module.
+ */
+// Define values for default settings.
+define('DATA_MONITORING_MULTISITE_INTERVAL', 0);
+define('DATA_MONITORING_MULTISITE_MAIL', 0);
+define('DATA_MONITORING_MULTISITE_LANGUAGE', 'English');
+define('DATA_MONITORING_MULTISITE_OVERVIEW', 'overview');
+
+/**
+ * Implementation of hook_help().
+ *
+ */
+function data_monitoring_multisite_help($path, $arg) {
+  global $conf;
+  if ($path == 'admin/help#data_monitoring_multisite') {
+    $txt = 'Companion to data monitoring module, to aggregate reports from multiple sites.';
+    return '<p>'. t($txt) .'</p>';
+  }
+}
+/**
+ * Implementation of hook_perm().
+ */
+function data_monitoring_multisite_perm() {
+  return array('administer multisite monitoring', 'access multisite monitoring logs');
+}
+/**
+ * Implementation of hook_menu().
+ */
+function data_monitoring_multisite_menu() {
+  $items['admin/reports/data-monitoring-multisite'] = array(
+    'title' => 'Multisite data monitoring',
+    'description' => 'View results of data monitoring from multiple sites, and configure reporting.',
+    'page callback' => 'data_monitoring_multisite_overview',
+    'access arguments' => array('access multisite monitoring logs'),
+    'type' => MENU_NORMAL_ITEM,
+    'parent' => 'admin/reports/data-monitoring-multisite',
+    'file' => 'data_monitoring_multisite.overview.inc',
+    'file path' => drupal_get_path('module', 'data_monitoring_multisite') .'/includes',
+  );
+  $items['admin/reports/data-monitoring-multisite/overview'] = array(
+    'title' => 'Overview',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'parent' => 'admin/reports/data-monitoring-multisite',
+    'weight' => -30,
+  );
+  $items['admin/reports/data-monitoring-multisite/monitors'] = array(
+    'title' => 'Data',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('data_monitoring_multisite_form_monitors'),
+    'access arguments' => array('access multisite monitoring logs'),
+    'parent' => 'admin/reports/data-monitoring-multisite',
+    'file' => 'data_monitoring_multisite.monitors.inc',
+    'file path' => drupal_get_path('module', 'data_monitoring_multisite') .'/includes',
+    'type' => MENU_LOCAL_TASK,
+    'parent' => 'admin/reports/data-monitoring-multisite',
+    'weight' => -20,
+  );
+  $items['admin/reports/data-monitoring-multisite/monitor/%data_monitoring_multisite_module/%data_monitoring_multisite_id'] = array(
+    'title' => 'Monitor details',
+    'page callback' => 'data_monitoring_multisite_monitor',
+    'page arguments' => array(4,5),
+    'access arguments' => array('access multisite monitoring logs'),
+    'type' => MENU_CALLBACK,
+    'parent' => 'admin/reports/data-monitoring-multisite',
+    'file' => 'data_monitoring_multisite.monitor.inc',
+    'file path' => drupal_get_path('module', 'data_monitoring_multisite') .'/includes',
+  );
+  $items['admin/reports/data-monitoring-multisite/chart/%data_monitoring_multisite_module/%data_monitoring_multisite_id'] = array(
+    'title' => 'Chart',
+    'page callback' => 'data_monitoring_multisite_chart',
+    'page arguments' => array(4,5),
+    'access arguments' => array('access multisite monitoring logs'),
+    'type' => MENU_CALLBACK,
+    'parent' => 'admin/reports/data-monitoring-multisite',
+    'file' => 'data_monitoring_multisite.chart.inc',
+    'file path' => drupal_get_path('module', 'data_monitoring_multisite') .'/includes',
+  );
+  $items['admin/reports/data-monitoring-multisite/settings'] = array(
+    'title' => 'Settings',
+    'description' => 'Configure settings for data integrity monitoring and reporting.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('data_monitoring_multisite_settings'),
+    'access arguments' => array('administer multisite monitoring'),
+    'type' => MENU_LOCAL_TASK,
+    'parent' => 'admin/reports/data-monitoring-multisite',
+    'file' => 'data_monitoring_multisite.settings.inc',
+    'file path' => drupal_get_path('module', 'data_monitoring_multisite') .'/includes',
+    'weight' => -15,
+  );
+  return $items;
+}
+/**
+ * Implentation of hook_load();
+ * @param $module
+ *     String module value of monitor.
+ */
+function data_monitoring_multisite_module_load($module) {
+  return $module;
+}
+/**
+ * Implentation of hook_load();
+ * @param $id
+ *     String id value of monitor.
+ */
+function data_monitoring_multisite_id_load($id) {
+  return $id;
+}
+/**
+ * Implementation of hook_theme();
+ */
+function data_monitoring_multisite_theme($existing, $type, $theme, $path) {
+  $path = $path . '/themes';
+
+  return array(
+    'data_monitoring_multisite_overview' => array(
+      'arguments' => array(
+        'monitors_summary' => array(),
+        'last_counts' => '',
+        'latest_counts' => '',
+      ),
+      'template' => 'data-monitoring-multisite-overview',
+      'path' => $path,
+    ),
+    'data_monitoring_multisite_monitors' => array(
+      'arguments' => array('form' => NULL),
+      'file' => 'data_monitoring_multisite.theme.inc',
+      'path' => $path,
+    ),
+    'data_monitoring_multisite_monitor' => array(
+      'arguments' => array('monitor' => array(), 'last_count_table' => '', 'referrer' => ''),
+      'template' => 'data-monitoring-multisite-monitor',
+      'path' => $path,
+    ),
+    'data_monitoring_multisite_email_report_plain_monitor' => array(
+      'arguments' => array('monitor' => NULL, 'language' => NULL),
+      'file' => 'data_monitoring_multisite.theme.inc',
+      'path' => $path,
+    ),
+    'data_monitoring_multisite_email_report_html_monitor' => array(
+      'arguments' => array('monitor' => NULL, 'language' => NULL),
+      'file' => 'data_monitoring_multisite.theme.inc',
+      'path' => $path,
+    ),
+    'data_monitoring_multisite_email_report_html' => array(
+      'arguments' => array('rows' => array(), 'language' => NULL),
+      'template' => 'data-monitoring-multisite-email-report-html',
+      'path' => $path,
+    ),
+    'data_monitoring_multisite_email_report_attachment_header' => array(
+      'arguments' => array('language' => NULL),
+      'file' => 'data_monitoring_multisite.theme.inc',
+      'path' => $path,
+    ),
+    'data_monitoring_multisite_email_report_attachment_monitor' => array(
+      'arguments' => array('monitor' => NULL, 'language' => NULL),
+      'file' => 'data_monitoring_multisite.theme.inc',
+      'path' => $path,
+    ),
+  );
+}
+/**
+ * Implementation of hook_preprocess_hookname();
+ */
+function data_monitoring_multisite_preprocess_data_monitoring_multisite_monitor(&$vars) {
+
+  $vars['chart_src'] = url("admin/reports/data-monitoring-multisite/chart/" . $vars['monitor']['module'] . '/' . $vars['monitor']['id']);
+
+}
+///**
+// * Implementation of hook_preprocess_hookname();
+// */
+//function data_monitoring_multisite_preprocess_data_monitoring_multisite_overview(&$vars) {
+//
+//  $vars['chart_src'] = url("admin/reports/data-monitoring-multisite/chart/" . DATA_MONITORING_MULTISITE_OVERVIEW);
+//
+//}
+
+/**
+ * Implementation of hook_preprocess_hookname();
+ */
+function data_monitoring_multisite_preprocess_data_monitoring_multisite_email_report_html(&$vars) {
+  global $base_root;
+  $style_table = 'border-collapse: collapse; border: 1px solid #ddd; border-top-color: #99bbcc; border-bottom-width: 2px; text-align: left; margin: 20px 10px;';
+  $style_th = 'border-spacing: 0; background-color: #cce5ff; border-bottom: 2px solid #99bbcc; padding: 3px; vertical-align: bottom;';
+  $header = array(
+    array('data' => t('Site', array(), $vars['language']->language), 'style' => $style_th),
+    array('data' => t('Monitor', array(), $vars['language']->language), 'style' => $style_th),
+    array('data' => t('Result count', array(), $vars['language']->language), 'style' => $style_th),
+    array('data' => t('Responses implemented', array(), $vars['language']->language), 'style' => $style_th),
+    array('data' => t('Responses pending', array(), $vars['language']->language), 'style' => $style_th),
+  );
+  $vars['monitor_logs'] = theme_table($header, $vars['rows'],
+                                      array('style' => $style_table),
+                                      t('Multisite data monitoring logs.', array(), $vars['language']->language));
+  $vars['footer'] = '<p style="padding: 5px 10px; border-top: 1px solid #eee; color: #666;">'
+                  . t('Sent from !site (!site_url) site.',
+                      array('!site' => variable_get('site_name', 'Drupal'), '!site_url' => $base_root),
+                      $vars['language']->language)
+                  . '</p>';
+}
+/**
+ * Implementation of hook_cron();
+ */
+function data_monitoring_multisite_cron() {
+  // Using bash scripts and drush to execute monitoring instead of Drupal cron.
+  // To use Drupal cron uncomment the following line.
+  // data_monitoring_multisite_run();
+}
+/**
+ * Custom function to execute multisite data monitoring.
+ * Combined with bash scripts and drush this replaces use of hook_cron().
+ */
+function data_monitoring_multisite_run() {
+  global $base_root;
+  $monitoring_interval = variable_get('data_monitoring_multisite_aggregate_logging_interval', DATA_MONITORING_MULTISITE_INTERVAL);
+  $last_monitoring_run = variable_get('data_monitoring_multisite_last_aggregate_logging_run', 0);
+
+  $output = t("!time DATA MONITORING MULTISITE LOG site=!base_root;",
+              array('!time' => gmdate('D M d H:i:s T Y', time()), '!base_root' => $base_root));
+
+  if ((time() - $last_monitoring_run) > ($monitoring_interval - 3600)) { // Subtract 1 hour from interval to ensure scheduling works when cron set to same interval.
+    $count = _data_monitoring_multisite_aggregate_results();
+    if (variable_get('data_monitoring_multisite_aggregate_mail', DATA_MONITORING_MULTISITE_MAIL) &&
+        $count > 0) {
+      $reporting_interval = variable_get('data_monitoring_multisite_aggregate_reporting_interval', DATA_MONITORING_MULTISITE_INTERVAL);
+      $last_report_sent = variable_get('data_monitoring_multisite_last_aggregate_reporting_run', 0);
+      if ((time() - $last_report_sent) > ($reporting_interval - 3600)) {
+        if (_data_monitoring_multisite_send_report($last_monitoring_run)) {
+          // We set this here and not in send mail function so that manual triggers don't reset this value.
+          variable_set('data_monitoring_multisite_last_aggregate_reporting_run', time());
+        }
+      }
+    }
+    if (!is_null($count)) {
+      variable_set('data_monitoring_multisite_last_aggregate_logging_run', time());
+      $output .= "aggregated_monitors=$count";
+    }
+    else {
+      // We use ERROR as keyword for checking in bash script so we don't want to translate it here.
+      $output .= "ERROR:" . t("Monitor results were not aggregated.")
+               . "MESSAGE:" . t("Check watchdog tables for more information.");
+    }
+  }
+  $output = escapeshellarg($output);
+  system("echo $output"); // Send output to shell for logging.
+
+  return $count;
+
+}
+/**
+ * Aggregate data monitoring results by directly querying databases.
+ *
+ */
+function _data_monitoring_multisite_aggregate_results() {
+
+  $sites = db_query("SELECT shortname FROM {drupal_site} ORDER BY shortname");
+  $last_log_date = db_result(db_query("SELECT MAX(processed) FROM {data_monitoring_multisite_log}"));
+  if (is_null($last_log_date)) $last_log_date = 0;
+  $sites_sql = array();
+  $err = array();
+  while ($site = db_fetch_object($sites)) {
+    $monitors = db_result(db_query("SELECT COUNT(*) FROM " . $site->shortname . ".{data_monitoring_monitors}"));
+    if ($monitors !== FALSE) {
+      $sites_sql[$site->shortname] = "SELECT '" . $site->shortname . "' AS shortname, dml.dmlid, dml.dmid, dml.processed, dml.result_count, dml.responses_pending, dml.responses_implemented, dml.log_file, dmm.id, dmm.module, dmm.name, dmm.description
+                                      FROM " . $site->shortname . ".{data_monitoring_log} dml
+                                      LEFT JOIN " . $site->shortname . ".{data_monitoring_monitors} dmm ON dml.dmid = dmm.dmid
+                                      WHERE dml.processed > $last_log_date
+                                      AND (dml.responses_implemented > 0 || dml.responses_pending > 0)";
+    }
+    else {
+      $err[] = $site->shortname;
+    }
+  }
+
+  if (empty($sites_sql)) {
+    $msg = "Could not access data monitoring data for any site.";
+    drupal_set_message(t($msg), 'error');
+    watchdog('data_monitoring_multisite', $msg, WATCHDOG_ERROR);
+    return NULL;
+  }
+  else {
+    $count = db_affected_rows(db_query("INSERT INTO {data_monitoring_multisite_log} (shortname, dmlid, dmid, processed, result_count, responses_pending, responses_implemented, log_file, id, module, name, description) " . implode(" UNION ALL ", $sites_sql)));
+    $replacements = array('!last_executed' => ($last_log_date > 0) ? date('Y-m-d H:i:s T', $last_log_date) : t('logging started'), '%sites' => implode('; ', $err));
+    if (empty($err)) {
+      $msg = format_plural($count, '1 log since !last_executed has been aggregated from all sites', '@count logs since !last_executed have been aggregated from all sites.', $replacements);
+      drupal_set_message($msg, 'status');
+    }
+    else {
+      $msg = format_plural($count, '1 log since !last_executed has been aggregated, logs in the following sites could not be accessed: %sites', '@count logs since !last_executed have been aggregated, logs in the following sites could not be accessed: %sites.', $replacements);
+      drupal_set_message($msg, 'error');
+      watchdog('data_monitoring_multisite', $msg, WATCHDOG_ERROR);
+    }
+    return $count;
+  }
+
+}
+function _data_monitoring_multisite_find_language() {
+  $dmm_language = variable_get('data_monitoring_multisite_aggregate_language', DATA_MONITORING_MULTISITE_LANGUAGE);
+  $language = language_default();
+  $language_list = language_list();
+  foreach ($language_list as $language_object) {
+    if ($language_object->name == $dmm_language) {
+      $language = $language_object;
+    }
+  }
+  return $language;
+}
+/**
+ * Sends email report containing latest results for each monitor, since a specified time.
+ * @param $since
+ *     Timestamp the last monitor type for each site will be included in the report if
+ *     the monitor was processed since this time. If time not provided the last processed
+ *     monitor of each type for each site will be included.
+ */
+function _data_monitoring_multisite_send_report($since = 0) {
+
+  global $base_root;
+
+  $language = _data_monitoring_multisite_find_language();
+
+  $result = db_query("SELECT dmml.*
+                      FROM {data_monitoring_multisite_log} dmml,
+                      (SELECT MAX(processed) AS latest, shortname, dmid FROM {data_monitoring_multisite_log} GROUP BY shortname, dmid) mr
+                      WHERE dmml.shortname = mr.shortname
+                      AND dmml.dmid = mr.dmid
+                      AND dmml.processed = mr.latest
+                      AND dmml.processed > %d", $since);
+  $body_plain = '';
+  $body_html_rows[] = array();
+  $attachment = theme('data_monitoring_multisite_email_report_attachment_header', $language);
+  while ($monitor = db_fetch_object($result)) {
+    $body_plain .= theme('data_monitoring_multisite_email_report_plain_monitor', $monitor, $language);
+    $body_html_rows[] = theme('data_monitoring_multisite_email_report_html_monitor', $monitor, $language);
+    $attachment .= theme('data_monitoring_multisite_email_report_attachment_monitor', $monitor, $language);
+  }
+  if (empty($body_plain)) return;
+  $body_plain .= t('Sent from !site (!site_url) site.',
+                      array('!site' => variable_get('site_name', 'Drupal'), '!site_url' => $base_root),
+                      $language->language);
+
+  $body_html = theme('data_monitoring_multisite_email_report_html', $body_html_rows, $language);
+  $interval = variable_get('data_monitoring_multisite_aggregate_reporting_interval', DATA_MONITORING_MULTISITE_INTERVAL);
+  $params = array(
+      'interval' => $interval,
+      'body_plain' => $body_plain,
+      'body_html' => $body_html,
+      'attachments' => array(array('filedata' => $attachment,
+                                   'filename' => 'LDM_' . date('Ymd_His') . '.txt',
+                       )),
+    );
+  $mail_to = explode(',', variable_get('data_monitoring_multisite_aggregate_mail_to', ''));
+  $from = variable_get('data_monitoring_multisite_aggregate_mail_reply_to', '');
+  foreach ($mail_to as $to) {
+    $message = drupal_mail('data_monitoring_multisite', 'monitoring_report', $to, $language, $params, $from, TRUE);
+  }
+  if ($message['result']) {
+    return TRUE;
+  }
+  watchdog('data_monitoring_multisite', 'Data monitoring aggregate mail report could not be sent.', WATCHDOG_ERROR);
+  drupal_set_message(t('Data monitoring aggregate mail report could not be sent.'), 'error');
+  return FALSE;
+
+}
+/**
+ * Implementation of hook_mail().
+ * @param $key
+ * @param $message
+ * @param $params
+ *
+ */
+function data_monitoring_multisite_mail($key, &$message, $params) {
+  global $base_root;
+  $language = $message['language']->language;
+  $msg_vars = array('!site' => variable_get('site_name', 'Drupal'), '!site_url' => $base_root);
+
+  switch ($key) {
+    case 'monitoring_report':
+
+      $boundary = md5(uniqid(time()));
+      // Adjust headers.
+      $message['headers']['From'] = $message['headers']['Sender'] = $message['headers']['Return-Path'] = $message['headers']['Errors-To'] = $message['from'];
+      $message['headers']['Content-Type'] = "multipart/mixed; boundary=\"Mixed-{$boundary}\"";
+
+      $message['subject'] = t("Multisite data monitoring report from !site", $msg_vars, $language);
+      // Build message body.
+
+      // For older mail clients.
+      $message['body'][]  = t('This is a multi-part email in MIME format');
+
+      // Specify a new boundary so that HTML and plain text can be alternatives.
+      $message['body'][]  = "--Mixed-{$boundary}\r\n"
+                          . "Content-Type: multipart/alternative; boundary=\"Alt-{$boundary}\"\r\n";
+
+      // Plain.
+      $message['body'][]  = "--Alt-{$boundary}\r\n"
+                          . "Content-Type: text/plain; charset=\"utf-8\"\r\n"
+                          . "Content-Transfer-Encoding: 7bit\r\n\r\n"
+                          . "{$params['body_plain']}\r\n\r\n";
+
+      // HTML.
+      $message['body'][] =  "--Alt-{$boundary}\r\n"
+                          . "Content-Type: text/html; charset=\"utf-8\"\r\n"
+                          . "Content-Transfer-Encoding: 7bit\r\n\r\n"
+                          . "{$params['body_html']}\r\n\r\n";
+
+      // End the alternative boundary
+      $message['body'][] = "--Alt-{$boundary}--\r\n";
+
+      // Attachments.
+      if (is_array($params['attachments'])) {
+        foreach ($params['attachments'] as $attachment) {
+          if ($attachment) {
+            $message['body'][] = "--Mixed-{$boundary}\r\n"
+                               . "Content-Type: application/octet-stream; name=\"" . $attachment['filename'] . "\"\r\n"
+                               . "Content-Transfer-Encoding: base64\r\n"
+                               . "Content-Disposition: attachment; filename=\"" . $attachment['filename'] . "\"\r\n\r\n"
+                               . chunk_split(base64_encode($attachment['filedata']))
+                               . "\r\n\r\n";
+          }
+        }
+      }
+
+      $message['body'][] = "--Mixed-{$boundary}--\r\n";
+
+    break;
+  }
+}
+/**
+ * Helper function to return array of site URIs for Drush bash script.
+ *
+ * @see scripts/data_monitoring_multisite.drush.sh
+ * @return
+ *     Bash array of site urls.
+ */
+function _data_monitoring_multisite_drush_get_sites() {
+  global $conf;
+  $sites = db_query("SELECT shortname FROM {drupal_site} ORDER BY shortname");
+  $l = array();
+  while ($site = db_fetch_array($sites)) {
+    $l[] = $site['shortname'];
+  }
+  $output = implode(' ', $l);
+  system("echo $output");
+}

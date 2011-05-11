@@ -1,0 +1,339 @@
+<?php
+/* $Id:$ */
+
+/**
+ * @file members.module
+ * This module produces a list of members for public access
+ */
+
+/**
+ * Implementation of hook_theme
+*/
+function members_theme() {
+  return array(
+    'members_list_form' => array(
+      'arguments' => array('form' => NULL),
+    ),
+  );
+}
+
+/**
+ * Menu items
+ */
+function members_menu() {
+  $items['members'] = array(
+    'title' => t('Members'),
+    'description' => t('A list and gallery of members'),
+    'page callback' => 'members_overview_page',
+    'access arguments' => array('access content'),
+  );
+  $items['members/list'] = array(
+    'title' => t('Member List'),
+    'description' => t('Members of this LifeDesk'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('members_list_form'),
+    'access arguments' => array('access content'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => 0,
+  );
+// See if there is at least one user with a picture
+  $result = db_fetch_object(db_query("SELECT u.picture, u.status FROM {users} u HAVING length(u.picture)>1 AND u.status=1 LIMIT 1"));
+  if($result->picture) {
+     $items['members/gallery'] = array(
+       'title' => t('Member Gallery'),
+       'description' => t('Members Gallery'),
+       'page callback' => 'members_gallery',
+       'access arguments' => array('access content'),
+       'type' => MENU_LOCAL_TASK,
+       'weight' => 1,
+     );
+  $items['members/gallery/mediarss'] = array(
+    'title' => t('Members RSS Feed'),
+    'access arguments' => array('access content'),
+    'page callback' => 'members_create_feed',
+    'type' => MENU_CALLBACK,
+  );
+  }
+  return $items;
+}
+
+/**
+ * Implementation of hook_block().
+ */
+function members_block($op = 'list', $delta = 0, $edit = array()) {
+  global $user;
+
+  if ($op == 'list') {
+    // Too dynamic to cache.
+    $blocks[0]['info'] = t('Who\'s online');
+    $blocks[0]['cache'] = BLOCK_NO_CACHE;
+    return $blocks;
+  }
+  else if ($op == 'view') {
+    $block = array();
+
+    switch ($delta) {
+      case 0:
+        if (user_access('access content')) {
+          // Count users active within the defined period.
+          $interval = time() - variable_get('user_block_seconds_online', 900);
+
+          // Perform database queries to gather online user lists.  We use s.timestamp
+          // rather than u.access because it is much faster.
+          $anonymous_count = sess_count($interval);
+          $ldsupport = variable_get('lifedesk_support',0);
+          $authenticated_users = db_query('SELECT DISTINCT u.uid, u.name, s.timestamp FROM {users} u INNER JOIN {sessions} s ON u.uid = s.uid WHERE s.timestamp >= %d AND s.uid > 1 AND s.uid != %d ORDER BY s.timestamp DESC', $interval, $ldsupport);
+          $authenticated_count = 0;
+          $max_users = variable_get('user_block_max_list_count', 10);
+          $items = array();
+          while ($account = db_fetch_object($authenticated_users)) {
+            if ($max_users > 0) {
+              $items[] = $account;
+              $max_users--;
+            }
+            $authenticated_count++;
+          }
+
+          // Format the output with proper grammar.
+          if ($anonymous_count == 1 && $authenticated_count == 1) {
+            $output = t('There is currently %members and %visitors online.', array('%members' => format_plural($authenticated_count, '1 user', '@count users'), '%visitors' => format_plural($anonymous_count, '1 guest', '@count guests')));
+          }
+          else {
+            $output = t('There are currently %members and %visitors online.', array('%members' => format_plural($authenticated_count, '1 user', '@count users'), '%visitors' => format_plural($anonymous_count, '1 guest', '@count guests')));
+          }
+
+          // Display a list of currently online users.
+          $max_users = variable_get('user_block_max_list_count', 10);
+          if ($authenticated_count && $max_users) {
+            $output .= theme('user_list', $items, t('Online users'));
+          }
+
+          $block['subject'] = t('Who\'s online');
+          $block['content'] = $output;
+        }
+        return $block;
+    }
+  }
+}
+
+/**
+ * Members overview page
+ */
+ function members_overview_page() {
+   return drupal_get_form('members_list_form');
+ }
+
+/**
+ * Implementation of hook_form
+ */
+function members_list_form(&$form_state) {
+
+  $module_path = drupal_get_path('module', 'members') .'/';
+  drupal_add_css($module_path .'css/members.css');
+
+  $ldsupport = variable_get('lifedesk_support', 0);
+	
+  $header = array(
+    array(),
+    array('data' => t('Name'), 'field' => 'u.surname'),
+    array('data' => t('Role(s)')),
+    array('data' => t('Status'), 'field' => 'u.status'),
+    array('data' => t('Member for'), 'field' => 'u.created', 'sort' => 'desc'),
+    array('data' => t('Last access'), 'field' => 'u.access')
+  );
+
+  if(user_access('administer users')) {
+	  $sql = '
+	    SELECT 
+	      u.uid,
+	      u.name,
+	      u.status,
+	      u.created,
+	      u.access,
+	      GROUP_CONCAT(r.name SEPARATOR \', \') as role
+	    FROM 
+	      {users} u  
+	    LEFT JOIN 
+	      (
+	      {users_roles} ur 
+	      INNER JOIN 
+	      {role} r ON (ur.rid=r.rid) ) ON (u.uid=ur.uid)
+	    WHERE u.uid > 1 AND u.uid != ' . $ldsupport . '
+	    GROUP BY u.uid'; //exclude anonymous, super admin, and ldadmin from member list
+	  $sql .= tablesort_sql($header);
+	  $query_count = '
+	    SELECT 
+	      COUNT(DISTINCT u.uid) 
+	    FROM 
+	      {users} u 
+	    WHERE u.uid > 1 AND u.uid != ' . $ldsupport; //exclude anonymous, super admin and ldadmin	
+  }
+  else {
+	  $sql = '
+	    SELECT 
+	      u.uid,
+	      u.name,
+	      u.status,
+	      u.created,
+	      u.access,
+	      GROUP_CONCAT(r.name SEPARATOR \', \') as role
+	    FROM 
+	      {users} u  
+	    LEFT JOIN 
+	      (
+	      {users_roles} ur 
+	      INNER JOIN 
+	      {role} r ON (ur.rid=r.rid) ) ON (u.uid=ur.uid)
+	    WHERE u.uid > 1 AND u.uid != ' . $ldsupport . ' AND u.status = 1
+	    GROUP BY u.uid'; //exclude anonymous, super admin, and ldadmin from member list
+	  $sql .= tablesort_sql($header);
+	  $query_count = '
+	    SELECT 
+	      COUNT(DISTINCT u.uid) 
+	    FROM 
+	      {users} u 
+	    WHERE u.uid > 1 AND u.uid != ' . $ldsupport . ' AND u.status = 1'; //exclude anonymous, super admin and ldadmin	
+  }
+
+  $result = pager_query($sql, 50, 0, $query_count);
+
+  $accounts = array();
+  while ($account = db_fetch_object($result)) {
+    $form['name'][$account->uid] = array('#value' => theme('username', $account));
+    $form['role'][$account->uid] = array('#value' => $account->role);
+    $form['active'][$account->uid] = array('#value' => $account->status == 1 ? '<span class="member-status active">' . t('active') . '</span>' : '<span class="member-status blocked">' . t('blocked') . '</span>');
+    $form['member_for'][$account->uid] = array('#value' => format_interval(time() - $account->created));
+    $form['last_access'][$account->uid] =  array('#value' => $account->access ? t('@time ago', array('@time' => format_interval(time() - $account->access))) : t('never'));
+  }
+  $form['pager'] = array('#value' => theme('pager', NULL, 50, 0));
+
+  return $form;
+}
+
+/**
+ * Theme members list.
+ */
+function theme_members_list_form($form) {
+
+  $header = array(
+    array('data' => t('Name'), 'field' => 'u.surname'),
+    array('data' => t('Role(s)')),
+    array('data' => t('Status'), 'field' => 'u.status'),
+    array('data' => t('Member for'), 'field' => 'u.created', 'sort' => 'desc'),
+    array('data' => t('Last access'), 'field' => 'u.access')
+  );
+
+  if (isset($form['name']) && is_array($form['name'])) {
+    foreach (element_children($form['name']) as $key) {
+      $rows[] = array(
+        drupal_render($form['name'][$key]),
+        drupal_render($form['role'][$key]),
+        drupal_render($form['active'][$key]),
+        drupal_render($form['member_for'][$key]),
+        drupal_render($form['last_access'][$key]),
+      );
+    }
+  }
+  else {
+    $rows[] = array(array('data' => t('No users available.'), 'colspan' => '3'));
+  }
+
+  $output .= theme('table', $header, $rows);
+  if ($form['pager']['#value']) {
+    $output .= drupal_render($form['pager']);
+  }
+
+  $output .= drupal_render($form);
+
+  return $output;
+}
+
+/**
+ * Members gallery callback
+ */
+function members_gallery() {
+  $module_path = drupal_get_path('module', 'members') .'/';
+  drupal_add_css($module_path .'css/members.css');
+
+  $output = '';
+  
+  if(module_exists('piclens')) {
+    $ld_name = variable_get('shortname','');
+    drupal_add_feed(url('members/gallery/mediarss'), 'MediaRSS - ' . $ld_name . ' Members Gallery');
+    mediarssapi_piclens_lite_javascript();
+
+    $query = "
+      SELECT 
+        u.uid, 
+        u.name, 
+        u.givenname, 
+        u.surname, 
+        u.picture 
+      FROM 
+        {users} u 
+      WHERE 
+        u.uid != 0 AND u.status = 1 AND length(u.picture)>1 
+      ORDER BY u.uid";
+    $query_pager = "
+      SELECT 
+        COUNT(DISTINCT(u.uid)) 
+      FROM 
+        {users} u 
+      WHERE 
+        u.uid != 0 AND u.status = 1 AND length(u.picture)>1";
+
+    $result = pager_query($query,10, 0, $query_pager);
+    
+    while ($account = db_fetch_object($result)) {
+      $output .= '<div class="members_image">';
+      $output .= l('<p><img src="'.file_create_url($account->picture).'" alt="' . $account->givenname . ' ' . $account->surname . '" title="' . $account->givenname . ' ' . $account->surname . '"></p>','user/' . $account->uid, array('html' => TRUE));
+      $output .= '<p>' . theme('username', $account);
+      if($account->uid == variable_get('site_owner_uid', 0)) {
+        $output .= ' (Site Owner)';
+      }
+      $output .= '</p>';
+      $output .= '</div>';
+    }
+    $output .= '<div style="clear:both"></div>';
+    $output .= '<ul id="members_slideshow"><li class="piclens">' . l(t('Start Slideshow'), '', array('attributes' => array('onclick' => 'javascript:PicLensLite.start();return false'))) . '</li></ul><div style="clear:both"></div>';
+    $output .= theme('pager', NULL, 10, 0);
+  }  
+     
+  return $output;
+}
+
+function members_create_feed() {
+	  if (user_access('access content')) {
+	    $args = func_get_args();
+	    $module = check_plain(array_shift($args));
+	    $items = module_invoke('members', 'mediarss_items', $args);
+	    if (!empty($items)) {
+	      mediarssapi_rss($items);
+	    }
+	  }
+}
+
+/**
+ * Implementation of hook_mediarss_items.
+ */
+function members_mediarss_items($args) {
+  // Allow images to be sorted in a useful order.
+  if(!$args) {
+    $query = "SELECT u.uid, u.surname, u.givenname, u.name, u.picture FROM {users} u WHERE u.uid != 0 AND u.status = 1 AND length(u.picture)>1";
+    $query_pager = "SELECT COUNT(DISTINCT(u.uid)) FROM {users} u WHERE u.uid != 0 AND u.status = 1 AND length(u.picture)>1";
+  }
+
+  $result = pager_query($query,10, 0, $query_pager);
+  
+  while ($account = db_fetch_object($result)) {
+    $item = array(
+      'title' => $account->givenname . ' ' . $account->surname,
+      'link' => url('user/'.$account->uid, array('absolute' => TRUE)),
+      'thumbnail' => file_create_url($account->picture),
+      'content' => file_create_url($account->picture),
+    );
+
+    $items .= mediarssapi_format_item($item);
+  }
+  return $items;
+}

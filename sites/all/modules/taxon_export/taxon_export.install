@@ -1,0 +1,129 @@
+<?php
+// $Id
+
+function taxon_export_install() {
+    drupal_install_schema('taxon_export');
+    taxon_export_xml_insert();
+    taxon_expert_map_insert();
+}
+
+function taxon_export_uninstall() {
+  drupal_uninstall_schema('taxon_export');
+}
+
+function taxon_export_schema() {
+  $schema['taxon_export_spm'] = array(
+    'description' => t('Stores species profile model infoitems for mapping configuration against Taxon Description Chapters.'),
+    'fields' => array(
+      'sid' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'description' => t('Species Profile Model infoitem identifier'),
+      ),
+      'infoitem' => array(
+        'type' => 'varchar',
+        'length' => 50,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => t('InfoItem'),
+      ),
+      'definition' => array(
+        'type' => 'varchar',
+        'not null' => TRUE,
+        'default' => '',
+        'length' => 255,
+        'description' => 'Description of species profile model InfoItem.',
+      ),
+    ),
+    'primary key' => array('sid'),
+  );
+
+  $schema['taxon_export_map'] = array(
+    'description' => 'Stores association between species profile model InfoItem identifiers and Taxon Chapter identifiers',
+    'fields' => array(
+      'mid' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'description' => t('Identifier for mapping species profile model InfoItem identifier to taxon chapter identifier'),
+      ),
+      'sid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => t('Species Profile Model InfoItem identifier'),
+      ),
+      'tid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => t('Taxon Chapter identifier'),
+      ),
+    ),
+    'primary key' => array('mid'),
+  );
+
+  return $schema;
+}
+
+function taxon_export_arrayloop($parsed) {
+  foreach($parsed->term as $term) {
+     foreach($term->children as $child) {
+	   foreach($child as $infoitem) {
+		  $name = $infoitem->name;
+		  $description = $infoitem->description;
+		  db_query("INSERT INTO {taxon_export_spm} (infoitem,definition) VALUES ('%s','%s')",$name,$description);
+       }
+       taxon_export_arrayloop($child);
+     }
+  }
+}
+
+function taxon_export_xml_insert() {
+	$xml_file = drupal_get_path('module', 'taxon_description') .'/EOL_SPM.xml';
+	$xml = simplexml_load_file($xml_file);
+	taxon_export_arrayloop($xml);
+}
+
+function taxon_expert_map_insert() {
+  	$chapters = taxonomy_get_tree(_taxon_export_get_vid('Taxon Description Chapters'));
+  	foreach($chapters as $chapter) {
+    	$tid = $chapter->tid;
+    	$name = $chapter->name;
+    	$parent = $chapter->parents[0];
+    	// remove all the grouping chapter headings
+    	if(!$parent) {
+    	}
+    	else {
+      		$sid = db_result(db_query("SELECT sid FROM {taxon_export_spm} WHERE infoitem = '%s'",$name));
+	  		db_query("INSERT INTO {taxon_export_map} (sid,tid) VALUES (%d,%d)", $sid, $tid);
+    	}
+  	}
+  	return TRUE;
+}
+
+/**
+ * Get the necessary $vid for various forms
+ */
+function _taxon_export_get_vid($name) {
+  	$voc = db_fetch_object(db_query(db_rewrite_sql("SELECT vid FROM {vocabulary} WHERE name = '%s'"), $name));
+  	return $voc->vid;
+}
+
+function taxon_export_update_6101() {
+  	$ret = array();
+  	$mapped = db_fetch_object(db_query("SELECT tid FROM {taxon_export_map} LIMIT 1"));
+  	if($mapped) { 		
+  	    $chapter = 1;
+  		$msg = "The chapter headings were already mapped to Species Profile Model.";
+  	} else {
+		taxon_expert_map_insert();
+		$chapter = db_fetch_object(db_query("SELECT tid FROM {taxon_export_map} LIMIT 1"));
+		if($chapter) {
+			$msg = "Chapter headings have been mapped to the Species Profile Model.";
+		} else {
+			$msg = "There was an error while mapping the chapter headings to the Species Profile Model.";
+		}
+	}
+	$ret[] = array('success' => $chapter, 'query' => $msg);
+	return $ret;
+}

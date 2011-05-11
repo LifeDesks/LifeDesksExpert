@@ -1,0 +1,7 @@
+name = Compare Schema (Required)
+description = "Contains a menu callback to clear caches & rebuild menu in a child site."
+package = "LifeDesk"
+project = "compare_schema_required"
+core = 6.x
+
+version = 6.0

@@ -1,0 +1,14 @@
+name = LifeDesk Releases
+description = "A CCK-based content type to track all LifeDesk release versions"
+package = "LifeDesk"
+project = "lifedesk_releases"
+
+dependencies[] = content
+dependencies[] = content_copy
+dependencies[] = text
+dependencies[] = auto_nodetitle
+dependencies[] = token
+
+core = 6.x
+
+version = "6.x-1"

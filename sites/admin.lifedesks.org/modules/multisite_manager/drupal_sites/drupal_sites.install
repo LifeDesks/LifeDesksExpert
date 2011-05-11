@@ -1,0 +1,132 @@
+<?php
+// $Id: drupal_sites.install,v 1.0 2009/02/01 12:40 dshorthouse Exp $
+
+function drupal_sites_schema() {
+$schema['request_experts'] = array(
+  'fields' => array(
+    'id' => array(
+      'type' => 'serial',
+      'unsigned' => TRUE, 
+      'not null' => TRUE,
+    ),
+    'givenname' => array(
+      'type' => 'varchar', 
+      'not null' => TRUE, 
+      'length' => 255
+    ),
+    'surname' => array(
+      'type' => 'varchar', 
+      'not null' => TRUE, 
+      'length' => 255
+    ),
+    'email' => array(
+      'type'=>'varchar', 
+      'not null' => TRUE, 
+      'length' => 255
+    ),
+    'username' => array(
+      'type' => 'varchar',
+      'not null' => TRUE,
+      'length' => 125,
+    ),
+    'password' => array(
+	  'type' => 'varchar',
+	  'not null' => TRUE,
+	  'length' => 125,
+    ),
+    'title' => array(
+      'type' => 'varchar', 
+      'not null' => TRUE, 
+      'not null' => TRUE, 
+      'length' => 255
+    ),
+    'url_requested' => array(
+	  'type' => 'varchar',
+      'not null' => TRUE, 
+      'length' => 125
+    ),
+   'md5' => array(
+	 'description' => t('An md5 hash used for the programmatic creation of a site'),
+	 'type' => 'varchar',
+	 'not null' => TRUE,
+	 'length' => 32
+   ),
+   'status' => array(
+	  'type'=>'int', 
+	  'not null'=>TRUE, 
+	  'default'=> 0
+	),
+   'created' => array(
+     'description' => t('The Unix timestamp when the request was created.'),
+     'type' => 'int',
+     'not null' => TRUE,
+     'default' => 0
+   ),
+  ),
+  'indexes' => array(
+    'md5' => array('md5')
+  ),
+  'primary key' => array('id'),			       
+);
+
+$schema['request_contact_us'] = array(
+	'fields' => array(
+	  'id' => array(
+		'type' => 'serial',
+        'unsigned' => TRUE, 
+        'not null' => TRUE,
+	  ),
+	  'name' => array(
+		'type' => 'varchar',
+		'not null' => TRUE,
+		'length' => 255,
+	  ),
+      'email' => array(
+        'type'=>'varchar', 
+        'not null' => TRUE, 
+        'length' => 255
+     ),
+     'message' => array(
+	   'description' => t('User submitted message.'),
+	   'type' => 'text',
+	   'size' => 'normal',
+	   'default' => '',
+	 ),
+	 'type' => array(
+		'description' => t('Message type'),
+		'type' => 'varchar',
+		'not null' => TRUE,
+		'length' => 50,
+		'default' => 'contact',
+	 ),
+	 'created' => array(
+      'description' => t('The Unix timestamp when the contact us was submitted.'),
+      'type' => 'int',
+      'not null' => TRUE,
+      'default' => 0
+	 ),
+	),
+	'primary key' => array('id'),
+);
+return $schema;
+}
+
+function drupal_sites_install() {
+	drupal_install_schema('drupal_sites');
+}
+
+function drupal_sites_uninstall() {
+	drupal_uninstall_schema('drupal_sites');
+}
+
+function drupal_sites_update_6100() {
+	$ret = array();
+	$ret[] = update_sql("UPDATE {system} SET weight=99 WHERE name = 'drupal_sites';");
+	return $ret;
+}
+
+function drupal_sites_update_6105() {
+	$ret = array();
+	$ret[] = update_sql("ALTER TABLE {request_contact_us} ADD type VARCHAR( 50 ) NOT NULL DEFAULT 'contact' AFTER message ");
+	return $ret;
+}

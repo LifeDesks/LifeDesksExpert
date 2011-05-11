@@ -1,0 +1,47 @@
+.members_image {
+	float:left;
+	width:33%;
+	border: thin siver solid;
+	margin: 0.5 em;
+	padding: 0.5 em;
+}
+
+.members_image p {
+	text-align: center;
+}
+
+#members_slideshow {
+	padding:3px;
+	background-color:#FFF;
+	margin:0px;
+}
+
+#members_slideshow li {
+	list-style:none;
+	background:none;
+	font-size:small;
+}
+
+#members_slideshow li a {
+	background:none;
+	display: block;
+	line-height: 20px;
+	height: 20px;
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	outline: none;
+	padding: 1px 5px;
+	padding-left: 24px;
+}
+
+#members_slideshow li.piclens a {
+		background-image: url(../images/cooliris-icon.gif);
+}
+
+span.active {
+	color:#009900;
+}
+
+span.blocked {
+	color: #FF0000;
+}

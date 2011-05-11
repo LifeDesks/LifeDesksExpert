@@ -1,0 +1,62 @@
+<?PHP
+// $Id: oai2.install,v 1.4.2.1.2.3 2008/12/16 19:11:38 rjerome Exp $
+function oai2_schema(){
+  $schema['oai2_metadata_formats'] = array(
+    'fields' => array(
+      'name' => array('type' => 'varchar','length' => 100,'not null' => true,'default' => ''),
+      'metadata_prefix' => array('type' => 'varchar','length' => 100,'not null' => true,'default' => ''),
+      'schema' => array('type' => 'varchar','length' => 255,'not null' => true,'default' => ''),
+      'metadata_namespace' => array('type' => 'varchar','length' => 255,'not null' => true,'default' => ''),
+      'record_prefix' => array( 'type' => 'varchar','length' => 100, 'not null' => true, 'default' => ''),
+      'record_namespace' => array('type' => 'varchar', 'length' => 255, 'not null' => true, 'default' => ''),
+    ),
+    'primary key' => array('name')
+  );
+  
+  $schema['oai2_tokens'] = array(
+    'fields' => array(
+      'id' => array('type' => 'varchar','length' => 32,'not null' => TRUE, 'default' => 0),
+      'deliveredrecords' => array('type' => 'int','not null' => TRUE,'default' => 0),
+      'extquery' => array('type' => 'varchar','length' => 255, 'default' => ''),
+      'queryargs' => array('type' => 'varchar','length' => 255, 'default' => ''),
+      'metadata_prefix' => array('type' => 'varchar', 'length' => 255, 'default' => ''),
+      'timestamp' => array( 'type' => 'datetime')
+    ),
+    'primary key' => array('id')
+    );
+    return $schema;
+}
+function oai2_install(){
+    $result = array();
+    
+   drupal_install_schema('oai2');      
+   
+   $result[] = update_sql("ALTER TABLE {oai2_tokens} MODIFY COLUMN timestamp TIMESTAMP ");
+   
+   $result[] = update_sql("INSERT INTO {oai2_metadata_formats} (`name`,`metadata_prefix`,`schema`,`metadata_namespace`,`record_prefix`,`record_namespace`) VALUES 
+                              ('oai_dc','oai_dc','http://www.openarchives.org/OAI/2.0/oai_dc.xsd','http://www.openarchives.org/OAI/2.0/oai_dc/','dc','http://purl.org/dc/elements/1.1/');
+                              ;");
+  
+  if (count($result) == count(array_filter($result))) {
+    drupal_set_message(t('The oai2 module has successfully added its tables to the database.'));
+  }
+  else {
+    drupal_set_message(t('Drupal encountered some errors while attempting to install the database tables for the oai2 module.'), 'error');
+  }
+   
+}
+function oai2_uninstall(){
+
+  drupal_uninstall_schema('oai2');
+   
+}
+function oai2_update_1() {
+  $result = array();
+  $result[] = update_sql("ALTER TABLE {oai2_tokens} MODIFY id VARCHAR(13) NOT NULL DEFAULT 0");
+  return $result;
+}
+function oai2_update_6000() {
+  $result = array();
+  $result[] = update_sql("ALTER TABLE {oai2_tokens} MODIFY id VARCHAR(32) NOT NULL DEFAULT 0");
+  return $result;
+}

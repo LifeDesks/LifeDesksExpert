@@ -1,0 +1,822 @@
+<?php
+/* $Id:$ */
+
+/**
+ * @file manage_site.module
+ * This module permits the management of a site, including site deletion
+ */
+
+/**
+  * Implementation of hook_perm()
+ */
+function manage_site_perm() {
+  return array('manage site','perform export','perform backup','delete site');
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function manage_site_menu() {
+  $items['admin/manage_site'] = array(
+    'title' => t('Manage Your LifeDesk'),
+    'description' => t('Manage your site, including exporting the database and deleting it altogether.'),
+    'type' => MENU_NORMAL_ITEM,
+    'weight' => 10,
+    'page callback' => 'manage_site_block_page',
+    'access arguments' => array('manage site'),
+  );
+  $items['admin/manage_site/export'] = array(
+    'title' => t('Export Your Files'),
+    'description' => t('Export everything in your site\'s files folder.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('manage_site_export_form'),
+    'access arguments' => array('perform export'),
+    'type' => MENU_NORMAL_ITEM,
+    'weight' => 0,
+  );
+  $items['admin/manage_site/backup'] = array(
+    'title' => t('Backup Your Database'),
+    'description' => t('Export your entire database for insertion in a MySQL database.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('manage_site_backup_form'),
+    'access arguments' => array('perform backup'),
+    'type' => MENU_NORMAL_ITEM,
+    'weight' => 1,
+  );
+  $items['admin/manage_site/delete'] = array(
+    'title' => t('Delete Your LifeDesk'),
+    'description' => t('Delete your LifeDesk.'),
+    'type' => MENU_NORMAL_ITEM,
+	'page callback' => 'drupal_get_form',
+	'page arguments' => array('manage_site_delete_form'),
+	'access arguments' => array('delete site'),
+	'weight' => 2,
+  );
+  $items['admin/manage_site/delete/confirm'] = array(
+	'page callback' => 'drupal_get_form',
+	'page arguments' => array('manage_site_delete_confirm_form'),
+	'access arguments' => array('delete site'),
+	'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_theme
+*/
+function manage_site_theme() {
+  return array(
+    'manage_site_delete_form' => array(
+      'arguments' => array('form' => NULL),
+    ),
+    'manage_site_backup_form' => array(
+	  'arguments' => array('form' => NULL),
+	),
+	'manage_site_export_form' => array(
+	  'arguments' => array('form' => NULL),
+	),
+  );
+}
+
+/**
+ * Display a block page for site management
+ */
+function manage_site_block_page() {
+  $item = menu_get_item();
+  $content = system_admin_menu_block($item);
+
+  if (system_admin_compact_mode()) {
+    $output .= '<ul class="menu">';
+    foreach ($content as $item) {
+      $output .= '<li class="leaf">'. l($item['title'], $item['href'], $item['localized_options']) .'</li>';
+    }
+    $output .= '</ul>';
+  }
+  else {
+    $output .= '<dl class="admin-list">';
+    foreach ($content as $item) {
+      $output .= '<dt>'. l($item['title'], $item['href'], $item['localized_options']) .'</dt>';
+      $output .= '<dd>'. $item['description'] .'</dd>';
+    }
+    $output .= '</dl>';
+  }
+
+  return $output;
+}
+
+/**
+ * Implementation of hook_form for files export.
+ */
+function manage_site_export_form(&$form_state) {
+  $form = array();
+  $form['manage_site_file_name'] = array(
+    "#type" => "textfield",
+    "#title" => t("Export compressed folder name"),
+    "#default_value" => _manage_site_default_file_name(),
+  );
+
+  if (@function_exists("gzencode")) {
+    $compression_options['gzip'] = t("GZip");
+  }
+  if (@function_exists("bzcompress")) {
+    $compression_options['bzip'] = t("BZip");
+  }
+  if (class_exists('ZipArchive')) {
+    $compression_options['zip'] = t("Zip");
+  }
+
+  $form['manage_site_destination'] = array(
+    "#type" => "hidden",
+    "#default_value" => "download",
+  );
+
+  $form['manage_site_compression'] = array(
+    "#type" => "radios",
+    "#title" => t("Compression"),
+    "#options" => $compression_options,
+    "#default_value" => "gzip",
+  );
+
+  $form['manage_site_append_timestamp'] = array(
+    "#type" => "hidden",
+    "#default_value" => 1,
+  );
+  $form['manage_site_timestamp_format'] = array(
+    "#type" => "hidden",
+    "#default_value" => 'Y-m-d\TH-i-s',
+  );
+  $form[] = array(
+    '#type' => 'submit',
+    '#value' => t('Export'),
+  );
+  return $form;
+}
+
+function theme_manage_site_export_form($form){
+  $output .= drupal_render($form);
+  return $output;
+}
+
+/**
+ * Submit the form. Save the values as defaults if desired and output the backup file.
+ */
+function manage_site_export_form_submit($form, &$form_state) {
+  $out = _manage_site_export(
+    $form_state['values']['manage_site_file_name'],
+    $form_state['values']['manage_site_compression'],
+    $form_state['values']['manage_site_append_timestamp'] ? $form_state['values']['manage_site_timestamp_format'] : FALSE
+    );
+
+  $form_state['redirect'] = $out;
+}
+
+function _manage_site_export($filename, $compression = "gzip", $append_timestamp = FALSE) {
+  if ($append_timestamp) {
+    $filename .= "-". date($append_timestamp);
+  }
+  $filename = _manage_site_clean_filename($filename);
+  $shortname = variable_get('shortname', '');
+
+  switch ($compression) {
+    case "gzip":
+      header('Content-Type: application/x-gzip');
+	  $content_disp = ( ereg('MSIE ([0-9].[0-9]{1,2})', $HTTP_USER_AGENT) == 'IE') ? 'inline' : 'attachment';
+	  header('Content-Disposition: ' . $content_disp . '; filename=' . $filename . '.tar.gz');
+	  header('Pragma: no-cache');
+	  header('Expires: 0');
+	  // create the gzipped tarfile.
+	  passthru( "tar cz files/$shortname");
+      break;
+
+    case "bzip":
+	  header('Content-Type: application/x-bzip');
+	  $content_disp = ( ereg('MSIE ([0-9].[0-9]{1,2})', $HTTP_USER_AGENT) == 'IE') ? 'inline' : 'attachment';
+	  header('Content-Disposition: ' . $content_disp . '; filename=' . $filename . '.tar.bz');
+	  header('Pragma: no-cache');
+	  header('Expires: 0');
+	  // create the bzipped tarfile.
+	  passthru( "tar cj files/$shortname");
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_form for site backup.
+ */
+function manage_site_backup_form(&$form_state) {
+  $form = array();
+  $form['message'] = array(
+  	'#type' => 'markup',
+  	'#value' => '<div class="messages status">' . t('The username and password for the master account in the database backup will be "superadmin" and "LDsRkewl!", respectively.') . '</div>',
+  );
+  $tables = _manage_site_get_table_names();
+  $form['manage_site_exclude_tables'] = array(
+    "#type" => "hidden",
+    "#default_value" => '',
+  );
+  $form['manage_site_nodata_tables'] = array(
+    "#type" => "hidden",
+    "#default_value" => '',
+  );
+  $form['manage_site_file_name'] = array(
+    "#type" => "textfield",
+    "#title" => t("Backup file name"),
+    "#default_value" => _manage_site_default_file_name(),
+  );
+
+  $compression_options = array("none" => t("No Compression"));
+  if (@function_exists("gzencode")) {
+    $compression_options['gzip'] = t("GZip");
+  }
+  if (@function_exists("bzcompress")) {
+    $compression_options['bzip'] = t("BZip");
+  }
+  if (class_exists('ZipArchive')) {
+    $compression_options['zip'] = t("Zip");
+  }
+
+  $form['manage_site_destination'] = array(
+    "#type" => "hidden",
+    "#default_value" => "download",
+  );
+
+  $form['manage_site_compression'] = array(
+    "#type" => "radios",
+    "#title" => t("Compression"),
+    "#options" => $compression_options,
+    "#default_value" => "gzip",
+  );
+
+  $form['manage_site_append_timestamp'] = array(
+    "#type" => "hidden",
+    "#default_value" => 1,
+  );
+  $form['manage_site_timestamp_format'] = array(
+    "#type" => "hidden",
+    "#default_value" => 'Y-m-d\TH-i-s',
+  );
+  $form[] = array(
+    '#type' => 'submit',
+    '#value' => t('Backup Database'),
+  );
+  return $form;
+}
+
+function theme_manage_site_backup_form($form) {
+	$output = drupal_render($form);
+	return $output;
+}
+
+/**
+ * Submit the form. Save the values as defaults if desired and output the backup file.
+ */
+function manage_site_backup_form_submit($form, &$form_state) {
+  $out = _manage_site_dump_tables(
+    $form_state['values']['manage_site_file_name'],
+    $form_state['values']['manage_site_exclude_tables'],
+    $form_state['values']['manage_site_nodata_tables'],
+    'sql',
+    $form_state['values']['manage_site_destination'],
+    $form_state['values']['manage_site_compression'],
+    "manual",
+    $form_state['values']['manage_site_append_timestamp'] ? $form_state['values']['manage_site_timestamp_format'] : FALSE
+    );
+
+  $form_state['redirect'] = $out;
+}
+
+/**
+ * Build the database dump file. Takes a list of tables to exclude and some formatting options.
+ */
+function _manage_site_dump_tables($filename, $exclude_tables, $nodata_tables, $type = "sql", $destination = "download", $compression = "gzip", $mode = "manual", $append_timestamp = FALSE) {
+  $file_mime = "text/plain";
+  $success = FALSE;
+
+  if ($append_timestamp) {
+    $filename .= "-". date($append_timestamp);
+  }
+  $filename = _manage_site_clean_filename($filename);
+
+  // Dump the database.
+  $temp_file = _manage_site_temp_file();
+  switch ($type) {
+    case "sql":
+      $success = _manage_site_get_dump_sql($temp_file, $exclude_tables, $nodata_tables);
+      $filename .= ".sql";
+      $filemime = 'text/x-sql';
+      break;
+  }
+
+  if ($success) {
+    // Compress the results.
+    switch ($compression) {
+      case "gzip":
+        $temp_gz = _manage_site_temp_file('gz');
+        if ($success = _manage_site_gzip_encode($temp_file, $temp_gz, 9)) {
+          $temp_file = $temp_gz;
+          $filename .= ".gz";
+          $filemime = 'application/x-gzip';
+        }
+        break;
+
+      case "bzip":
+        $temp_bz = _manage_site_temp_file('bz');
+        if ($success = _manage_site_bzip_encode($temp_file, $temp_bz)) {
+          $temp_file = $temp_bz;
+          $filename .= ".bz";
+          $filemime = 'application/x-bzip';
+        }
+        break;
+
+      case "zip":
+        $temp_zip = _manage_site_temp_file('zip');
+        if ($success = _manage_site_zip_encode($temp_file, $temp_zip, $filename)) {
+          $temp_file = $temp_zip;
+          $filename .= ".zip";
+          $filemime = 'application/zip';
+        }
+        break;
+    }
+
+    // Download the results.
+    switch ($destination) {
+      case "download":
+        _manage_site_send_file_to_download($filename, $file_mime, $temp_file);
+        break;
+    }
+  }
+
+  // Delete any temporary files we've created.
+  _manage_site_temp_file("", TRUE);
+}
+
+/**
+ *  Force a browser download for the file.
+ */
+function _manage_site_send_file_to_download($filename, $filetype, $file_path) {
+  header('Content-Type: '. $filetype);
+  header('Expires: '. gmdate('D, d M Y H:i:s') .' GMT');
+  header('Content-Length: '. filesize($file_path));
+  header('Content-Disposition: attachment; filename="'. $filename .'"');
+
+  // Transfer file in 1024 byte chunks to save memory usage.
+  if ($fd = fopen($file_path, 'rb')) {
+    while (!feof($fd)) {
+      print fread($fd, 1024);
+    }
+    fclose($fd);
+  }
+
+  // Delete any temporary files we've created.
+  _manage_site_temp_file("", TRUE);
+  watchdog('manage_site', 'Database backup downloaded');
+  module_invoke_all('exit');
+  exit();
+}
+
+/**
+ * Get the sql dump file. Returns a list of sql commands, one command per line.
+ *  That makes it easier to import without loading the whole file into memory.
+ *  The files are a little harder to read, but human-readability is not a priority
+ */
+function _manage_site_get_dump_sql($file, $exclude_tables, $nodata_tables) {
+  if ($dst = fopen($file, "w")) {
+    $exclude = _manage_site_default_exclude_tables();
+    $nodata = _manage_site_default_structure_only_tables();
+    fwrite($dst, _manage_site_get_sql_file_header());
+    $alltables = _manage_site_get_tables();
+    foreach ($alltables as $table) {
+      if ($table['Name'] && !isset($exclude[$table['Name']])) {
+        fwrite($dst, _manage_site_get_table_structure_sql($table));
+        if (!in_array($table['Name'], $nodata)) {
+          _manage_site_dump_table_data_sql_to_handle($dst, $table);
+        }
+      }
+    }
+    fwrite($dst, _manage_site_get_sql_file_footer());
+    fclose($dst);
+    return TRUE;
+  }
+  else {
+    return FALSE;
+  }
+}
+
+/**
+ * Get the sql for the structure of the given table.
+ */
+function _manage_site_get_table_structure_sql($table) {
+  $out = "";
+  $result = db_query("SHOW CREATE TABLE `". $table['Name'] ."`");
+  if ($create = db_fetch_array($result)) {
+    $out .= "DROP TABLE IF EXISTS `". $table['Name'] ."`;\n";
+    $out .= strtr($create['Create Table'], "\n", " ");
+    if ($table['Auto_increment']) {
+      $out .= " AUTO_INCREMENT=". $table['Auto_increment'];
+    }
+    $out .= ";\n";
+  }
+  return $out;
+}
+
+/**
+ *  Get the sql to insert the data for a given table
+ */
+function _manage_site_dump_table_data_sql_to_handle($dst, $table) {
+  $superadmin = array();
+
+  // Set dummy credentials to LD Superadmin account.
+  if($table['Name'] == 'users') {
+    $superadmin = db_fetch_array(db_query("SELECT name, givenname, surname, pass FROM {users} WHERE uid = 1"));
+    $shortname = variable_get('shortname', '');
+    // Set 'superadmin' as name, $shortname as givenname, 'superadmin' as surname and 'LDsRkewl!' as password.
+    db_query("UPDATE {users} SET name = 'superadmin', givenname = '%s', surname = 'superadmin', pass = 'c011d8946349282b2fd2d29f33a686ad' WHERE uid = 1", $shortname);
+  }
+
+  $data = db_query("SELECT * FROM `". $table['Name'] ."`");
+  while ($row = db_fetch_array($data)) {
+    $items = array();
+    foreach ($row as $key => $value) {
+      $items[] = is_null($value) ? "null" : "'". db_escape_string($value) ."'";
+    }
+    if ($items) {
+      fwrite(
+        $dst,
+        "INSERT INTO `". $table['Name'] ."` VALUES (". implode(",", $items) .");\n"
+        );
+    }
+  }
+
+  // Set the originals credentials back to LD Superadmin user account.
+  if($table['Name'] == 'users') {
+    db_query("UPDATE {users} SET name = '%s', givenname = '%s', surname = '%s', pass = '%s' WHERE uid = 1", $superadmin['name'], $superadmin['givenname'], $superadmin['surname'], $superadmin['pass']);
+  }
+}
+
+/**
+ * The header for the top of the sql dump file. These commands set the connection
+ *  character encoding to help prevent encoding conversion issues.
+ */
+function _manage_site_get_sql_file_header() {
+  return "
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE=NO_AUTO_VALUE_ON_ZERO */;
+
+SET NAMES utf8;
+";
+}
+
+/**
+ * The footer of the sql dump file.
+ */
+function _manage_site_get_sql_file_footer() {
+  return "
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+";
+}
+
+/**
+ * Get a list of tables in the db. Works with MySQL, Postgres not tested.
+ */
+function _manage_site_get_tables() {
+  $out = "";
+  // get auto_increment values and names of all tables
+  $tables = db_query("show table status");
+  while ($table = db_fetch_array($tables)) {
+    $out[$table['Name']] = $table;
+  }
+  return $out;
+}
+
+/**
+ * Get the list of table names.
+ */
+function _manage_site_get_table_names() {
+  $out = "";
+  // Get auto_increment values and names of all tables.
+  $tables = db_query("show table status");
+  while ($table = db_fetch_array($tables)) {
+    $out[$table['Name']] = $table['Name'];
+  }
+  return $out;
+}
+
+/**
+ * Return a list of backup filetypes.
+ */
+function _manage_site_filetypes() {
+  return array(
+    "sql" => array(
+      "extension" => ".sql",
+      "filemime" => "text/x-sql",
+    ),
+    "gzip" => array(
+      "extension" => ".gz",
+      "filemime" => "application/x-gzip",
+    ),
+    "bzip" => array(
+      "extension" => ".bz",
+      "filemime" => "application/x-bzip",
+    ),
+    "zip" => array(
+      "extension" => ".zip",
+      "filemime" => "application/zip",
+    ),
+  );
+}
+
+/**
+ * Get a temp file. Store it in the normal save path for slightly better security
+ *   in shared environments.
+ */
+function _manage_site_temp_file($extension = "", $delete_all = FALSE) {
+  static $files = array();
+
+  if ($delete_all) {
+    _manage_site_temp_files_delete($files);
+  }
+  else {
+    $file = tempnam(file_directory_temp(), 'manage_site_');
+    if (!empty($extension)) {
+      unlink($file);
+      $file .= '.'. $extension;
+    }
+    $files[] = $file;
+    return $file;
+  }
+}
+
+/**
+ * Delete all temporary files.
+ */
+function _manage_site_temp_files_delete($files) {
+  foreach ($files as $file) {
+    if (file_exists($file)) {
+      @unlink($file);
+    }
+  }
+}
+
+/**
+ * Gzip encode a file.
+ */
+function _manage_site_gzip_encode($source, $dest, $level = 9) {
+  $success = FALSE;
+  if (@function_exists("gzopen")) {
+    if (($fp_out = gzopen($dest, 'wb'. $level)) && ($fp_in = fopen($source, 'rb'))) {
+      while (!feof($fp_in)) {
+        gzwrite($fp_out, fread($fp_in, 1024 * 512));
+      }
+      $success = TRUE;
+    }
+    @fclose($fp_in);
+    @gzclose($fp_out);
+  }
+  return $success;
+}
+
+/**
+ * Bzip encode a file.
+ */
+function _manage_site_bzip_encode($source, $dest) {
+  $success = FALSE;
+  if (@function_exists("bzopen")) {
+    if (($fp_out = bzopen($dest, 'w')) && ($fp_in = fopen($source, 'rb'))) {
+      while (!feof($fp_in)) {
+        bzwrite($fp_out, fread($fp_in, 1024 * 512));
+      }
+      $success = TRUE;
+    }
+    else {
+      $error = TRUE;
+    }
+    @fclose($fp_in);
+    @bzclose($fp_out);
+  }
+  return $success;
+}
+
+/**
+ * Zip encode a file.
+ */
+function _manage_site_zip_encode($source, $dest, $filename) {
+  $success = FALSE;
+  if (class_exists('ZipArchive')) {
+    $zip = new ZipArchive;
+    $res = $zip->open($dest, constant("ZipArchive::CREATE"));
+    if ($res === TRUE) {
+      $zip->addFile($source, $filename);
+      $success = $zip->close();
+    }
+  }
+  return $success;
+}
+
+/*
+ Defaults
+ */
+
+/**
+ * Construct a default filename using the site's name.
+ */
+function _manage_site_default_file_name() {
+  return _manage_site_clean_filename(variable_get('site_name', "manage_site"));
+}
+
+/**
+ * Construct a default filename using token and some cleaning.
+ */
+function _manage_site_clean_filename($filename) {
+  $filename = preg_replace("/[^a-zA-Z0-9\.\-_]/", "", $filename);
+  if (strlen($filename) > 50) {
+    $filename = drupal_substr($filename, 0, 50);
+  }
+  if (strlen($filename) == 0) {
+    $filename = 'untitled';
+  }
+  return $filename;
+}
+
+/**
+ * Tables to ignore altogether. None by default.
+ */
+function _manage_site_default_exclude_tables() {
+  return array();
+}
+
+/**
+ * Return the default tables whose data can be ignored. These tables mostly contain
+ *  info which can be easily reproducted (such as cache or search index)
+ *  but also tables which can become quite bloated but are not necessarily extremely
+ *  important to back up or migrate during development (such ass access log and watchdog)
+ */
+function _manage_site_default_structure_only_tables() {
+  $core = array(
+    'cache',
+    'cache_filter',
+    'cache_calendar_ical',
+    'cache_menu',
+    'cache_page',
+    'cache_views',
+    'sessions',
+    'search_dataset',
+    'search_index',
+    'search_keywords_log',
+    'search_total',
+    'watchdog',
+    'accesslog',
+    'devel_queries',
+    'devel_times',
+  );
+  $alltables = array_merge($core, module_invoke_all('devel_caches'));
+  global $db_prefix;
+  foreach ($alltables as $table) {
+    $prefixed_tables[] = $db_prefix . $table;
+  }
+  return $prefixed_tables;
+}
+
+/**
+ * Implementation of hook_form for site deletion
+ */
+function manage_site_delete_form(&$form_state) {
+  $form['manage_site']['submit'] = array(
+	'#type' => 'submit',
+	'#value' => t('Delete'),
+  );
+  $form['manage_site']['cancel'] = array(
+	'#type' => 'markup',
+	'#value' => l(t('Cancel'),'admin'),
+  );
+
+  $form['#action'] = url('admin/manage_site/delete/confirm');
+
+  return $form;
+}
+
+function theme_manage_site_delete_form($form) {
+  $output = '<div class="messages warning"><strong>' . t('WARNING') . '</strong> ' . t('Your database will be held for two weeks then will be automatically deleted along with all your site\'s content.') . '</div>';
+  $output .= drupal_render($form['manage_site']);
+  return $output;
+}
+
+function manage_site_delete_confirm_form(&$form_state) {
+  $module_path = drupal_get_path('module', 'manage_site') .'/';
+  drupal_add_css($module_path .'manage_site.css');
+
+  $message = '<div class="messages error"><strong>' . t('Are you sure you want to delete your site?') . '</strong></div>';
+
+  $form['message'] = array(
+	 '#type' => 'markup',
+	 '#value' => $message
+  );
+
+  $form['sitename'] = array(
+	 '#type' => 'hidden',
+	 '#value' => variable_get('shortname', 'LifeDesk'),
+  );
+
+  $form['reason'] = array(
+	 '#type' => 'textarea',
+	 '#title' => t('Feedback'),
+	 '#description' => t('Please help us by providing some feedback')
+  );
+
+
+  return confirm_form($form,
+   t('Are you sure you want to delete your site?'),
+   isset($_GET['destination']) ? $_GET['destination'] : 'admin',
+   '',
+   t('Delete'), t('Cancel'));
+}
+
+function manage_site_delete_confirm_form_submit($form, &$form_state) {
+	  global $db_url, $user, $conf;
+	
+	  //remove the site's content from the Solr index if deleted
+	  if(module_exists('apachesolr')) {
+		$solr = apachesolr_get_solr();
+		$query = 'hash:' . apachesolr_site_hash();
+	    $solr->deleteByQuery($query);
+		$solr->commit();	
+	  }
+	
+	  $cur_db = parse_url(is_array($db_url) ? $db_url['default'] : $db_url);
+	  if (strpos($cur_db['path'],'/')===0) {
+	    $cur_db['path'] = substr($cur_db['path'],1);
+	  }
+	  $dbname = $cur_db['path'];
+	  $hostname = $cur_db['host'];
+	  $username = $cur_db['user'];
+	  $password = $cur_db['pass'];
+	  $date = time();
+	  $backupFile = $dbname . format_date($date,"custom","Y-m-d-H-i-s");
+	  $backupFile1 = $backupFile.'_database';
+	  $backupFile2 = $backupFile.'_files';
+	  $backup = getcwd()."/SITE_BACKUPS/".$backupFile;
+	  $files = getcwd()."/files/".$dbname;
+	  mkdir($backup);
+	  $command = "mysqldump -h$hostname -u$username -p$password $dbname | gzip > $backup/$backupFile1.gz";
+	  system($command);
+	  $command = "tar cfz $backup/$backupFile2.tar.gz $files";
+	  system($command);
+
+	  $name = $user->surname.", ".$user->givenname;
+	  $mail = $user->mail;
+	  $site_name = variable_get('site_name',1);
+	  $shortname = $dbname;
+	  $message = $form_state['values']['reason'];
+	  $admin_db = $conf['_lifedesks_admindb'];
+	  if(!$admin_db)
+	    return;
+
+	  if (file_exists($backup.'/'.$backupFile.'_files.tar.gz')&&file_exists($backup)&&file_exists($backup.'/'.$backupFile.'_database.gz')) {
+		$dropped = db_query("DROP DATABASE %s", $dbname);
+		$command = "rm -rf $files";
+		system($command);
+
+		if(($dropped)&&(!file_exists($files))){
+		  $switch_db = _manage_site_dbswitch($admin_db);
+		  if($switch_db){
+		    $delete_nid = db_result(db_query("SELECT nid FROM {drupal_site} WHERE shortname = '%s'", $shortname));
+		    db_query("DELETE FROM {drupal_site} WHERE shortname = '%s'", $shortname);
+		    db_query("INSERT INTO {deleted_sites} (name, email, title, shortname, message, deleted) VALUES ('%s', '%s', '%s', '%s', '%s', '%d')", $name, $mail, $site_name, $shortname, $message, $date);
+		    node_delete($delete_nid);
+		    drupal_goto("http://www.lifedesks.org/delete");
+		  }
+		}
+	  } else {
+	    echo t("Backup of your files & database failed! We're sorry your LifeDesk cannot be deleted!");
+	  }
+	  //$command = "df -h | grep home";
+	  //system($command);
+	}
+
+	function _manage_site_dbswitch($db_name='') {
+	  global $db_url;
+
+	  if(!is_array($db_url)) {
+	    $db_url = array('default' => $db_url);
+	  }
+
+	  if (!$db_name) {
+	    $cur_db = db_set_active('default');
+	  }
+	  if($db_name) {
+		$url = parse_url($db_url['default']);
+		$conn = $url['scheme'] . '://' . $url['user'] . ':' . $url['pass'] . '@' . $url['host'] . '/' . $db_name;
+	    $db_url[$db_name] = $conn;
+	    $cur_db = db_set_active($db_name);
+	  }
+	  return $cur_db;
+}

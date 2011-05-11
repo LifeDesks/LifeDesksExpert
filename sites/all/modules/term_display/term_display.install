@@ -1,0 +1,44 @@
+<?php
+// $Id: term_display.install,v 1.3 2008/09/07 14:45:18 nedjo Exp $
+
+/**
+ * Implementation of hook_schema().
+ */
+function term_display_schema() {
+  $schema['term_display'] = array(
+    'description' => t('Stores display styles for terms in node presentation by vocabulary.'),
+    'fields' => array(
+      'vid' => array(
+        'description' => t('The {vocabulary}.vid to be affected.'),
+        'type' => 'int',
+        'unsigned' => 1,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'style' => array(
+        'description' => t('The display style.'),
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'weight' => array(
+        'description' => t('Weight of the element in the $node->content array. Lighter weights are higher up, heavier weights go down.'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('vid'),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function term_display_install() {
+  // Create tables.
+  drupal_install_schema('term_display');
+}

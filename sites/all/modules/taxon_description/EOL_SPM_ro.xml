@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<drupal>
+<term>
+<name lang="ro" term="overview" type="header">Prezentare generală</name>
+<description>capitol primar poziţia în Enciclopedia Vieţii.</description>
+<children>
+<term>
+<name lang="ro" term="description" type="chapter">Descriere</name>
+<description>O descriere completă a caracteristicilor taxon. Pentru a fi utilizate în principal atunci când multe din categoriile supuse sunt tratate împreună într-un singur obiect, dar la lungime. biologie taxon este de a fi utilizate în cazul în care un scurt rezumat.</description>
+</term>
+<term>
+<name lang="ro" term="biology" type="chapter">Biologie</name>
+<description>Un cont de biologia taxon. De exemplu, comportament, reproducerea, dispersie.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="ro" term="conservation" type="header">Conservare</name>
+<description>capitol primar poziţia în Enciclopedia Vieţii.</description>
+<children>
+<term>
+<name lang="ro" term="conservation" type="chapter">Conservare</name>
+<description>Conservare</description>
+</term>
+<term>
+<name lang="ro" term="conservationstatus" type="chapter">Stare de conservare</name>
+<description>O descriere a riscului de a deveni specie dispărută în prezent sau în viitorul apropiat. Dimensiunea populaţiei este tratată în conformitate cu Populaţie Biologie, şi tendinţele în dimensiuni populaţiei sunt tratate în Tendinţe. Cu toate acestea, acest lucru este elementul preferată, dacă un obiect include toate aceste lucruri si detalii despre listări de conservare.</description>
+</term>
+<term>
+<name lang="ro" term="legislation" type="chapter">Legislaţie</name>
+<description>reglementările juridice sau a statutului, cu privire la taxon.</description>
+</term>
+<term>
+<name lang="ro" term="management" type="chapter">Conducere</name>
+<description>Descrie şi tehnici utilizate în scopuri de gestionare a speciilor. Poate include, de management în raport cu o bucata de legislaţie, de exemplu, o lista CITES.</description>
+</term>
+<term>
+<name lang="ro" term="procedures" type="chapter">Proceduri</name>
+<description>Se ocupă cu modul în care te duci despre gestionarea acest taxon, ce sunt ameninţărilor cunoscute la acest taxonului?</description>
+</term>
+<term>
+<name lang="ro" term="threats" type="chapter">Ameninţări</name>
+<description>Ameninţările la care este supus acest taxon.</description>
+</term>
+<term>
+<name lang="ro" term="trends" type="chapter">Tendinţe</name>
+<description>O indicaţie a faptului dacă o populaţie este stabil, sau la creşterea sau descrescătoare.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="ro" term="description" type="header">Descriere</name>
+<description>capitol primar poziţia în Enciclopedia Vieţii.</description>
+<children>
+<term>
+<name lang="ro" term="behaviour" type="chapter">Comportamentul</name>
+<description>Descriere a comportamentului şi a modelelor de comportament ale unui organism, inclusiv acţiuni şi reacţii ale organismului în raport cu mediul său biotici şi abiotici. Include comunicare, percepţie, moduri şi mecanismele de locomoţie, precum şi strategii pe termen lung (cu excepţia împerechere şi strategii de reproducere, sunt reglementate de reproducere).</description>
+</term>
+<term>
+<name lang="ro" term="cytology" type="chapter">Citologie</name>
+<description>biologie celulară: formarea, structura, organite, şi funcţia de celule.</description>
+</term>
+<term>
+<name lang="ro" term="diagnosticdescription" type="chapter">Diagnostic Descriere</name>
+<description>Liste caracteristicile care disting acest taxon de la rudele săi cei mai apropiaţi. Poate include, dar nu se limitează la synapomorphies.</description>
+</term>
+<term>
+<name lang="ro" term="genetics" type="chapter">Genetică</name>
+<description>Informaţii privind genetica din taxonul, inclusiv karyotypes, Codul de bare de stare, întreg secvenţierea genomului statutul, ploidie.</description>
+</term>
+<term>
+<name lang="ro" term="growth" type="chapter">Creştere</name>
+<description>Descriere a ratelor de creştere, allometries, parametrii cunoscuţi a fi predictiv, morphometrics. Poate include, de asemenea ipoteze de paedomorphy sau neoteny, etc</description>
+</term>
+<term>
+<name lang="ro" term="lookalikes" type="chapter">Uită-te Alikes</name>
+<description>Alte taxoni că acest taxon pot fi confundate cu. Utile pentru identificarea şi compararea. Comune în cadrul comunităţilor de specii invazive.</description>
+</term>
+<term>
+<name lang="ro" term="molecularbiology" type="chapter">Biologie Moleculară</name>
+<description>Include toxicitate proteomica şi biochimie (de exemplu). Genomic de informaţii este, de obicei tratate în conformitate cu genetica.</description>
+</term>
+<term>
+<name lang="ro" term="morphology" type="chapter">Morfologie</name>
+<description>Descrierea aspectul taxonului; planul corpului de exemplu, forma şi culoarea de caracteristici externe, posturi tipice. Pot fi menţionate în continuare şi nici să includă obicei, sau anatomie.</description>
+</term>
+<term>
+<name lang="ro" term="physiology" type="chapter">Fiziologie</name>
+<description>Descrierea proceselor fiziologice. Include rate metabolice, precum şi sisteme de circulaţie, respiraţie, excreţie, imunitate, neurofiziologie.</description>
+</term>
+<term>
+<name lang="ro" term="size" type="chapter">Dimensiune</name>
+<description>Mărimea medie, max, gama; tip de dimensiune (perimetrul, lungime, volum, greutate ...)</description>
+</term>
+<term>
+<name lang="ro" term="taxonbiology" type="chapter">Taxon Biologie</name>
+<description>Rezumatul sau imagine de ansamblu a tuturor aspectelor legate de biologia o organismului.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="ro" term="ecologyanddistribution" type="header">Ecologie şi distribuţie</name>
+<description>capitol primar poziţia în Enciclopedia Vieţii.</description>
+<children>
+<term>
+<name lang="ro" term="associations" type="chapter">Asociaţiile</name>
+<description>Descrieri şi listele de taxoni care interacţionează cu taxon subiect. Include referire explicită la fel de interacţiune ecologice: Predator / prada; gazda / parazit, polenizatori, simbioza, mutualism, commensalism; hibridizare, ...</description>
+</term>
+<term>
+<name lang="ro" term="cyclicity" type="chapter">Ciclul</name>
+<description>Descrierea bioritmurilor, dacă pe scara de secunde, ore, zile, sau sezoane. Aceste state sau condiţii caracterizate prin repetarea regulată în timp. Ar putea acoperi, de asemenea, fenomene cum ar fi ratele de mestecat. cicluri de viaţă sunt trataţi în termen ciclului de viaţă. migraţiei sezoniere şi de reproducere sunt de obicei tratate separat.</description>
+</term>
+<term>
+<name lang="ro" term="dispersal" type="chapter">Dispersare</name>
+<description>Descriere a metodelor, circumstanţele, şi calendarul de dispersie (include atât de dispersie natale şi a dispersării încrucişării?)</description>
+</term>
+<term>
+<name lang="ro" term="distribution" type="chapter">Distribuire</name>
+<description>gamele Toci, de exemplu, o gamă globală, sau o mai restrânsă o; poate fi biogeografice, politice sau de altă natură (de exemplu, a reuşit domenii precum conservencies); endemism, indigene sau exotice; ref Darwin Core prelungire Geospatial. Nu includ distribuţia altitudinală.</description>
+</term>
+<term>
+<name lang="ro" term="ecology" type="chapter">Ecologie</name>
+<description>Ecologie</description>
+</term>
+<term>
+<name lang="ro" term="habitat" type="chapter">Habitat</name>
+<description>Include tărâmul (de exemplu, etc terestre) şi informaţii climatice (de exemplu, boreală); include, de asemenea, cerinţele şi toleranţele; orizontală şi verticală (altitudine) de distribuţie.</description>
+</term>
+<term>
+<name lang="ro" term="lifecycle" type="chapter">Ciclul de viaţă</name>
+<description>Defineşte şi descrie obligatorii transformări de dezvoltare. Include metamorfoză, instars, gametophyte / embryophytes, tranziţia de la gorun la forme de telefonie mobilă. Discută calendarul. Morfologia, de obicei, descris în descrieri morfologice.</description>
+</term>
+<term>
+<name lang="ro" term="lifeexpectancy" type="chapter">Speranţa de viaţă</name>
+<description>Orice informaţii cu privire la longevitate, inclusiv perioada medie un organism poate fi de aşteptat să supravieţuiască.</description>
+</term>
+<term>
+<name lang="ro" term="migration" type="chapter">Migraţia</name>
+<description>Descrierea mişcării periodice ale organismelor de la o localitate la alta (de exemplu, pentru reproducţie). De obicei include localitate, calendarul, şi ipoteza scop.</description>
+</term>
+<term>
+<name lang="ro" term="trophicstrategy" type="chapter">Strategia trofice</name>
+<description>Rezumate caracterul general al hrănire interacţiuni. De exemplu, modul de bază a absorbţiei foliare a nutrienţilor (autotrophy, heterotrophy, coprophagy, saprophagy), poziţia în reţeaua alimentară (prădător de top, producător primar, de consum), calificarea dieta (detritovore, omnivor, carnivor, ierbivor). liste specifice de taxoni sunt tratate în conformitate cu asociaţii (specificând prădători sau pradă).</description>
+</term>
+<term>
+<name lang="ro" term="populationbiology" type="chapter">Populaţie Biologie</name>
+<description>Include informaţii abundenţei (mărimea populaţiei, densitatea) şi demografice (de exemplu, vârsta de stratificare).</description>
+</term>
+<term>
+<name lang="ro" term="reproduction" type="chapter">Reproducere</name>
+<description>Descriere a fiziologiei de reproducere şi comportament, inclusiv împerechere şi variabilele istorie de viata. Include indicii, strategii, restricţii, ratele.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="ro" term="evolutionandsystematics" type="header">Evoluţia şi sistematică</name>
+<description>capitol primar poziţia în Enciclopedia vieţii</description>
+<children>
+<term>
+<name lang="ro" term="evolution" type="chapter">Evoluţie</name>
+<description>Descrierea evolutia taxon.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="ro" term="relevance" type="header">Relevanţă</name>
+<description>capitol primar poziţia în Enciclopedia Vieţii.</description>
+<children>
+<term>
+<name lang="ro" term="diseases" type="chapter">Boli</name>
+<description>Descrierea boli care organismul este supus. Organisme cauzatoare de boli pot fi, de asemenea, enumerate în asociaţii.</description>
+</term>
+<term>
+<name lang="ro" term="riskstatement" type="chapter">Declaratie de risc</name>
+<description>Efectele negative asupra oamenilor, a comunităţilor. Aceasta poate include, de asemenea, impactul asupra ecosistemelor ar trebui să declinul organismului sau să fie extirpată.</description>
+</term>
+<term>
+<name lang="ro" term="uses" type="chapter">Utilizeaza</name>
+<description>Beneficii pentru om, care pot include serviciile de ecosistem. Cu toate acestea, beneficiile pentru ecosisteme nu sunt specifice pentru om sunt cele mai bune tratate în declaraţia de risc (ceea ce se întâmplă atunci când organismul este eliminat)</description>
+</term>
+</children>
+</term>
+</drupal>

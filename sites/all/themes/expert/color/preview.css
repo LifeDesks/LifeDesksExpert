@@ -1,0 +1,42 @@
+/* $Id$ */
+#preview {
+  overflow: hidden;
+  max-width: 100%;
+  width: 600px;
+  height: 465px;
+}
+#preview #img {
+  width: 600px;
+  height: 465px;
+  position: relative;
+  z-index: 3;
+}
+#preview #gradient {
+  position: absolute;
+  left: 39px;
+  right: 39px;
+  top: 0;
+  height: 89px;
+  z-index: 2;
+}
+
+#preview #text {
+  position: absolute;
+  left: 220px;
+  top: 100px;
+  width: 300px;
+  height: 250px;
+  z-index: 4;
+}
+#preview #link-fill {
+  position: absolute;
+  left: 59px;
+  top: 122px;
+  width: 100px;
+  height: 20px;
+  z-index: 2;
+}
+#preview #gradient .gradient-line {
+  height: 10px;
+  overflow: hidden;
+}

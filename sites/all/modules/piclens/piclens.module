@@ -1,0 +1,256 @@
+<?php
+// $Id: piclens.module,v 1.1.4.16 2008/07/18 16:25:23 swentel Exp $
+
+/**
+ * @file Enables PicLens feeds and/or PicLens (Lite) on your Drupal website.
+ *
+ * @author Kristof De Jaeger - http://drupal.org/user/107403 - http://realize.be
+ * @version this is the drupal 6.x version
+ */
+
+/**
+ * Implementation of hook_help(). {
+ */
+function piclens_help($path, $arg) {
+  switch($path) {
+    case 'admin/help#piclens':
+      // we make it easy by reading in the README.txt
+      $path = drupal_get_path('module', 'piclens');
+      $readme = file_get_contents($path .'/README.txt');
+      return '<p>'. nl2br($readme) .'</p>';
+  }
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function piclens_perm() {
+  return array('administer piclens');
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function piclens_theme() {
+  return array(
+    'piclens_lite_html_link' => array(
+      'arguments' => array('drupal_set_content' => NULL),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function piclens_menu() {
+  $items = array();
+  $items['piclens'] = array(
+    'title' => 'PicLens RSS Feed',
+    'access arguments' => array('access content'),
+    'page callback' => 'piclens_create_feed',
+    'type' => MENU_CALLBACK,
+  );
+  $items['admin/settings/piclens'] = array(
+    'title' => 'PicLens',
+    'access arguments' => array('administer piclens'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('piclens_admin_settings'),
+    'description' => 'Configure Piclens support on your website.',
+  );
+  $items['admin/settings/piclens/piclens'] = array(
+    'title' => 'PicLens',
+    'access arguments' => array('administer piclens'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('piclens_admin_settings'),
+    'description' => 'Configure Piclens support on your website.',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['crossdomain.xml'] = array(
+    'title' => 'crossdomain',
+    'access arguments' => array('access content'),
+    'page callback' => 'piclens_crossdomain_xml',
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ *  Menu callback used by this module to create feeds.
+ */
+function piclens_create_feed() {
+  if (user_access('access content')) {
+    $args = func_get_args();
+    $module = check_plain(array_shift($args));
+    $items = module_invoke($module, 'mediarss_items', $args);
+    if (!empty($items)) {
+      mediarssapi_rss($items);
+    }
+  }
+}
+
+/**
+ * Menu callback for piclens settings.
+ */
+function piclens_admin_settings() {
+  // image gallery support
+  if (module_exists('piclens_image_gallery') || module_exists('piclens_taxonomy_image')) {
+
+    $form['supported_modules'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('General'),
+      '#description' => t('Please choose a tab to configure settings for a specific module.<br />More help and code examples is available at <a href="!url">admin/help/piclens</a>.', array('!url' => url('admin/help/piclens'))),
+    );
+    // one day we will support views
+    if (module_exists('piclens_views')) {
+      $form['supported_modules']['#description'] = t('Please choose a tab (if available) to configure settings for a specific module.<br />More help and code examples is available at <a href="!url">admin/help/piclens</a>. Views support is handled by a MediaRSS argument.');
+    }
+  }
+  else {
+    $form['no_supported_modules'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('No support'),
+      '#description' => t('No available modules are found for auto support by PicLens. Supported modules for now are %types. More help and code examples is available at <a href="!url">admin/help/piclens</a>.', array('%types' => 'Image Gallery and Taxonomy - Image', '!url' => url('admin/help/piclens')))
+    );
+  }
+  $form['logo_fieldset'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Logo'),
+    '#description' => t('You can add a custom logo to your slideshow. You may use any image (PNG, JPG, or GIF). A 26-pixel high logo will fit nicely into the top bar. By default, the shortcut icon is used, configured at <a href="@themes_configure">admin/build/themes</a>. You can override it underneath by entering the path to a custom logo.', array('@themes_configure' => url('admin/build/themes/settings'))),
+  );
+  $form['logo_fieldset']['piclens_logo'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Path to custom logo'),
+    '#default_value' => variable_get('piclens_logo', ''),
+  );
+  
+  return $form;
+}
+
+/**
+ * Menu callback to output crossdomain.xml
+ */
+function piclens_crossdomain_xml() {
+  $output = '<!DOCTYPE cross-domain-policy SYSTEM "http://www.macromedia.com/xml/dtds/cross-domain-policy.dtd">
+  <cross-domain-policy>
+  <allow-access-from domain="lite.piclens.com" />
+  </cross-domain-policy>';
+  drupal_set_header('Content-Type: text/xml; charset=utf-8');
+  echo $output;
+}
+
+/**
+ * API functions that other modules can use to create their own mediaRSS feed.
+ * This might get into a separate project one day.
+ */
+/**
+ * Helper function adding rss feed to drupal head.
+ */
+function mediarssapi_feed_url($feed_url, $title = '') {
+  $title = isset($title) ? ': '. $title .' - ' : ' ';
+  $page = (isset($_GET['page'])) ? $page = '?page='. $_GET['page'] : '';
+  drupal_add_feed($feed_url . $page, variable_get('site_name', 'Drupal') . $title . t('mediaRSS'));
+}
+
+/**
+ * Function spitting out mediaRSS feed.
+ * @param $items structured xml of items, see mediarssapi_format_item().
+ */
+function mediarssapi_rss($items) {
+
+  // logo
+  $logo = variable_get('piclens_logo', '');
+  if (empty($logo)) $logo = theme_get_setting('favicon');
+  if (!empty($logo)) $logo = '<atom:icon>'. check_url($logo) .'</atom:icon>';
+  
+  // paging
+  global $pager_total;
+  $total_pages = $pager_total[0]; // this might be tricky, what if we have more elements?
+  if ($total_pages != NULL) {
+    $page = $_GET['page'];
+    if ($page > 0) {
+      if (($page-1) == 0) $page_prev = '';
+      else $page_prev = 'page='. ($page-1);
+      $previous = '<atom:link rel="previous" href="'. url($_GET['q'], array('absolute' => true, 'query' => ($page_prev))) .'"/>';
+    }
+    else $previous = '';
+    if (($page+1) != $total_pages)
+    $next = '<atom:link rel="next" href="'. url($_GET['q'], array('absolute' => true, 'query' => 'page='. ($page+1))) .'"/>';
+    else $next = '';
+  }
+  else {
+    $next = '';
+    $previous = '';
+  }
+  
+  $output = '<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+    <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
+      <channel>
+      <title>'. variable_get('site_name', '') .'</title>
+      '. $logo .'
+      '. $previous .'
+      '. $next .'
+      '. $items .'
+      </channel>
+    </rss>';
+
+  drupal_set_header('Content-Type: application/rss+xml; charset=utf-8');
+  echo $output;
+}
+
+/**
+ * Format an item to add to PicLens rss feed.
+ *
+ * @param $item array of item properties
+ * properties:
+ * - title : title image or video
+ * - link : direct link to content
+ * - thumbnail : thumbnail url image or video
+ * - content : content url of image or video
+ *
+ * @return formatted item
+ */
+function mediarssapi_format_item($item) {
+  $rssitem = '
+    <item>
+      <title>'. check_plain($item['title']) .'</title>
+      <link>'. $item['link']  .'</link>
+      <pubDate>' . $item['pubdate'] . '</pubDate>
+      <media:thumbnail url="'. $item['thumbnail'] .'"/>
+      <media:content url="'. $item['content_url'] .'" type="'. $item['type'] .'" height="'. $item['height'] .'" width="'. $item['width'] .'" />
+    </item>
+  ';
+  return $rssitem;
+}
+
+/**
+ * Helper function adding javascript tag for PicLens Lite into <head> tag of your documents.
+ */
+function mediarssapi_piclens_lite_javascript() {
+  $path = drupal_get_path('module', 'piclens');
+  drupal_set_html_head('<script type="text/javascript" src="http://lite.piclens.com/current/piclens_optimized.js"></script>');
+}
+
+/**
+ * Helper function adding javascript link to start PicLens Lite slideshow.
+ *
+ * @param $image_or_text can be a text or thumbnail.
+ * @param $drupal_set_message determine if we use standard
+ * drupal_set_message function to insert the link into $messages
+ * or just return the link.
+ */
+function mediarssapi_piclens_lite_link($image_or_text = '', $drupal_set_message = false) {
+  $html = theme('piclens_lite_html_link', $image_or_text);
+  if ($drupal_set_message == TRUE)
+  drupal_set_message($html);
+  else
+  return $html;
+}
+
+function theme_piclens_lite_html_link($image_or_text) {
+  $path = drupal_get_path('module', 'piclens');
+  if (empty($image_or_text))
+  return '<div id="piclenslite"><a href="javascript:PicLensLite.start();">'. t('Start Slideshow') .' '. theme('image', $path .'/PicLensButton.png', 'PicLens', 'PicLens', array('width' => '16', 'height' => '12',  'border' => '0',  'align' => 'absmiddle')) .'</a></div>';
+  else
+  return '<a href="javascript:PicLensLite.start();">'. $image_or_text .'</a>';
+}

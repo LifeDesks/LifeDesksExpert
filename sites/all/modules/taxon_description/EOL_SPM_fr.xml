@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<drupal>
+<term>
+<name lang="fr" term="overview" type="header">Vue d'ensemble</name>
+<description>Chapitre principale position dans l'Encyclopédie de la vie.</description>
+<children>
+<term>
+<name lang="fr" term="description" type="chapter">Description</name>
+<description>Une description détaillée des caractéristiques du taxon. Pour être principalement utilisé lorsque la plupart des catégories de sujets sont traités dans un même objet, mais à la fin. biologie taxon est à utiliser si un bref résumé.</description>
+</term>
+<term>
+<name lang="fr" term="biology" type="chapter">Biologie</name>
+<description>Un compte rendu de la biologie du taxon. Par exemple, comportement, la reproduction, la dispersion.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="fr" term="conservation" type="header">Préservation</name>
+<description>Chapitre principale position dans l'Encyclopédie de la vie.</description>
+<children>
+<term>
+<name lang="fr" term="conservation" type="chapter">Préservation</name>
+<description>Préservation</description>
+</term>
+<term>
+<name lang="fr" term="conservationstatus" type="chapter">État de conservation</name>
+<description>Une description de la probabilité de l'espèce en voie de disparition à l'époque actuelle ou dans un proche avenir. Taille de la population est traitée en vertu de la biologie des populations, et les tendances dans les tailles de population sont traités en fonction des tendances. Toutefois, c'est l'élément préféré si un objet comprend toutes ces choses et les détails sur les annonces de conservation.</description>
+</term>
+<term>
+<name lang="fr" term="legislation" type="chapter">Législation</name>
+<description>Les dispositions légales ou des lois relatives au taxon.</description>
+</term>
+<term>
+<name lang="fr" term="management" type="chapter">Gestion</name>
+<description>Décrit les techniques et les objectifs utilisés dans la gestion des espèces. Ils peuvent comprendre la gestion par rapport à un projet de loi, par exemple, une liste de la CITES.</description>
+</term>
+<term>
+<name lang="fr" term="procedures" type="chapter">Procédures</name>
+<description>Traite de la manière que vous alliez sur la gestion de ce taxon; quelles sont les menaces connues à ce taxon?</description>
+</term>
+<term>
+<name lang="fr" term="threats" type="chapter">Menaces</name>
+<description>Les menaces que ce taxon est soumis.</description>
+</term>
+<term>
+<name lang="fr" term="trends" type="chapter">Tendances</name>
+<description>Une indication de savoir si une population est stable ou croissante ou décroissante.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="fr" term="description" type="header">Description</name>
+<description>Chapitre principale position dans l'Encyclopédie de la vie.</description>
+<children>
+<term>
+<name lang="fr" term="behaviour" type="chapter">Comportement</name>
+<description>Description des comportements et des modes de comportement d'un organisme, y compris les actions et réactions de l'organisme par rapport à son environnement biotique et abiotique. Comprend la communication, la perception, les modes et mécanismes de la locomotion, ainsi que des stratégies à long terme (à l'exception d'accouplement et les stratégies de reproduction, couverts par la reproduction).</description>
+</term>
+<term>
+<name lang="fr" term="cytology" type="chapter">Cytologie</name>
+<description>Biologie cellulaire: la formation, la structure, les organites, et la fonction des cellules.</description>
+</term>
+<term>
+<name lang="fr" term="diagnosticdescription" type="chapter">Description de diagnostic</name>
+<description>Énumère les caractéristiques qui distinguent ce taxon de ses plus proches parents. Peut inclure, mais n'est pas limité à synapomorphies.</description>
+</term>
+<term>
+<name lang="fr" term="genetics" type="chapter">Génétique</name>
+<description>Information sur la génétique du taxon, y compris les caryotypes, codage à barres de statut, le statut de l'ensemble de séquençage du génome, de ploïdie.</description>
+</term>
+<term>
+<name lang="fr" term="growth" type="chapter">Croissance</name>
+<description>Description des taux de croissance, allométries, les paramètres connus pour être intuitive, la morphométrie. Peut aussi inclure des hypothèses de paedomorphy ou néoténie, etc</description>
+</term>
+<term>
+<name lang="fr" term="lookalikes" type="chapter">Rechercher Alikes</name>
+<description>d'autres taxons que ce taxon peut être confondue avec. Utiles pour l'identification et la comparaison. Commune dans les communautés d'espèces envahissantes.</description>
+</term>
+<term>
+<name lang="fr" term="molecularbiology" type="chapter">Biologie Moléculaire</name>
+<description>Incluent la toxicité protéomique et de la biochimie (par exemple). L'information génomique est généralement traité en vertu de la génétique.</description>
+</term>
+<term>
+<name lang="fr" term="morphology" type="chapter">Morphologie</name>
+<description>Description de l'apparition du taxon; plan du corps, par exemple, la forme et la couleur des traits extérieurs, postures typiques. Peut être appelé ou inclure l'habitude, ou l'anatomie.</description>
+</term>
+<term>
+<name lang="fr" term="physiology" type="chapter">Physiologie</name>
+<description>Description des processus physiologiques. Comprend le taux métabolique, et des systèmes tels que la circulation, la respiration, l'excrétion, l'immunité, de la neurophysiologie.</description>
+</term>
+<term>
+<name lang="fr" term="size" type="chapter">Taille</name>
+<description>Taille moyenne, max, la gamme, le type de taille (périmètre, la longueur, volume, poids ...)</description>
+</term>
+<term>
+<name lang="fr" term="taxonbiology" type="chapter">Taxon Biologie</name>
+<description>Résumé ou un aperçu de tous les aspects de la biologie d'un organisme.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="fr" term="ecologyanddistribution" type="header">Ecologie et distribution</name>
+<description>Chapitre principale position dans l'Encyclopédie de la vie.</description>
+<children>
+<term>
+<name lang="fr" term="associations" type="chapter">Associations</name>
+<description>Les descriptions et les listes de taxons qui interagissent avec le taxon en question. Comprend une référence explicite à la nature de l'interaction écologique: prédateur / proie; hôte / parasite, les pollinisateurs, la symbiose, mutualisme, commensalisme, hybridation, ...
+</description>
+</term>
+<term>
+<name lang="fr" term="cyclicity" type="chapter">Cyclicité</name>
+<description>Description des biorythmes, que ce soit sur l'échelle de secondes, heures, jours, ou les saisons. Des États ou des conditions caractérisées par la répétition régulière dans le temps. Pourrait également couvrir des phénomènes tels que les taux à mâcher. Les cycles de vie sont traités dans la durée du cycle de vie. La migration saisonnière et la reproduction sont généralement traitées séparément.</description>
+</term>
+<term>
+<name lang="fr" term="dispersal" type="chapter">Dispersion</name>
+<description>Description des méthodes, des circonstances et du moment de la dispersion (comprend à la fois la dispersion natale et la dispersion métissage?)</description>
+</term>
+<term>
+<name lang="fr" term="distribution" type="chapter">Distribution</name>
+<description>Couvre gammes, par exemple, une offre globale, ou une interprétation plus restrictive; peut être biogéographique, politique ou autre (par exemple, la gestion des domaines tels que conservencies); endémisme; indigènes ou exotiques; ref Darwin Core géospatiales extension. Ne comprend pas la distribution altitudinale.</description>
+</term>
+<term>
+<name lang="fr" term="ecology" type="chapter">Écologie</name>
+<description>Écologie</description>
+</term>
+<term>
+<name lang="fr" term="habitat" type="chapter">Habitat</name>
+<description>Comprend domaine (par exemple, etc terrestre) et les données climatiques (par exemple boréale); inclut également des exigences et des tolérances; horizontale et verticale (altitude) de distribution.
+</description>
+</term>
+<term>
+<name lang="fr" term="lifecycle" type="chapter">Cycle de vie</name>
+<description>Définit et décrit les transformations obligatoires de développement. Comprend la métamorphose, stades, gamétophyte / embryophytes, les transitions de sessiles aux formes mobiles. Discute moment. Morphologie généralement décrits dans les descriptions morphologiques.</description>
+</term>
+<term>
+<name lang="fr" term="lifeexpectancy" type="chapter">Espérance de vie</name>
+<description>Toute information sur la longévité, y compris la période moyenne d'un organisme peut s'attendre à survivre.</description>
+</term>
+<term>
+<name lang="fr" term="migration" type="chapter">Migration</name>
+<description>Description du mouvement périodique des organismes d'une localité à une autre (par exemple, pour la reproduction). comprend habituellement une localité, le calendrier, et l'hypothèse but.</description>
+</term>
+<term>
+<name lang="fr" term="trophicstrategy" type="chapter">Trophique stratégie</name>
+<description>Résumés nature générale de l'alimentation interactions. Par exemple, le mode de base de l'absorption des nutriments (autotrophie, hétérotrophie, la coprophagie, saprophagy), position dans le réseau alimentaire (prédateurs, des producteurs primaires, des consommateurs), la catégorisation alimentation (detritovore, omnivore, carnivore, herbivore). des listes spécifiques de taxons sont traités dans des associations (en précisant les prédateurs ou proies).</description>
+</term>
+<term>
+<name lang="fr" term="populationbiology" type="chapter">Biologie des populations</name>
+<description>Comprend information sur l'abondance (taille de la population, densité) et les données démographiques (âge stratification).</description>
+</term>
+<term>
+<name lang="fr" term="reproduction" type="chapter">Reproduction</name>
+<description>Description de la physiologie de la reproduction et des comportements, y compris les accouplements et les variables démographiques. Comprend les indices, les stratégies, les restrictions, les taux.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="fr" term="evolutionandsystematics" type="header">Evolution et Systématique</name>
+<description>Chapitre principale position dans l'Encyclopédie de la vie</description>
+<children>
+<term>
+<name lang="fr" term="evolution" type="chapter">Évolution</name>
+<description>Description de l'évolution du taxon.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="fr" term="relevance" type="header">Pertinence</name>
+<description>Chapitre principale position dans l'Encyclopédie de la vie.</description>
+<children>
+<term>
+<name lang="fr" term="diseases" type="chapter">Maladies</name>
+<description>Description des maladies que l'organisme est soumis. Organismes pathogènes peuvent également être répertoriés sous les associations.</description>
+</term>
+<term>
+<name lang="fr" term="riskstatement" type="chapter">Énoncé du risque</name>
+<description>Les impacts négatifs sur les êtres humains, les communautés. Cela peut également inclure les impacts sur les écosystèmes devrait le déclin organisme ou être extirpé.</description>
+</term>
+<term>
+<name lang="fr" term="uses" type="chapter">Usages</name>
+<description>Avantages pour les humains qui peuvent inclure des services écosystémiques. Toutefois, les avantages pour les écosystèmes pas spécifique à l'homme sont les mieux traités dans la déclaration du risque (ce qui arrive lorsque l'organisme est supprimée)</description>
+</term>
+</children>
+</term>
+</drupal>

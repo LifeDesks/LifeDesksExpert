@@ -1,0 +1,366 @@
+<?php
+// $Id$
+/**
+ * @file
+ * Install and uninstall scripts for Data monitoring module.
+ */
+/**
+ * Implementation of hook_install().
+ */
+function data_monitoring_multisite_install() {
+  drupal_install_schema('data_monitoring_multisite');
+}
+/**
+ * Implementation of hook_schema().
+ */
+function data_monitoring_multisite_schema() {
+  // Add database tables
+  $schema['data_monitoring_multisite_log'] = array(
+    'description' => 'Aggregation of monitoring results and execution times for all sites.',
+    'fields' => array(
+      'dmmlid' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'The multisite monitoring log ID, defined by the database.',
+      ),
+      'shortname' => array(
+        'type' => 'varchar',
+        'not null' => TRUE,
+        'length' => 45,
+      ),
+      'dmlid' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'A unique ID for the log of a monitoring run and/or response process.',
+      ),
+      'dmid' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The monitor to which these results apply.',
+      ),
+      'id' => array(
+        'type' => 'varchar',
+        'length' => '100',
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The unique machine name of the monitor. This is the primary field monitors are loaded from, and is used so that monitors may be internal and not necessarily in the database. May only be alphanumeric characters plus underscores.',
+      ),
+      'module' => array(
+        'type' => 'varchar',
+        'length' => '50',
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The name of the module that generated this monitor.',
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => '200',
+        'default' => '',
+        'not null' => TRUE,
+        'description' => 'The descriptive display name of the monitor.',
+      ),
+      'description' => array(
+        'type' => 'text',
+        'size' => 'medium',
+        'default' => '',
+        'description' => 'A description of the monitor for the administrator interface.',
+      ),
+      'result_count' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Count of records returned by monitor query.',
+      ),
+      'processed' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'UNIX timestamp for when the monitor was executed.',
+      ),
+      'log_file' => array(
+        'description' => 'Path to the file containing detailed results, relative to Drupal root.',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => ''
+      ),
+      'responses_pending' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Count of responses waiting to be implemented for this log.',
+      ),
+      'responses_implemented' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Count of responses implemented for this log.',
+      ),
+    ),
+    'primary key' => array(
+      'dmmlid',
+    ),
+    'unique keys' => array(
+      'site_log' => array('shortname', 'dmlid'),
+    ),
+  );
+  return $schema;
+}
+/**
+ * Implementation of hook_requirements().
+ *
+ * Test and report on Data monitoring requirements
+ *
+ * @param $phase
+ *   The current system installation phase.
+ * @return
+ *   An array of system requirements.
+ */
+function data_monitoring_multisite_requirements($phase) {
+  $requirements = array();
+  // Ensure translations don't break at install time
+  $t = get_t();
+  if ($phase == 'runtime' || $phase == 'install') {
+    // Check default file directory is working.
+    $filesdir = file_directory_path();
+    if (file_check_directory($filesdir)) {
+      $path = variable_get('data_monitoring_multisite_directory', '');
+      if (empty($path)) {
+        $path = file_create_path('data-monitoring');
+        variable_set('data_monitoring_multisite_directory', $path);
+      }
+      if (!file_check_directory($path, FILE_CREATE_DIRECTORY)) {
+        $requirements['data_monitoring_multisite_directory'] = array(
+          'title' => $t('Data monitoring multisite'),
+          'value' => $t('Missing directory'),
+          'severity' => REQUIREMENT_ERROR,
+          'description' => $t("The %data_monitoring_multisite_directory_path is missing. Check permissions on your file directory then refresh this page. If problem persists contact module developer.", array('%data_monitoring_multisite_directory_path' => $path)),
+        );
+        // Change severity on install to prevent aborting, but allow error to show at runtime
+        if ($phase == 'install') $requirements['data_monitoring_multisite_directory']['severity'] = REQUIREMENT_WARNING;
+      }
+    }
+  }
+  return $requirements;
+}
+/**
+ * Implementation of hook_uninstall().
+ */
+function data_monitoring_multisite_uninstall() {
+  // TODO: Delete files?
+  drupal_uninstall_schema('data_monitoring_multisite');
+  variable_del('data_monitoring_multisite_last_aggregate_reporting_run');
+  variable_del('data_monitoring_multisite_aggregate_reporting_interval');
+  variable_del('data_monitoring_multisite_last_aggregate_logging_run');
+  variable_del('data_monitoring_multisite_aggregate_logging_interval');
+  variable_del('data_monitoring_multisite_aggregate_mail');
+  variable_del('data_monitoring_multisite_aggregate_mail_to');
+  variable_del('data_monitoring_multisite_aggregate_mail_reply_to');
+  variable_del('data_monitoring_multisite_directory');
+  variable_del('data_monitoring_multisite_aggregate_reporting_language');
+}
+/**
+ * Implementation of hook_disable().
+ */
+function data_monitoring_multisite_disable() {
+
+}
+/**
+ * Implementation of hook_enable().
+ */
+function data_monitoring_multisite_enable() {
+
+}
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function data_monitoring_multisite_update_6000() {
+  // Add database tables
+  $schema['data_monitoring_multisite_log'] = array(
+    'description' => 'Aggregation of monitoring results and execution times for all sites.',
+    'fields' => array(
+      'dmmlid' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'The multisite monitoring log ID, defined by the database.',
+      ),
+      'shortname' => array(
+        'type' => 'varchar',
+        'not null' => TRUE,
+        'length' => 45,
+      ),
+      'dmlid' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'A unique ID for the log of a monitoring run and/or response process.',
+      ),
+      'dmid' => array(
+        'type' => 'int',
+        'size' => 'normal',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The monitor to which these results apply.',
+      ),
+      'id' => array(
+        'type' => 'varchar',
+        'length' => '50',
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The unique id of the monitor. This is the primary field monitors are loaded from, and is used so that monitors may be internal and not necessarily in the database. May only be alphanumeric characters plus underscores.',
+      ),
+      'module' => array(
+        'type' => 'varchar',
+        'length' => '50',
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The name of the module that generated this monitor.',
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => '100',
+        'default' => '',
+        'not null' => TRUE,
+        'description' => 'The descriptive display name of the monitor.',
+      ),
+      'description' => array(
+        'type' => 'text',
+        'size' => 'medium',
+        'default' => '',
+        'description' => 'A description of the monitor for the administrator interface.',
+      ),
+      'response_trigger' => array(
+        'type' => 'varchar',
+        'length' => '20',
+        'default' => 'none',
+        'not null' => TRUE,
+        'description' => 'The type of trigger, value should be one of none, manual, automatic.',
+      ),
+      'failed' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Boolean indicating whether monitor failed (1) or passed (0) or did not execute (NULL).',
+      ),
+      'affected_records' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Count of records returned by monitor query.',
+      ),
+      'executed' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'UNIX timestamp for when the monitor was executed.',
+      ),
+      'response_executed' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'UNIX timestamp for when the response was executed.',
+      ),
+      'archive' => array(
+        'description' => 'Path to the file containing detailed results, relative to Drupal root.',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => ''
+      ),
+    ),
+    'primary key' => array(
+      'dmmlid',
+    ),
+    'unique keys' => array(
+      'site_log' => array('shortname', 'dmlid'),
+    ),
+  );
+
+  $ret = array();
+  db_create_table($ret, 'data_monitoring_multisite_log', $schema['data_monitoring_multisite_log']);
+  return $ret;
+
+}
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function data_monitoring_multisite_update_6001() {
+  $ret = array();
+  db_drop_field($ret, 'data_monitoring_multisite_log', 'response_trigger');
+  db_drop_field($ret, 'data_monitoring_multisite_log', 'response_executed');
+  db_drop_field($ret, 'data_monitoring_multisite_log', 'failed');
+  db_change_field($ret, 'data_monitoring_multisite_log', 'affected_records', 'result_count', array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Count of records returned by monitor query.',
+      ));
+  db_change_field($ret, 'data_monitoring_multisite_log', 'executed', 'processed', array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'UNIX timestamp for when the monitor was processed.',
+      ));
+  db_change_field($ret, 'data_monitoring_multisite_log', 'archive', 'log_file', array(
+        'description' => 'Path to the file containing detailed results, relative to Drupal root.',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => ''
+      ));
+  db_add_field($ret, 'data_monitoring_multisite_log', 'responses_pending', array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Count of responses waiting to be implemented for this log.',
+      ));
+  db_add_field($ret, 'data_monitoring_multisite_log', 'responses_implemented', array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Count of responses implemented for this log.',
+      ));
+  return $ret;
+}
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function data_monitoring_multisite_update_6002() {
+  $ret = array();
+  db_change_field($ret, 'data_monitoring_multisite_log', 'id', 'id', array(
+    'type' => 'varchar',
+    'length' => '100',
+    'not null' => TRUE,
+    'default' => '',
+    'description' => 'The unique machine name of the monitor. This is the primary field monitors are loaded from, and is used so that monitors may be internal and not necessarily in the database. May only be alphanumeric characters plus underscores.',
+  ));
+  db_change_field($ret, 'data_monitoring_multisite_log', 'name', 'name', array(
+    'type' => 'varchar',
+    'length' => '200',
+    'default' => '',
+    'not null' => TRUE,
+    'description' => 'The descriptive display name of the monitor.',
+  ));
+  return $ret;
+}

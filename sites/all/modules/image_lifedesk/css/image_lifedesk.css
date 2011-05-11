@@ -1,0 +1,18 @@
+.image {
+	margin-top:10px;
+}
+
+.image-node-attribution {
+	height:1.5em;
+	line-height:1.5em;
+	margin-bottom:10px;
+	margin-top:1.5em;
+}
+
+.image-node-attribution span {
+	margin-right:15px;
+}
+
+.image-node-attribution span img {
+	vertical-align:top;
+}

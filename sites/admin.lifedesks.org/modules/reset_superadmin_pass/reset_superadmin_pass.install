@@ -1,0 +1,16 @@
+<?php
+
+/**
+ * Implementation of hook_install().
+ */
+function reset_superadmin_pass_install() {
+    $weight = db_result(db_query("SELECT MAX(weight) FROM {trigger_assignments} WHERE hook = 'user' AND op = 'update'"));
+    db_query("INSERT INTO {trigger_assignments} values ('user', 'update', 'reset_superadmin_pass_action', %d)", $weight + 1);
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function reset_superadmin_pass_uninstall() {
+  actions_delete('reset_superadmin_pass_action');
+}

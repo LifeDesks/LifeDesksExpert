@@ -1,0 +1,96 @@
+div.taxon-list-current-filters {
+	background-color:#FFE1E1;
+}
+
+#taxon-list-objects {
+	text-align:right;
+}
+
+#taxon-list-languages {
+	text-align:right;
+	margin-bottom:10px;
+}
+
+th.taxon-list-names {
+	width:30%;
+}
+
+th.taxon-list-objects {
+	width:80px;
+}
+
+th.taxon-list-authors {
+	width:30%;
+}
+
+th.taxon-list-languages {
+	width:50px;
+}
+
+th.taxon-list-modified {
+	width:110px;
+}
+
+span.taxon-list-del-name {
+	text-decoration: line-through;
+}
+
+.taxon_list_draft {
+	color:#FF0000;
+}
+
+.taxon_list_links {
+	padding:3px;
+	margin-top:0px;
+	margin-bottom:10px;
+	float:right;
+	background-color:#FFF;
+	border:1px solid #CCC;
+	background-color:#FFF;
+}
+
+.taxon_list_links li {
+	list-style:none;
+	background:none;
+	font-size:small;
+}
+
+.taxon_list_links li a {
+	background:none;
+	display: block;
+	line-height: 20px;
+	height: 20px;
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	outline: none;
+	padding: 1px 5px;
+	padding-left: 24px;
+}
+
+.taxon_list_links li.add_taxon_page a {
+	background-image: url(images/bug_add.gif);
+}
+
+span.taxon-list {
+  	background-position: 0px center;
+	background-repeat: no-repeat;
+	outline: none;
+	padding: 1px 0px 1px 14px;
+}
+
+span.taxon-list-legend {
+  	background-position: 0px center;
+	background-repeat: no-repeat;
+	outline: none;
+	padding: 1px 0px 1px 18px;
+	margin-left:10px;
+}
+
+span.taxon_description { background-image: url(images/bug.png); }
+span.taxon_description_missing { background-image: url(images/bug_missing.png); }
+span.image { background-image: url(images/picture.png); }
+span.image_missing { background-image: url(images/picture_missing.png); }
+span.biblio { background-image: url(images/book.png); }
+span.biblio_missing { background-image: url(images/book_missing.png); }
+span.simplemappr { background-image: url(images/map.png); }
+span.simplemappr_missing { background-image: url(images/map_missing.png); }

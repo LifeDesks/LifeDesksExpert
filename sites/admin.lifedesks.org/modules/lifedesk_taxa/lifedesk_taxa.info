@@ -1,0 +1,11 @@
+name = LifeDesk Taxa
+description = "Aggregates all names in the primary classifications across all LifeDesks sites into a single table"
+package = "LifeDesk"
+project = "lifedesk_taxa"
+
+dependencies[] = "db_switch"
+dependencies[] = "multisite_manager"
+
+core = 6.x
+
+version = "6.x-1"

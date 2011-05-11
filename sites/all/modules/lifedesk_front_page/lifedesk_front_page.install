@@ -1,0 +1,47 @@
+<?php
+
+function lifedesk_front_page_install() {
+  // Set the site frontpage
+  variable_set('site_frontpage','front_page');
+  
+  // the default welcome text for authenticated users is installed using lifedesk_front_page.module
+  
+  $warning = '// DO NOT MODIFY THIS UNLESS YOU KNOW EXACTLY WHAT YOU ARE DOING';
+  
+  //anonymous page
+  $anonymous = '<?php' . "\n";
+  $anonymous .= $warning  . "\n";
+  $anonymous .= 'global $lifedesk_front_page;' . "\n";
+  $anonymous .= '$lifedesk_front_page = drupal_get_path(\'module\', \'lifedesk_front_page\') .\'/\';' . "\n";
+  $anonymous .= 'require_once($lifedesk_front_page . "includes/lifedesk_front_page.anonymous.inc");' . "\n";
+  $anonymous .= '_lifedesk_front_page_anonymous();' . "\n";
+  $anonymous .= '?>';
+  variable_set('front_1_php', 1);
+  variable_set('front_1_redirect','node');
+  variable_set('front_1_text',$anonymous);
+  variable_set('front_1_type', 'themed');
+  
+  //authenticated page
+  $authenticated = '<?php' . "\n";
+  $authenticated .= $warning . "\n";
+  $authenticated .= 'global $lifedesk_front_page;' . "\n";
+  $authenticated .= '$lifedesk_front_page = drupal_get_path(\'module\', \'lifedesk_front_page\') .\'/\';' . "\n";
+  $authenticated .= 'require_once($lifedesk_front_page . "includes/lifedesk_front_page.authenticated.inc");' . "\n";
+  $authenticated .= '_lifedesk_front_page_authenticated();' . "\n";
+  $authenticated .= '?>';
+  variable_set('front_2_php', 1);
+  variable_set('front_2_redirect','node');
+  variable_set('front_2_text',$authenticated);
+  variable_set('front_2_type', 'themed');
+
+  //a few extra variables here in anticipation of additional roles
+  for($i=3;$i<=6;$i++) {
+    variable_set('front_' . $i . '_php', 0);
+    variable_set('front_' . $i . '_redirect','node');
+    variable_set('front_' . $i . '_text','');
+    variable_set('front_' . $i . '_type', 'sameasauth');
+  }
+}
+
+function lifedesk_front_page_uninstall() {
+}

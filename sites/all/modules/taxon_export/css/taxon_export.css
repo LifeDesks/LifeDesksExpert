@@ -1,0 +1,49 @@
+input.export-buttons {
+  border: thin solid;
+  border-color: #cccccc #555555 #555555 #cccccc;
+  background-color: #f2f2f2;
+  background-repeat: no-repeat;
+  background-position:3px;
+  padding-left: 25px;
+  padding-bottom: 3px;
+  height: 28px;
+}
+
+input.export {
+  background-image: url(../images/csv.gif);
+}
+
+input.save {
+  background-image: url(../images/document-save.gif);
+  margin:10px;
+}
+
+h3 {
+  margin-top:15px;
+  margin-bottom:5px;
+  padding-bottom:0px;
+}
+
+.chapter_definition {
+  margin-top:0px;
+  text-indent: 1.5em;
+  margin-left:10px;
+}
+
+#taxon_export_intro_message {
+	margin-bottom:15px;
+}
+
+#taxon_export_endpoint {
+	margin:0px auto;
+	width:80%;
+	margin-top:10px;
+	margin-bottom:10px;
+	padding:5px;
+	background-color:#FFF;
+	border:1px solid #CCC;
+}
+
+#taxon-export-map {
+	margin:10px;
+}

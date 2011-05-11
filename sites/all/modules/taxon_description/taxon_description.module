@@ -1,0 +1,1296 @@
+<?php
+// $Id
+
+/**
+ * @file
+ * Enables the dynamic creation of a taxon description.
+ */
+
+define('TAXON_DESCRIPTION_CHAPTERS', taxon_description_get_vid('Taxon Description Chapters'));
+define('TAXON_DESCRIPTION_ORPHANED', taxon_description_get_vid('Orphan Chapters'));
+
+/**
+ * Implementation of hook_node_info().
+ */
+function taxon_description_node_info() {
+  return array(
+      'taxon_description' => array(
+      'name' => t('Taxon Page'),
+      'module' => 'taxon_description',
+      'description' => t('A <em>Taxon Page</em> is the text for a species page.'),
+      'title_label' => t('Chapter'),
+      'has_title' => FALSE,
+      'has_body' => FALSE,
+    )
+  );
+}
+
+/**
+ * Implementation of hook_help().
+ */
+function taxon_description_help($section) {
+  switch ($section) {
+    case 'admin/help#taxon_description':
+      $output = '<p>'. t('The taxon description module allows registered users to maintain content about taxa and also permits interaction with the %EOL.', array('%EOL' => '<a href="http://www.eol.org">Encyclopedia of Life</a> (EOL)')) . '</p>';
+      $output .= '<p>' . t('This module requires that you have a working classification called "Taxa" and established relationships among and flags about names.');
+      $output .= ' ' . t('At a minimum, names for which you wish to author taxa descriptions must be flagged as "preferred name".') . '</p>';
+      return $output;
+  }
+}
+
+function taxon_description_theme() {
+   $template_path = drupal_get_path('module', 'taxon_description') . '/templates';
+   return array(
+     'taxon_description_config' => array(
+       'template' => 'taxon_description_config',
+       'path' => $template_path,
+       'arguments' => array('vid' => NULL, 'arg' => NULL),
+     ),
+     'taxon_description' => array(
+       'template' => 'taxon_description',
+       'path' => $template_path,
+       'arguments' => array('name' => NULL, 'content' => NULL),
+     ),
+     'taxon_description_contributor' => array(
+       'template' => 'taxon_description_contributor',
+       'path' => $template_path,
+       'arguments' => array('title' => NULL, 'contributors' => NULL),
+     ),
+     'taxon_description_rightsholder' => array(
+       'template' => 'taxon_description_rightsholder',
+       'path' => $template_path,
+       'arguments' => array('title' => NULL, 'rightsholders' => NULL),
+     ),
+     'taxon_description_link' => array(
+       'template' => 'taxon_description_link',
+       'path' => $template_path,
+       'arguments' => array('link' => NULL),
+     ),
+     'taxon_description_chapter' => array(
+       'template' => 'taxon_description_chapter',
+       'path' => $template_path,
+       'arguments' => array('chapters' => NULL, 'cc_license' => NULL, 'authors' => NULL, 'rightsholders' => NULL),
+     ),
+     'taxon_description_entire' => array(
+       'template' => 'taxon_description_entire',
+       'path' => $template_path,
+       'arguments' => array('chapters' => NULL, 'taxon_desc_chapters' => NULL, 'link' => NULL),
+     ),
+     'taxon_description_settings_form' => array(
+       'file' => 'includes/taxon_description.settings.inc',
+       'arguments' => array('form' => NULL),
+     ),
+     'taxon_description_contributors' => array(
+       'file' => 'includes/taxon_description.contributors.inc',
+       'arguments' => array('form'),
+     ),
+     'taxon_description_rightsholders' => array(
+       'file' => 'includes/taxon_description.rightsholders.inc',
+       'arguments' => array('form'),
+     ),
+  );
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function taxon_description_menu() {
+  $items['taxon_description/autocomplete/contributor'] = array(
+    'title'             => 'Autocomplete',
+    'page callback'     => 'taxon_description_contributor_autocomplete',
+    'access callback'   => 'user_access',
+    'access arguments'  => array('access content'),
+    'type'              => MENU_CALLBACK
+  );
+  $items['taxon_description/autocomplete/rightsholder'] = array(
+    'title'             => 'Autocomplete',
+    'page callback'     => 'taxon_description_rightsholder_autocomplete',
+    'access callback'   => 'user_access',
+    'access arguments'  => array('access content'),
+    'type'              => MENU_CALLBACK
+  );
+  $items['taxon_description/contributor-js'] = array(
+    'title'             => 'Javascript Contributors Form',
+    'page callback'     => 'taxon_description_contributors_js',
+    'access arguments'  => array('access content'),
+    'type'              => MENU_CALLBACK,
+  );
+  $items['taxon_description/rightsholder-js'] = array(
+    'title'             => 'Javascript Rightsholders Form',
+    'page callback'     => 'taxon_description_rightsholders_js',
+    'access arguments'  => array('access content'),
+    'type'              => MENU_CALLBACK,
+  );
+  $items['admin/taxonpage'] = array(
+    'title' => t('Taxon Pages'),
+    'description' => t('Configure your taxon pages.'),
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'taxon_description_block_page',
+    'access arguments' => array('administer taxon description'),
+    'file' => 'includes/taxon_description.default.inc',
+  );
+
+  $items['admin/taxonpage/chapters'] = array(
+    'title' => t('Chapter Configuration'),
+    'description' => t('Manage your heading and chapter titles.'),
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'taxon_description_config_page',
+    'page arguments' => array('headings'),
+    'access arguments' => array('administer taxon description'),
+    'file' => 'includes/taxon_description.settings.inc',
+  );
+
+  $items['admin/taxonpage/chapters/headings'] = array(
+    'title' => t('Headings'),
+    'description' => t('Organize main headings for your taxon pages.'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => 0,
+  );
+
+  $items['admin/taxonpage/chapters/chapters'] = array(
+    'title' => t('Chapters'),
+    'description' => t('Organize chapters for your taxon pages.'),
+    'page callback' => 'taxon_description_config_page',
+    'page arguments' => array(3),
+    'access arguments' => array('administer taxon description'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 1,
+    'file' => 'includes/taxon_description.settings.inc',
+  );
+
+  $items['taxa/template'] = array(
+    'title' => t('Taxon Page (Offline Template)'),
+    'description' => t('Export and later import a template to work on taxon page chapter content offline.'),
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('taxon_description_export_form'),
+    'access arguments' => array('export template'),
+    'file' => 'includes/taxon_description.export.inc',
+    'weight' => 10,
+  );
+
+  $items['taxa/template/export']  = array(
+    'title' => t('Export Template'),
+    'description' => t('Export a template file for offline work on taxon page text.'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => 0,
+  );
+
+  $items['taxa/template/import']  = array(
+    'title' => t('Import File'),
+    'description' => t('Import a template file.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('taxon_description_import_form'),
+    'access arguments' => array('import content'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 5,
+    'file' => 'includes/taxon_description.import.inc',
+  );
+
+  // Callback functions
+  $items['chapter_config/get_chapter'] = array(
+    'type' => MENU_CALLBACK,
+    'page callback' => 'taxon_description_get_chapter',
+    'access arguments' => array('administer taxon description'),
+    'file' => 'includes/taxon_description.settings.inc',
+  );
+
+  $items['chapter_config/add_chapter'] = array(
+    'type' => MENU_CALLBACK,
+    'page callback' => 'taxon_description_add_chapter',
+    'access arguments' => array('administer taxon description'),
+    'file' => 'includes/taxon_description.settings.inc',
+  );
+
+  $items['chapter_config/update_chapter'] = array(
+    'type' => MENU_CALLBACK,
+    'page callback' => 'taxon_description_update_chapter',
+    'access arguments' => array('administer taxon description'),
+    'file' => 'includes/taxon_description.settings.inc',
+  );
+
+  $items['chapter_config/check_chapter_content'] = array(
+    'type' => MENU_CALLBACK,
+    'page callback' => 'taxon_description_check_chapter_content',
+    'access arguments' => array('administer taxon description'),
+    'file' => 'includes/taxon_description.settings.inc',
+  );
+
+  $items['chapter_config/delete_chapter'] = array(
+    'type' => MENU_CALLBACK,
+    'page callback' => 'taxon_description_delete_chapter',
+    'access arguments' => array('administer taxon description'),
+    'file' => 'includes/taxon_description.settings.inc',
+  );
+
+  $items['chapter_config/reorder_chapter'] = array(
+    'type' => MENU_CALLBACK,
+    'page callback' => 'taxon_description_reorder_chapter',
+    'access arguments' => array('administer taxon description'),
+    'file' => 'includes/taxon_description.settings.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function taxon_description_perm() {
+  return array('view taxon description', 'create taxon description', 'edit own taxon description', 'edit any taxon description', 'delete any taxon description', 'delete own taxon description', 'administer taxon description', 'export template', 'import content');
+}
+
+/**
+ * Implementation of hook_access().
+ */
+function taxon_description_access($op, $node, $account) {
+  $is_author = $account->uid == $node->uid;
+  switch($op) {
+    case 'create':
+      if(user_access('create taxon description', $account)) {
+        return true;
+      }
+      break;
+    case 'update':
+      if(user_access('edit any taxon description', $account) || (user_access('edit own taxon description', $account) && $is_author)) {
+        return true;
+      }
+      break;
+    case 'delete':
+      if(user_access('delete any taxon description', $account) || (user_access('delete own taxon description', $account) && $is_author)) {
+        return true;
+      }
+      break;
+  }
+  //return null if not true
+  return;
+}
+
+/**
+* Implementation of hook_user().
+*/
+function taxon_description_user($op, &$edit, &$user, $category = NULL) {
+  switch($op) {
+  //insert user into taxon_description_contributor_data and taxon_description_rightsholder_data if they are not yet present
+    case 'insert':
+        if(($user->uid > 1) && ($user->uid != variable_get('lifedesk_support', 0)) && ($user->status != 0)) {
+          //insert contributor data if they do not already exist
+          $contributor_exists = db_result(db_query("SELECT drupal_uid FROM {taxon_description_contributor_data} WHERE drupal_uid = %d", $user->uid));
+          if(!$contributor_exists) {
+            db_query("INSERT INTO {taxon_description_contributor_data} (drupal_uid, lastname, firstname, name) VALUES (%d, '%s', '%s', '%s')", $user->uid, $user->surname, $user->givenname, $user->surname . ', ' . $user->givenname);
+          }
+          //insert rightsholder data if they do not already exist
+          $rightsholder_exists = db_result(db_query("SELECT drupal_uid FROM {taxon_description_rightsholder_data} WHERE drupal_uid = %d", $user->uid));
+          if(!$rightsholder_exists) {
+            db_query("INSERT INTO {taxon_description_rightsholder_data} (drupal_uid, lastname, firstname, name) VALUES (%d, '%s', '%s', '%s')", $user->uid, $user->surname, $user->givenname, $user->surname . ', ' . $user->givenname);
+          }
+        }
+      break;
+    case 'after_update':
+        if(($user->uid > 1) && ($user->uid != variable_get('lifedesk_support', 0))) {
+          if (($user->status == 1)) {
+            $contributor_exists = db_result(db_query("SELECT cntr_id FROM {taxon_description_contributor_data} WHERE drupal_uid = 0 AND firstname = '%s' AND lastname = '%s'", $user->givenname, $user->surname));
+            //update or insert contributor data
+            if($contributor_exists) {
+              db_query("UPDATE {taxon_description_contributor_data} SET drupal_uid= %d WHERE cntr_id = %d", $user->uid, $contributor_exists);
+            }
+            else {
+              db_query("INSERT INTO {taxon_description_contributor_data} (drupal_uid, lastname, firstname, name) VALUES (%d, '%s', '%s', '%s')", $user->uid, $user->surname, $user->givenname, $user->surname . ', ' . $user->givenname);
+            }
+            //update or insert rightsholder data
+            $rightsholder_exists = db_result(db_query("SELECT rts_id FROM {taxon_description_rightsholder_data} WHERE drupal_uid = 0 AND firstname = '%s' AND lastname = '%s'", $user->givenname, $user->surname));
+            if($contributor_exists) {
+              db_query("UPDATE {taxon_description_rightsholder_data} SET drupal_uid= %d WHERE rts_id = %d", $user->uid, $rightsholder_exists);
+            }
+            else {
+              db_query("INSERT INTO {taxon_description_rightsholder_data} (drupal_uid, lastname, firstname, name) VALUES (%d, '%s', '%s', '%s')", $user->uid, $user->surname, $user->givenname, $user->surname . ', ' . $user->givenname);
+            }
+          }
+          else {
+            db_query("UPDATE {taxon_description_contributor_data} SET drupal_uid = 0 WHERE drupal_uid = %d", $user->uid);
+            db_query("UPDATE {taxon_description_rightsholder_data} SET drupal_uid = 0 WHERE drupal_uid = %d", $user->uid);
+          }
+        }
+      break;
+    case 'delete':
+        if(($user->uid > 1) && ($user->uid != variable_get('lifedesk_support', 0))) {
+          db_query("UPDATE {taxon_description_contributor_data} SET drupal_uid = 0 WHERE drupal_uid = %d", $user->uid);
+          db_query("UPDATE {taxon_description_rightsholder_data} SET drupal_uid = 0 WHERE drupal_uid = %d", $user->uid);
+        }
+      break;
+  }
+}
+
+//separate out node hooks
+function taxon_description_load($node) {
+
+    module_load_include('inc', 'taxon_description', 'includes/taxon_description.contributors');
+    module_load_include('inc', 'taxon_description', 'includes/taxon_description.rightsholders');
+
+    if($node->taxonomy) {
+      foreach($node->taxonomy as $type => $values) {
+        if($type == CLASSIFICATION_PRIMARY) {
+          foreach($values as $value) {
+            $term = taxonomy_get_term($value);
+            $node->title = $term->name;
+            $teeid = $term->tid;
+          }
+        }
+      }
+    }
+
+    $result = db_query("SELECT t.name as name, td.tid_chapter AS cid, td.sid AS sid, td.body AS content FROM {taxon_description} td LEFT JOIN {term_data} t ON t.tid = td.tid_chapter WHERE td.nid = %d AND t.vid = %d", $node->nid, TAXON_DESCRIPTION_CHAPTERS);
+      while ($chapter = db_fetch_array($result)) {
+        $chapter['contributors'] = taxon_description_load_contributors($chapter['sid']);
+        $chapter['rightsholders'] = taxon_description_load_rightsholders($chapter['sid']);
+        $node->taxon_description[$chapter['cid']] = $chapter;
+      }
+}
+
+function taxon_description_insert($node) {
+
+  module_load_include('inc', 'taxon_description', 'includes/taxon_description.contributors');
+  module_load_include('inc', 'taxon_description', 'includes/taxon_description.rightsholders');
+
+  if($node->taxonomy) {
+    foreach($node->taxonomy as $type => $values) {
+      if($type == CLASSIFICATION_PRIMARY) {
+        foreach($values as $value) {
+          $term = taxonomy_get_term($value);
+          $node->title = $term->name;
+          $teeid = $term->tid;
+        }
+      }
+    }
+  }
+
+  foreach ($node->taxon_description as $taxon_description) {
+    if($taxon_description['content']) {
+      db_query("INSERT INTO {taxon_description} (nid, vid, tid_chapter, tid_taxon, body) VALUES (%d, %d, %d, %d, '%s')", $node->nid, $node->vid, $taxon_description['cid'], $teeid, $taxon_description['content']);
+
+      $sid = db_result(db_query("SELECT sid FROM {taxon_description} WHERE nid = %d AND vid = %d AND tid_chapter = %d AND tid_taxon = %d AND body = '%s'", $node->nid, $node->vid, $taxon_description['cid'], $teeid, $taxon_description['content']));
+
+      taxon_description_insert_contributors($taxon_description['contributors'], $node->nid, $sid);
+      taxon_description_insert_rightsholders($taxon_description['rightsholders'], $node->nid, $sid);
+    }
+  }
+  db_query("UPDATE {node} SET title = '%s' WHERE nid = %d", $node->title, $node->nid);
+  db_query("UPDATE {node_revisions} SET title = '%s' WHERE nid = %d", $node->title, $node->nid);
+}
+
+function taxon_description_update($node) {
+
+  module_load_include('inc', 'taxon_description', 'includes/taxon_description.contributors');
+  module_load_include('inc', 'taxon_description', 'includes/taxon_description.rightsholders');
+
+  if($node->taxonomy) {
+    foreach($node->taxonomy as $type => $values) {
+      if($type == CLASSIFICATION_PRIMARY) {
+        foreach($values as $value) {
+          $term = taxonomy_get_term($value);
+          $node->title = $term->name;
+          $teeid = $term->tid;
+        }
+      }
+    }
+  }
+
+  $content = false;
+  foreach ($node->taxon_description as $taxon_description) {
+    $body = db_result(db_query("SELECT body FROM {taxon_description} WHERE nid = %d AND tid_chapter = %d", $node->nid, $taxon_description['cid']));
+    if($body){
+      $content = true;
+      db_query("UPDATE {taxon_description} SET body = '%s', tid_taxon = %d WHERE nid = %d AND tid_chapter = %d", $taxon_description['content'], $teeid, $node->nid, $taxon_description['cid']);
+      if($taxon_description['content'] == "")
+        db_query("DELETE FROM {taxon_description} WHERE nid = %d AND tid_chapter = %d", $node->nid, $taxon_description['cid']);
+      else {
+        $sid = db_result(db_query("SELECT sid FROM {taxon_description} WHERE nid = %d AND tid_chapter = %d", $node->nid, $taxon_description['cid']));
+        taxon_description_save_contributors($taxon_description['contributors'], $node->nid, $sid, TRUE);
+        taxon_description_save_rightsholders($taxon_description['rightsholders'], $node->nid, $sid, TRUE);
+      }
+    }
+    else {
+      if($taxon_description['content']) {
+        db_query("INSERT INTO {taxon_description} (nid, tid_chapter, tid_taxon, body) VALUES (%d, %d, %d, '%s')", $node->nid, $taxon_description['cid'], $teeid, $taxon_description['content']);
+        $sid = db_result(db_query("SELECT sid FROM {taxon_description} WHERE nid = %d AND tid_chapter = %d", $node->nid, $taxon_description['cid']));
+        taxon_description_save_contributors($taxon_description['contributors'], $node->nid, $sid, TRUE);
+        taxon_description_save_rightsholders($taxon_description['rightsholders'], $node->nid, $sid, TRUE);
+      }
+    }
+  }
+  db_query("UPDATE {node_revisions} SET title = '%s' WHERE nid = %d", $node->title, $node->nid);
+  db_query("UPDATE {node} SET title = '%s' WHERE nid = %d", $node->title, $node->nid);
+  if(!$content) node_delete($node->nid);
+}
+
+function taxon_description_delete(&$node) {
+  db_query('DELETE FROM {taxon_description} WHERE nid = %d', $node->nid);
+  db_query('DELETE FROM {taxon_description_contributor} WHERE nid = %d', $node->nid);
+  db_query('DELETE FROM {taxon_description_rightsholder} WHERE nid = %d', $node->nid);
+}
+
+function taxon_description_validate($node, &$form) {
+    if($form['taxon_description']) {
+        $module_path = drupal_get_path('module', 'taxon_description') .'/';
+        drupal_add_js($module_path . 'js/taxon_description.js');
+        drupal_add_css($module_path .'css/taxon_description.css');
+        $content_present = false;
+        $undefined_chapter = false;
+        $undefined_chapter_count = 0;
+        foreach ($node->taxon_description as $tid => $taxon_description) {
+           if($taxon_description['name'] == 'Undefined') {
+             $undefined_chapter = true;
+             $undefined_chapter_count++;
+           }
+           if($taxon_description['content']) {
+             if(!$taxon_description['contributors'][0]['name']) form_set_error('',t('At least one author should be present for the chapter %chapter', array('%chapter' => $taxon_description['name'])));
+             $content_present = true;
+           }
+         }
+         if($undefined_chapter) {
+           form_set_error('',t('!count of your chapter titles is/are entitled "Undefined". Contact your site administrator to translate these chapter titles. You cannot save this form until all your chapter titles have been translated.', array('!count' => $undefined_chapter_count)));
+         }
+         if(!$content_present) {
+           form_set_error('',t('At least one chapter must have content'));
+         }  
+    }
+}
+
+/**
+ * Implementation of hook_form_alter().
+ * Removes redundant taxonomy and options.
+ */
+function taxon_description_form_alter(&$form, $form_state, $form_id) {
+
+  if($form['#id'] == 'node-form') {
+    unset($form['taxonomy'][TAXON_DESCRIPTION_CHAPTERS],$form['taxonomy'][TAXON_DESCRIPTION_ORPHANED]);
+  }
+
+
+  if($form_id == 'taxon_description_node_form') {
+    $form['language']['#disabled'] = TRUE;
+    if(($form_state['storage']['step'] < 2) && (!$form['nid']['#value'])) {
+      $form['options']['#access'] = FALSE;
+      $form['attachments']['#access'] = FALSE;
+      $form['creativecommons_lite']['#access'] = FALSE;
+      $form['author']['#access'] = FALSE;
+      $form['buttons']['submit']['#access'] = FALSE;
+      $form['buttons']['preview']['#access'] = FALSE;
+      $form['language']['#disabled'] = FALSE;
+      if(isset($_GET['lang'])) $form['language']['#default_value'] = $_GET['lang'];
+    }
+  }
+
+  if($form_id == 'locale_languages_overview_form' || $form_id == 'locale_languages_predefined_form') {
+    $form['#submit'][] = '_taxon_description_enable_chapter_language';
+  }
+
+}
+
+function _taxon_description_enable_chapter_language($form, &$form_state) {
+
+  module_load_include('php','taxon_description', 'translate_api/GTranslate');
+  $gt = new Gtranslate;
+
+  $codes = ($form_state['values']['enabled']) ? $form_state['values']['enabled'] : array($form_state['values']['langcode'] => 1);
+
+  unset($codes['en']);
+
+  foreach($codes as $code => $enabled) {
+    $alt_code = ($code == 'pt-pt' || $code == 'pt-br') ? 'pt-PT' : $code; //used later for Google Translate API calls
+    $exists = db_result(db_query("SELECT tid FROM {term_data} WHERE vid = %d AND language = '%s' LIMIT 1", TAXON_DESCRIPTION_CHAPTERS, $code));
+    if($enabled && !$exists) {
+        
+          $terms = array();
+
+          $xml_file = drupal_get_path('module', 'taxon_description') .'/EOL_SPM_' . $code . '.xml';
+
+          if(file_exists($xml_file)) {
+
+            $xml = simplexml_load_file($xml_file);
+
+            foreach($xml as $item) {
+
+              $attributes = $item->name->attributes();
+              $term = array(
+                'name' => (string)$item->name,
+                'description' => (string)$item->description,
+                'vid' => TAXON_DESCRIPTION_CHAPTERS,
+                'parent' => 0,
+                'weight' => 0,
+              );
+        
+              //compare all the term_en to what already exists in English
+              $terms[(string)$attributes->term . "|0"] = $term;
+
+              foreach($item->children as $children) {
+                foreach($children as $child) {
+                  $attributes = $child->name->attributes();
+                  $term = array(
+                    'name' => (string)$child->name,
+                    'description' => (string)$child->description,
+                    'vid' => TAXON_DESCRIPTION_CHAPTERS,
+                    'weight' => 0,
+                  );
+                  $terms[(string)$attributes->term. "|1"] = $term;
+                }
+              }
+            }
+            
+            $tree = taxon_description_taxonomy_get_tree(TAXON_DESCRIPTION_CHAPTERS, 'en');
+        
+            $parent = 0;
+
+            foreach($tree as $branch) { 
+              if(array_key_exists($branch->term_en . "|0", $terms) && $branch->parents[0] == 0) {
+                $term = array();
+                $terms[$branch->term_en . "|0"]['weight'] = $branch->weight;
+                $term = $terms[$branch->term_en . "|0"];
+                taxonomy_save_term($term);
+                $parent = $term['tid'];
+                db_query("UPDATE {term_data} SET language = '%s', trid = %d WHERE tid = %d", $code, $branch->tid, $term['tid']);
+              }
+              elseif(array_key_exists($branch->term_en . "|1", $terms) && $branch->parents[0] != 0) {         
+                $term = array();
+                $terms[$branch->term_en . "|1"]['weight'] = $branch->weight;
+                $terms[$branch->term_en . "|1"]['parent'] = $parent;
+                $term = $terms[$branch->term_en . "|1"];
+                taxonomy_save_term($term); 
+                db_query("UPDATE {term_data} SET language = '%s', trid = %d WHERE tid = %d", $code, $branch->tid, $term['tid']);        
+              }
+              else {
+                $gt_title = t("Undefined");
+                $gt_description = "";
+                if($branch->parents[0]==0) {
+                  //api call to Google Translate for custom heading
+                  try {
+                    $gt_title = $gt->query(array('en', $alt_code), $branch->name);
+                    $gt_description = $gt->query(array('en', $alt_code), $branch->description);
+                  }
+                  catch (GTranslateException $ge) {}
+                  $term = array(
+                    'name' => $gt_title,
+                    'description' => $gt_description,
+                    'vid' => TAXON_DESCRIPTION_CHAPTERS,
+                    'parent' => 0,
+                    'weight' => $branch->weight,
+                  );
+                  taxonomy_save_term($term);
+                  $parent = $term['tid'];
+                  db_query("UPDATE {term_data} SET language = '%s', trid = %d WHERE tid = %d", $code, $branch->tid, $term['tid']);
+                }
+                else {
+                  //api call to Google Translate for custom heading
+                  try {
+                    $gt_title = $gt->query(array('en', $alt_code), $branch->name);
+                    $gt_description = $gt->query(array('en', $alt_code), $branch->description); 
+                  }
+                  catch (GTranslateException $ge) {}
+                  $term = array(
+                    'name' => $gt_title,
+                    'description' => $gt_description,
+                    'vid' => TAXON_DESCRIPTION_CHAPTERS,
+                    'parent' => $parent,
+                    'weight' => $branch->weight,
+                  );
+                  taxonomy_save_term($term);
+                  db_query("UPDATE {term_data} SET language = '%s', trid = %d WHERE tid = %d", $code, $branch->tid, $term['tid']);
+                }
+                //slow down loop to prevent Google Translate API from getting hit too quickly
+                sleep(2);
+              }
+            }
+
+        }
+        
+    }
+
+  }
+
+}
+
+/**
+ * Implementation of hook_form().
+ */
+function taxon_description_form($node, &$form_state) {
+
+  // $form_state['storage']['step'] keeps track of what page we're on.
+  if (!isset($form_state['storage']['step'])) {
+    $form_state['storage']['step'] = 1;
+  }
+
+  //Don't lose our old data when returning to a page with data already typed in.
+  $default_value = '';
+  if (isset($form_state['storage']['values'][$form_state['storage']['step']])) {
+    $default_value = $form_state['storage']['values'][$form_state['storage']['step']];
+  }
+
+  if ($form_state['values']['language']) $node->language = $form_state['values']['language'];
+
+  // This is required if user wants to edit the existing taxon_description.
+  if($node->nid) {
+    $form_state['storage']['step'] = 2;
+  }
+
+  switch ($form_state['storage']['step']) {
+    case 1: $form_state['storage']['step'] = 1;
+      break;
+
+    case 2: global $user;
+
+            $module_path = drupal_get_path('module', 'taxon_description') .'/';
+            drupal_add_js($module_path . 'js/jquery.scrollTo.js');
+            drupal_add_js($module_path . 'js/taxon_description.js');
+            drupal_add_css($module_path .'css/taxon_description.css');
+            require_once($module_path . 'includes/taxon_description.contributors.inc');
+            require_once($module_path . 'includes/taxon_description.rightsholders.inc');
+
+            $chapter = $_GET['chapter'] ? $_GET['chapter'] : '';
+
+            if($chapter) {
+              $chapter_parent = db_result(db_query("SELECT td.name FROM {term_data} td INNER JOIN {term_hierarchy} th ON (td.tid=th.parent) INNER JOIN {term_data} td2 ON (th.tid=td2.tid) WHERE LOWER(td2.name)='%s' AND td.vid=%d",strtolower($chapter),TAXON_DESCRIPTION_CHAPTERS));
+              drupal_add_js(array('taxon_description_chapter' => $_GET['chapter']), 'setting');
+            }
+
+            $type = node_get_types('type', $node);
+
+            $form['#cache'] = TRUE;
+            $form['taxon_description']['#prefix'] = '<div id="taxon-description-form-wrapper">';
+            $form['taxon_description']['#suffix'] = '</div>';
+            $form['taxon_description']['#weight'] = 0;
+
+            $tree = taxon_description_taxonomy_get_tree(TAXON_DESCRIPTION_CHAPTERS, $node->language);
+
+            foreach ($tree as $i) {
+              $tid = $i->tid;
+              $name = $i->name;
+              $description = $i->description;
+              $parent = $i->parents[0];
+              if($parent == 0) {
+                $children = taxonomy_get_children($tid, TAXON_DESCRIPTION_CHAPTERS, $key = 'tid');  //should look to see if any children have content here and expand
+                if($children) {
+                  $form['taxon_description'][$tid] = array(
+                    '#type' => 'fieldset',
+                    '#title' => $name,
+                    '#collapsible' => TRUE,
+                    '#collapsed' => TRUE,
+                    '#tree' => TRUE,
+                    '#attributes' => array('class' => 'taxon-description-header'),
+                  );
+                }
+              }
+              else {
+                $form['taxon_description'][$parent][$tid]['content'] = array(
+                  '#type' => 'item',
+                  '#tree' => TRUE,
+                );
+
+                $content = (isset($form_state['values']['taxon_description'])) ? $form_state['values']['taxon_description'][$tid]['content'] : $node->taxon_description[$tid]['content'];
+
+                if(isset($form_state['values']['taxon_description']) && $form_state['values']['taxon_description'][$tid]['content']) {
+                  $form['taxon_description'][$parent]['#collapsed'] = FALSE;
+                }
+                elseif($node->taxon_description[$tid]['content']) {
+                  $form['taxon_description'][$parent]['#collapsed'] = FALSE;
+                }
+
+                $form['taxon_description'][$parent][$tid]['content']['content'] = array(
+                  '#type' => 'textarea',
+                  '#title' => $name,
+                  '#default_value' => $content,
+                  '#description' => $description,
+                  '#rows' => 5,
+                  '#parents' => array('taxon_description', $tid, 'content'),
+                );
+
+                $form['taxon_description'][$parent][$tid]['content']['format'] = filter_form(FILTER_FORMAT_DEFAULT, NULL, array('taxon_description', $parent, $tid, 'content', 'format'));
+
+                $contributors = taxon_description_contributors($node, $form_state, $tid);
+                $contributor_count = max(1, count($contributors));
+
+                $form['taxon_description'][$parent][$tid]['contributors'] = array(
+                  '#tree' => TRUE,
+                  '#type' => 'fieldset',
+                  '#collapsible' => TRUE,
+                  '#collapsed' => TRUE,
+                  '#title' => t("Contributing authors"),
+                  '#description' => t('Enter a single name per line using a format such as "Smith, John K" or "John K Smith" or "J.K. Smith"'),
+                  '#prefix' => '<div class="clear-block chapter-metadata authors" id="taxon-description-contributors-'.$tid.'-wrapper">',
+                  '#suffix' => '</div>'
+                );
+
+                $default_values = array('name' => $user->surname . ', ' . $user->givenname, 'cntr_id' => '', 'rank' => '');
+
+                $form['taxon_description'][$parent][$tid]['contributors']['contributors'] = array(
+                  '#prefix' => '<div class="taxon-description-contributors">',
+                  '#suffix' => '</div>',
+                  '#theme' => 'taxon_description_contributors',
+                  '#id' => 'taxon_description_contributors_'.$tid,
+                );
+
+                for ($delta = 0; $delta < $contributor_count; $delta++) {
+                  if (isset($contributors[$delta])) { // contributor already exists
+                    $values = $contributors[$delta];
+                  }
+                  else { // contributor is new
+                    $values = $default_values;
+                  }
+                  $values['rank'] = (isset($values['rank']) && is_numeric($values['rank'])) ? $values['rank'] : $delta;
+                  $form['taxon_description'][$parent][$tid]['contributors']['contributors'][$delta] = _taxon_description_contributor_form($tid, $values, $delta);
+                }
+
+                $form['taxon_description'][$parent][$tid]['contributors']['contributors_more'] = array(
+                  '#type' => 'submit',
+                  '#value' => t('More authors'),
+                  '#description' => t("If there aren't enough boxes above, click here to add more."),
+                  '#weight' => 1,
+                  '#submit' => array('taxon_description_more_contributors_submit'), // If no javascript action.
+                  '#attributes' => array('class' => 'taxon-description-add-author'),
+                  '#ahah' => array(
+                    'path' => 'taxon_description/contributor-js/'.$parent.'/'.$tid,
+                    'wrapper' => 'taxon-description-contributors-'.$tid.'-wrapper',
+                    'method' => 'replace',
+                    'effect' => 'fade'
+                  )
+                );
+
+                $rightsholders = taxon_description_rightsholders($node, $form_state, $tid);
+                $rightsholder_count = max(1, count($rightsholders));
+
+                $form['taxon_description'][$parent][$tid]['rightsholders'] = array(
+                  '#tree' => TRUE,
+                  '#type' => 'fieldset',
+                  '#collapsible' => TRUE,
+                  '#collapsed' => TRUE,
+                  '#title' => t("Copyright owners"),
+                  '#description' => t('If blank, contributing author(s) receive copyright ownership. The Creative Commons license chosen at the bottom of this form will be applied to this chapter. However, if you select Public Domain, copyright ownership will be ignored.'),
+                  '#prefix' => '<div class="clear-block chapter-metadata rightsholders" id="taxon-description-rightsholders-'.$tid.'-wrapper">',
+                  '#suffix' => '</div>'
+                );
+
+                $default_values = '';
+
+                $form['taxon_description'][$parent][$tid]['rightsholders']['rightsholders'] = array(
+                  '#prefix' => '<div class="taxon-description-rightsholders">',
+                  '#suffix' => '</div>',
+                  '#theme' => 'taxon_description_rightsholders',
+                  '#id' => 'taxon_description_rightsholders_'.$tid,
+                );
+
+                for ($delta = 0; $delta < $rightsholder_count; $delta++) {
+                  if (isset($rightsholders[$delta])) { // rights holder already exists
+                    $values = $rightsholders[$delta];
+                  }
+                  else { // rightsholder is new
+                    $values = $default_values;
+                  }
+                  $values['rank'] = (isset($values['rank']) && is_numeric($values['rank'])) ? $values['rank'] : $delta;
+                  $form['taxon_description'][$parent][$tid]['rightsholders']['rightsholders'][$delta] = _taxon_description_rightsholder_form($tid, $values, $delta);
+                }
+
+                $form['taxon_description'][$parent][$tid]['rightsholders']['rightsholders_more'] = array(
+                  '#type' => 'submit',
+                  '#value' => t('More copyright owners'),
+                  '#description' => t("If there aren't enough boxes above, click here to add more."),
+                  '#weight' => 1,
+                  '#submit' => array('taxon_description_more_rightsholders_submit'), // If no javascript action.
+                  '#attributes' => array('class' => 'taxon-description-add-rightsholder'),
+                  '#ahah' => array(
+                    'path' => 'taxon_description/rightsholder-js/'.$parent.'/'.$tid,
+                    'wrapper' => 'taxon-description-rightsholders-'.$tid.'-wrapper',
+                    'method' => 'replace',
+                    'effect' => 'fade'
+                  )
+                );
+
+                $form['taxon_description_hidden'][$parent][$tid]['name'] = array(
+                  '#type' => 'hidden',
+                  '#default_value' => $name,
+                  '#parents' => array('taxon_description', $tid, 'name'),
+                );
+                $form['taxon_description_hidden'][$parent][$tid]['cid'] = array(
+                  '#type' => 'hidden',
+                  '#default_value' => $tid,
+                  '#parents' => array('taxon_description', $tid, 'cid'),
+                );
+
+              }
+            }
+
+          break;
+  }
+
+  //Show 'Continue >>' button on the first page.
+  if ($form_state['storage']['step'] == 1) {
+    $form['next'] = array(
+      '#type' => 'submit',
+      '#value' => t('Continue >>'),
+    );
+  }
+
+  return $form;
+}
+
+/**
+ * Surrogate to taxonomy_get_tree such that the appropriate language is used
+ */
+function taxon_description_taxonomy_get_tree($vid, $lang, $parent = 0, $depth = -1, $max_depth = NULL) {
+  static $children, $parents, $terms;
+
+  $depth++;
+
+  // We cache trees, so it's not CPU-intensive to call get_tree() on a term
+  // and its children, too.
+  if (!isset($children[$vid])) {
+    $children[$vid] = array();
+
+    $result = db_query(db_rewrite_sql('
+    SELECT 
+      td.tid, td.*, th.parent, LOWER(REPLACE(td2.name,\' \',\'\')) as term_en
+    FROM 
+      {term_data} td 
+    INNER JOIN 
+      {term_hierarchy} th ON td.tid = th.tid 
+    INNER JOIN 
+      {term_data} td2 ON (td.trid = td2.trid)
+    WHERE 
+      td.vid = %d AND td.language="%s" AND td2.language="en" 
+    ORDER BY 
+      td.weight, td.name', 'td', 'tid'), $vid, $lang);
+    while ($term = db_fetch_object($result)) {
+      $children[$vid][$term->parent][] = $term->tid;
+      $parents[$vid][$term->tid][] = $term->parent;
+      $terms[$vid][$term->tid] = $term;
+    }
+  }
+
+  $max_depth = (is_null($max_depth)) ? count($children[$vid]) : $max_depth;
+  $tree = array();
+  if ($max_depth > $depth && !empty($children[$vid][$parent])) {
+    foreach ($children[$vid][$parent] as $child) {
+      $term = drupal_clone($terms[$vid][$child]);
+      $term->depth = $depth;
+      // The "parent" attribute is not useful, as it would show one parent only.
+      unset($term->parent);
+      $term->parents = $parents[$vid][$child];
+      $tree[] = $term;
+      if (!empty($children[$vid][$child])) {
+        $tree = array_merge($tree, taxon_description_taxonomy_get_tree($vid, $lang, $child, $depth, $max_depth));
+      }
+    }
+  }
+
+  return $tree;
+}
+
+function taxon_description_contributors($node, &$form_state, $tid) {
+  $contributors = array();
+  $rank = array();
+  if(isset($form_state['values']['taxon_description'][$tid]['contributors'])) {
+    $contributors = $form_state['values']['taxon_description'][$tid]['contributors'];
+  }
+  elseif ($node->taxon_description[$tid]['contributors']) {
+    $contributors = $node->taxon_description[$tid]['contributors'];
+  }
+  else {}
+
+  foreach($contributors as $delta => $value) {
+    if(!$value['name'] || $value['name'] == '' ) unset($contributors[$delta]);
+  }
+
+  foreach($contributors as $delta => $value) {
+    $rank[$delta] = ($value['rank']) ? $value['rank'] : 0;
+  }
+  array_multisort($rank, SORT_ASC, $contributors);
+
+  return $contributors;
+}
+
+function _taxon_description_contributor_form($tid, $values, $delta) {
+
+  $form['#tree'] = TRUE;
+
+  // We'll manually set the #parents property of these fields so that
+  // their values appear in the $form_state['values']['choice'] array.
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Contributing author(s)'),
+    '#autocomplete_path' => 'taxon_description/autocomplete/contributor',
+    '#default_value' => $values['name'],
+    '#parents' => array('taxon_description', $tid, 'contributors', $delta, 'name')
+  );
+  $form['cntr_id'] = array(
+    '#type' => 'hidden',
+    '#default_value' => $values['cntr_id'],
+    '#parents' => array('taxon_description', $tid, 'contributors', $delta, 'cntr_id')
+  );
+  $form['rank'] = array(
+    '#type' => 'textfield',
+    '#size' => 6,
+    '#default_value' => $values['rank'],
+    '#parents' => array('taxon_description', $tid, 'contributors', $delta, 'rank')
+  );
+  return $form;
+}
+
+function taxon_description_contributor_autocomplete($string = '') {
+  $matches = array();
+  $result = db_query_range("SELECT * FROM {taxon_description_contributor_data} WHERE LOWER(lastname) LIKE LOWER('%s%%') OR LOWER(firstname) LIKE LOWER('%s%%') ORDER BY lastname ASC ", array($string, $string), 0, 10);
+  while ($data = db_fetch_object($result)) {
+    $matches[$data->lastname . ', ' . $data->firstname] = check_plain($data->lastname . ', ' . $data->firstname);
+  }
+  print drupal_to_js($matches);
+  exit();
+}
+
+function taxon_description_contributors_js($parent,$tid) {
+
+  $contributors = $_POST['taxon_description'][$tid]['contributors'];
+  $delta = count($contributors);
+
+  foreach($contributors as $contributor) {
+    $ranks[] = $contributor['rank'];
+  }
+  $rank = max($ranks);
+  $rank++;
+
+  $default_values = array('name' => '', 'cntr_id' => '', 'rank' => $rank);
+
+  $form_element = _taxon_description_contributor_form($tid, $default_values, $delta);
+  drupal_alter('form', $form_element, array(), 'taxon_description_contributors_js');
+  // Build the new form.
+
+  $form_state = array('submitted' => FALSE);
+  $form_build_id = $_POST['form_build_id'];
+  // Add the new element to the stored form. Without adding the element to the
+  // form, Drupal is not aware of this new elements existence and will not
+  // process it. We retreive the cached form, add the element, and resave.
+  $form = form_get_cache($form_build_id, $form_state);
+  $form['taxon_description'][$parent][$tid]['content']['contributors']['contributors'][$delta] = $form_element;
+  form_set_cache($form_build_id, $form, $form_state);
+  $form += array(
+    '#post' => $_POST,
+    '#programmed' => FALSE
+  );
+  // Rebuild the form.
+  $form = form_builder('taxon_description_node_form', $form, $form_state);
+  $contributor_form = $form['taxon_description'][$parent][$tid]['content']['contributors'];
+
+  unset($contributor_form['#prefix'], $contributor_form['#suffix']); // Prevent duplicate wrappers.
+  $contributor_form[$delta]['#attributes']['class'] = empty($contributor_form[$delta]['#attributes']['class']) ? 'ahah-new-content' : $contributor_form[$delta]['#attributes']['class'] .' ahah-new-content';
+  $output = theme('status_messages') . drupal_render($contributor_form);
+  print drupal_json(array('status' => TRUE, 'data' => $output));
+  exit();
+}
+
+function taxon_description_rightsholders($node, &$form_state, $tid) {
+  $rightsholders = array();
+  $rank = array();
+  if(isset($form_state['values']['taxon_description'][$tid]['rightsholders'])) {
+    $rightsholders = $form_state['values']['taxon_description'][$tid]['rightsholders'];
+  }
+  elseif ($node->taxon_description[$tid]['rightsholders']) {
+    $rightsholders = $node->taxon_description[$tid]['rightsholders'];
+  }
+  else {}
+
+  foreach($rightsholders as $delta => $value) {
+    if(!$value['name'] || $value['name'] == '' ) unset($rightsholders[$delta]);
+  }
+
+  foreach($rightsholders as $delta => $value) {
+    $rank[$delta] = ($value['rank']) ? $value['rank'] : 0;
+  }
+  array_multisort($rank, SORT_ASC, $rightsholders);
+
+  return $rightsholders;
+}
+
+function _taxon_description_rightsholder_form($tid, $values, $delta) {
+
+  $form['#tree'] = TRUE;
+
+  // We'll manually set the #parents property of these fields so that
+  // their values appear in the $form_state['values']['choice'] array.
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Rights holder(s)'),
+    '#autocomplete_path' => 'taxon_description/autocomplete/rightsholder',
+    '#default_value' => $values['name'],
+    '#parents' => array('taxon_description', $tid, 'rightsholders', $delta, 'name')
+  );
+  $form['rts_id'] = array(
+    '#type' => 'hidden',
+    '#default_value' => $values['rts_id'],
+    '#parents' => array('taxon_description', $tid, 'rightsholders', $delta, 'rts_id')
+  );
+  $form['rank'] = array(
+    '#type' => 'textfield',
+    '#size' => 6,
+    '#default_value' => $values['rank'],
+    '#parents' => array('taxon_description', $tid, 'rightsholders', $delta, 'rank')
+  );
+  return $form;
+}
+
+function taxon_description_rightsholder_autocomplete($string = '') {
+  $matches = array();
+  $result = db_query_range("SELECT * FROM {taxon_description_rightsholder_data} WHERE LOWER(lastname) LIKE LOWER('%s%%') OR LOWER(firstname) LIKE LOWER('%s%%') ORDER BY lastname ASC ", array($string, $string), 0, 10);
+  while ($data = db_fetch_object($result)) {
+    $matches[$data->lastname . ', ' . $data->firstname] = check_plain($data->lastname . ', ' . $data->firstname);
+  }
+  print drupal_to_js($matches);
+  exit();
+}
+
+function taxon_description_rightsholders_js($parent,$tid) {
+
+  $rightsholders = $_POST['taxon_description'][$tid]['rightsholders'];
+  $delta = count($rightsholders);
+
+  foreach($rightsholders as $rightsholder) {
+    $ranks[] = $rightsholder['rank'];
+  }
+  $rank = max($ranks);
+  $rank++;
+
+  $default_values = array('name' => '', 'rts_id' => '', 'rank' => $rank);
+
+  $form_element = _taxon_description_rightsholder_form($tid, $default_values, $delta);
+  drupal_alter('form', $form_element, array(), 'taxon_description_rightsholders_js');
+  // Build the new form.
+
+  $form_state = array('submitted' => FALSE);
+  $form_build_id = $_POST['form_build_id'];
+  // Add the new element to the stored form. Without adding the element to the
+  // form, Drupal is not aware of this new elements existence and will not
+  // process it. We retreive the cached form, add the element, and resave.
+  $form = form_get_cache($form_build_id, $form_state);
+  $form['taxon_description'][$parent][$tid]['content']['rightsholders']['rightsholders'][$delta] = $form_element;
+  form_set_cache($form_build_id, $form, $form_state);
+  $form += array(
+    '#post' => $_POST,
+    '#programmed' => FALSE
+  );
+  // Rebuild the form.
+  $form = form_builder('taxon_description_node_form', $form, $form_state);
+  $rightsholder_form = $form['taxon_description'][$parent][$tid]['content']['rightsholders'];
+
+  unset($rightsholder_form['#prefix'], $rightsholder_form['#suffix']); // Prevent duplicate wrappers.
+  $rightsholder_form[$delta]['#attributes']['class'] = empty($rightsholder_form[$delta]['#attributes']['class']) ? 'ahah-new-content' : $rightsholder_form[$delta]['#attributes']['class'] .' ahah-new-content';
+  $output = theme('status_messages') . drupal_render($rightsholder_form);
+  print drupal_json(array('status' => TRUE, 'data' => $output));
+  exit();
+}
+
+/**
+ * Implementation of hook_submit.
+ */
+function taxon_description_node_form_submit(&$form, &$form_state) {
+
+  // $form_state['storage']['step'] keeps track of what page we're on.
+  if (!isset($form_state['storage']['step'])) {
+    $form_state['storage']['step'] = 1;
+  }
+
+  //Save the values for the current step into the storage array.
+  $form_state['storage']['values'][$form_state['storage']['step']] = $form_state['values'];
+
+  //Check the button that was clicked and change the step.
+  if ($form_state['clicked_button']['#id'] == 'edit-previous') {
+    $form_state['storage']['step']--;
+  }
+  elseif ($form_state['clicked_button']['#id'] == 'edit-next') {
+    $form_state['storage']['step']++;
+  }
+  elseif ($form_state['clicked_button']['#id'] == 'edit-preview') {
+  }
+  elseif ($form_state['clicked_button']['#id'] == 'edit-delete') {
+    $form_state['values']['taxon_description'] = array_values($form_state['values']['taxon_description']);
+  }
+  else {
+    $form_state['values']['taxon_description'] = array_values($form_state['values']['taxon_description']);
+    //We must do this or the form will rebuild instead of refreshing.
+    unset($form_state['storage']);
+  }
+}
+
+/**
+ * Implementation of hook_view.
+ */
+
+function taxon_description_view($node, $teaser = 0, $page = 0) {
+  global $user;
+  $is_author = $user->uid == $node->uid;
+  if(user_access('edit any taxon description', $user) || (user_access('edit own taxon description', $user) && $is_author)) {
+    if($node->taxon_description && $node->cc_lite_license == 'publicdomain') {
+      $rightsholders_present = FALSE;
+      foreach ($node->taxon_description as $tid => $taxon_description) {
+        if($taxon_description['content']) {
+          if ($taxon_description['rightsholders'][0]['name']) {
+            $rightsholders_present = TRUE;
+          }
+        }
+      }
+      if($rightsholders_present == TRUE) {
+        drupal_set_message('Public Domain license is selected and rights holder is indicated. In this case, rights holder information will not be displayed on the taxon pages.', 'warning');
+      }
+    }
+  }
+  $node = node_prepare($node, $teaser);
+  $node->content['taxon_description'] = array(
+    '#value' => taxon_description_view_results($node),
+    '#weight' => 0,
+    );
+
+  return $node;
+}
+
+/*
+ * Enumeration of templates for view of taxon description
+ */
+function taxon_description_view_results($node) {
+
+  global $NAMES;
+
+  $chapter = $contributing_authors = $contributing_rightsholders = "";
+
+  if($node->taxon_description) {
+    foreach ($node->taxon_description as $taxon_description) {
+      if($taxon_description['content']) {
+        $chapter = theme('taxon_description', $taxon_description['name'], check_markup($taxon_description['content'],FILTER_FORMAT_DEFAULT));
+
+        //contributing authors
+        foreach($taxon_description['contributors'] as $key => $contributor) {
+          if(!$contributor['name'] || $contributor['name'] == "") {
+            unset($taxon_description['contributors'][$key]);
+          }
+        }
+        $rank = array();
+        foreach($taxon_description['contributors'] as $key => $contributor) {
+          $rank[$key] = ($contributor['rank']) ? $contributor['rank'] : 0;
+        }
+        array_multisort($rank, SORT_ASC, $taxon_description['contributors']);
+        $authors = array();
+        foreach($taxon_description['contributors'] as $contributor) {
+          $contributor_uid = db_result(db_query("SELECT drupal_uid FROM {taxon_description_contributor_data} WHERE name = '%s'", $contributor['name']));
+          $authors[] = ($contributor_uid) ? l(t($contributor['name']), "user/".$contributor_uid) : t($contributor['name']);
+        }
+        $title = format_plural(count($authors), "Author", "Authors");
+        $contributing_authors = theme('taxon_description_contributor', $title, implode('; ', $authors));
+        
+        //rightsholders
+        if($node->cc_lite_license != 'publicdomain') {
+          foreach($taxon_description['rightsholders'] as $key => $rightsholder) {
+            if(!$rightsholder['name'] || $rightsholder['name'] == "") {
+              unset($taxon_description['rightsholders'][$key]);
+            }
+          }
+          $rank = array();
+          foreach($taxon_description['rightsholders'] as $key => $rightsholder) {
+            $rank[$key] = ($rightsholder['rank']) ? $rightsholder['rank'] : 0;
+          }
+          array_multisort($rank, SORT_ASC, $taxon_description['rightsholders']);
+          $names = array();
+          foreach($taxon_description['rightsholders'] as $rightsholder) {
+            $rightsholder_uid = db_result(db_query("SELECT drupal_uid FROM {taxon_description_rightsholder_data} WHERE name = '%s'", $rightsholder['name']));
+            $names[] = ($rightsholder_uid) ? l(t($rightsholder['name']), "user/".$rightsholder_uid) : t($rightsholder['name']);
+          }
+          if (!$names) $names = $authors;
+          $title = format_plural(count($names), "Rights holder", "Rights holders");
+          $contributing_rightsholders = theme('taxon_description_rightsholder', $title, implode('; ', $names));
+        }
+        $taxon_desc_chapters .= theme('taxon_description_chapter', $chapter, $node->cc_lite_license, $contributing_authors, $contributing_rightsholders);
+      }
+    }
+
+    foreach($node->taxonomy as $key => $value) {
+      if($key == 'classification_multitag') {
+        $tid = $node->taxonomy['classification_multitag'][1];
+      }
+      else {
+        if($value->vid == CLASSIFICATION_PRIMARY) {
+          $tid = $value->tid;
+        }
+      }
+      $taxon = taxonomy_get_term($tid);
+      $name = classification_check_italicize($tid) ? $NAMES->italicized_form($taxon->name) : $taxon->name;
+    }
+ 
+    $link = l(t('View'),'pages/'.$tid.'/', array('query' => array('lang' => $node->language)));
+    $link = theme('taxon_description_link', $link);
+
+    return theme('taxon_description_entire', $chapter, $taxon_desc_chapters, $link);
+  }
+}
+
+/**
+ * Get the necessary $vid for various forms
+ */
+function taxon_description_get_vid($type) {
+  $voc = db_fetch_object(db_query("SELECT vid FROM {vocabulary} WHERE name = '%s'", $type));
+  return $voc->vid;
+}
+
+// grab firstname and initials which may be of form "A.B.C." or "A. B. C. " or " A B C " etc.
+/**
+ * @param $remainder
+ * @return unknown_type
+ */
+function _taxon_description_grabFirstnameInitials($remainder) {
+  $prefix = array();
+  $firstname = $initials = '';
+  $array = explode(" ", $remainder);
+  foreach ($array as $value) {
+    $firstChar = drupal_substr($value, 0, 1);
+    if ((ord($firstChar) >= 97) && (ord($firstChar) <= 122)){
+    $prefix[] = $value;
+    } else if (preg_match("/[a-zA-Z]{2,}/", trim($value))){
+      $firstnameArray[] = trim($value);
+    } else {
+      $initialsArray[] = trim(str_replace(".", " ", trim($value)));
+    }
+  }
+  if (isset ($initialsArray)) {
+    $initials = implode(" ", $initialsArray);
+  }
+  if (isset ($firstnameArray)) {
+    $firstname = implode(" ", $firstnameArray);
+  }
+  if (!empty ($prefix)){
+    $prefix = implode(" ", $prefix);
+  }
+  return array($firstname,$initials,$prefix);
+}
+
+// surname may have title such as 'den', 'von', 'de la' etc. - characterised by first character lowercased.  Any
+// uppercased part means lowercased parts following are part of the surname (e.g. Van den Bussche)
+/**
+ * @param $input
+ * @return unknown_type
+ */
+function _taxon_description_grabSurname($input) {
+  $noPrefix = FALSE;
+  $surname = FALSE;
+  $prefix  = FALSE;
+
+  $surnameArray = explode(" ", $input);
+
+  foreach ($surnameArray as $value) {
+    $firstChar = substr($value, 0, 1);
+    if (!$noPrefix && (ord($firstChar) >= 97) && (ord($firstChar) <= 122)) {
+      $prefix[] = $value;
+    }
+    else {
+      $surname[] = $value;
+      $noPrefix = TRUE;
+    }
+  }
+  if (!empty($surname)) {
+    $surname = implode(" ", $surname);
+  }
+  if (!empty ($prefix)) {
+    $prefix = implode(" ", $prefix);
+  }
+  return array($surname, $prefix);
+}

@@ -1,0 +1,11 @@
+; $Id: piclens.info,v 1.1.4.4 2008/04/27 19:12:55 swentel Exp $
+name = Piclens
+description = Provides Piclens support for your website.
+core = 6.x
+
+; Information added by drupal.org packaging script on 2008-07-20
+version = "6.x-1.4"
+core = "6.x"
+project = "piclens"
+datestamp = "1216572911"
+

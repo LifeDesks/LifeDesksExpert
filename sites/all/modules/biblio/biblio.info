@@ -1,0 +1,13 @@
+; $Id: biblio.info,v 1.5.2.3 2009/06/03 19:52:03 rjerome Exp $
+name = Biblio
+description = Maintains biblographic lists.
+core = 6.x
+dependencies[] = taxonomy
+package = Biblio
+
+; Information added by drupal.org packaging script on 2010-06-30
+version = "6.x-1.14"
+core = "6.x"
+project = "biblio"
+datestamp = "1277927105"
+

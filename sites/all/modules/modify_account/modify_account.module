@@ -1,0 +1,249 @@
+<?php
+/* $Id:$ */
+
+/** 
+ * @file modify_account.module
+ * This module adds a few additional columns to the users table for Given Name and Surname and alters the account creation and edit pages
+ */
+
+define('GIVENNAME_MAX_LENGTH', 100);
+define('SURNAME_MAX_LENGTH', 100);
+
+function modify_account_form_alter(&$form, $form_state, $form_id) {
+
+ if($form_id == 'user_register') { 
+	if(empty($form['account'])) {
+	    $form['givenname'] = array(
+	    		'#type' => 'textfield',
+	    		'#title' => t('Given Name'),
+	    		'#required' => TRUE,
+	    		'#maxlength' => GIVENNAME_MAX_LENGTH,
+	    		'#weight' => -10,
+	    );
+	    $form['surname'] = array(
+	    		'#type' => 'textfield',
+	    		'#title' => t('Last Name'),
+	    		'#required' => TRUE,
+	    		'#maxlength' => SURNAME_MAX_LENGTH,
+	    		'#weight' => -9,
+	    );
+	}
+	else {
+      $form['account']['givenname'] = array(
+    		'#type' => 'textfield',
+    		'#title' => t('Given Name'),
+    		'#required' => TRUE,
+    		'#maxlength' => GIVENNAME_MAX_LENGTH,
+    		'#weight' => -10,
+      );
+      $form['account']['surname'] = array(
+    		'#type' => 'textfield',
+    		'#title' => t('Last Name'),
+    		'#required' => TRUE,
+    		'#maxlength' => SURNAME_MAX_LENGTH,
+    		'#weight' => -9,
+      );
+  }
+
+ }
+ 
+ if($form_id == 'user_profile_form' && $form['#uid']) {
+    global $conf;
+    $user_id = $form['#uid'];
+
+    $sql = db_query("SELECT givenname, surname from {users} where uid = %d", $user_id);
+    $fullname = db_fetch_object($sql);
+
+    drupal_set_title($fullname->givenname . ' ' . $fullname->surname);
+ 
+    $form['account']['givenname'] = array(
+    		'#type' => 'textfield',
+    		'#title' => t('Given Name'),
+    		'#default_value' => $fullname->givenname,
+    		'#required' => TRUE,
+    		'#maxlength' => GIVENNAME_MAX_LENGTH,
+    		'#weight' => -10,
+    );
+    $form['account']['surname'] = array(
+    		'#type' => 'textfield',
+    		'#title' => t('Last Name'),
+    		'#default_value' => $fullname->surname,
+    		'#required' => TRUE,
+    		'#maxlength' => SURNAME_MAX_LENGTH,
+    		'#weight' => -9,
+    );
+    $form['roles_assign']['#description'] = $form['roles_assign']['#description'].t(' For further information on user roles refer to ').l(t('LifeDesk help documentation'),'http://help.' . $conf['_lifedesks_domain'] . '/members/roles');
+ }
+}
+
+/**
+ * Implementation of hook_user().
+ */
+function modify_account_user($op, &$edit, &$user, $category = NULL) {
+	$module_path = drupal_get_path('module', 'modify_account') .'/';
+	drupal_add_css($module_path .'css/modify_account.css');
+	$terms = '<div id="terms">
+      	<div id="scrollTerms">
+            <dl>
+			<dt>
+			<h3>LifeDesk</h3>
+			<dd>' . t('The term \'LifeDesk\' represents a publicly accessible web site. Your LifeDesk will be a discrete implementation of a Content Management System provided by the Encyclopedia of Life.') . '</dd>
+			</dt>
+			<dt>
+			<h3>' . t('Agreement') . '</h3>
+			<dd>' . t('This agreement is between the <a href="http://www.eol.org">Encyclopedia of Life</a> and its agents (collectively &ldquo;EOL&rdquo;), and you and your agents (collectively &ldquo;you&rdquo;) regarding the use of your LifeDesk (the "Site"). By using the Site, you agree to the Terms and Conditions in this document.') . '</dd>
+			</dt>
+			<dt>
+			<h3>' . t('Ownership of Site') . '</h3>
+			<dd>' . t('The text, graphics, sound and software (collectively "Content"; i.e. material that you have up-loaded) on this Site is owned by you and your agents and you bear sole and ultimate responsibility for this Content. EOL supports the computer hardware infrastructure and software content management system that provides access to this Content') . '</dd>
+			</dt>
+			<dt>
+			<h3>' . t('Access to Services and Termination of Access') . '</h3>
+			<dd>' . t('You are responsible for all activity logged through your user account and for the activity of other persons or entities you grant access to this Site. You agree to notify EOL immediately you become aware of any unauthorized use. EOL may terminate your access privileges, remove Content or close down the site without notice if EOL believes you have violated any provision of this Agreement. You agree that termination of your access to the Site shall not result in any liability or other obligation of EOL to you or any third party in connection with such termination.') . '</dd>
+			</dt>
+			<dt>
+			<h3>' . t('Purpose of Site') . '</h3>
+			<dd>' . t('The Site is made available to you to foster collaborative research in taxonomy and to make information available for re-use through a public domain or Creative Commons (attribution) license with or without a non-commercial clause and with or without a share-alike clause.  EOL expects to be able to harvest the content for inclusion within EOL where the author, source (your LifeDesk) and license agreement will be displayed. The Site must not restrict membership to any single geographical area. Areas of the Site may be restricted to nominated parts of your membership (&ldquo;private areas&rdquo;) at your discretion. You agree to manage requests for membership and to allocate appropriate access privileges.') . '</dd>
+			</dt>
+			<dt>
+			<h3>' . t('Content') . '</h3>
+			<dd>' . t('All Content placed on the Site must be legal, decent and truthful. Through your use of the Site you represent and warrant that you have all the rights necessary to receive, use, transmit and disclose all data that you use in any way with the Site. You agree and acknowledge that you are solely responsible for any liabilities, fines, or penalties occasioned by any such violations or lack of rights and that you are solely responsible for the accuracy and adequacy of information and data furnished on the Site. EOL will, as part of the provision of the Site, implement a periodic archive of the Content that can be made available to you on request. You understand and acknowledge that EOL assumes no responsibility to screen or review Content and that EOL shall have the right, but not the obligation, in its sole discretion to review, refuse, monitor, edit or remove any Content. EOL expressly disclaims all responsibility or liability to you or any other person or entity for the Content and you acknowledge and agree that you assume all risk associated with the use of any and all Content. All information currently in the public domain will remain in the public domain. Neither the EOL nor the LifeDesk owner will seek to assert any intellectual property rights over any public domain materials that are made available through the EOL.') . '</dd>
+			</dt>
+			<dt>
+			<h3>' . t('Content Partnership With EOL') . '</h3>
+			<dd>' . t('In providing your content to EOL via a LifeDesk, you will: provide content via a format and interchange method compatible with the EOL, facilitated by the LifeDesk; provide data objects as-is with no warranty or claim of fitness for purpose; respond to the originators of comments or feedback communicated to you via the EOL regarding its content; work with the EOL to improve the quality of the provided data objects and reduce errors. In handling the content provided by your LifeDesk, EOL will provide attribution information for all content that it serves. EOL will also indicate the Creative Commons license attached to each object (text, structured data, graphics, multimedia, <em>etc.</em>). The specific style and techniques employed for display of attribution for data objects may change as the EOL evolves. EOL will present or pass along your data objects to others using web services (such as APIs) which will carry the same Creative Commons licenses and specified manner of attribution. EOL will refer all requests for re-usage of your content to you. EOL will not alter the data objects provided; however EOL will enable annotations or comments to be added. EOL will notify you of any comments or feedback received about your data objects and work with you to improve the quality of the provided data objects and reduce errors. EOL will notify you about statistics about the usage of its data objects. EOL will show your logo and project description on its list of data partners. EOL will post on its  site a statement designating an agent for receiving notice of any content alleged to violate copyright or other rights. EOL may elect at its sole discretion to present all, portions or none of any data objects provided by your LifeDesk and reserves the right to redact or remove any illegal, offensive, or objectionable content. The parties do not intend to create a legal partnership, principal/agent, or joint venture relationship and nothing in this agreement shall be construed as creating such a relationship between the parties. Neither party may incur any obligation on behalf of the other. This agreement is non-exclusive, and in no way restricts either EOL or you from participating in similar activities or arrangements with other public or private initiatives, organizations, or individuals. This agreement and the obligations set forth herein shall be subject to available funding.') . '
+			</dd>
+			</dt>
+			<dt>
+			<h3>' . t('Disclaimer of Warranties') . '</h3>
+			<dd>' . t('The use of the Site is solely at your own risk. The site is provided on an "as is" and "as available" basis and EOL expressly disclaims all warranties of any kind with respect to the site, whether express or implied. EOL makes no warranty that the access to the site and/or Content therein will be uninterrupted or secure. Your remedy with respect to any defect in or unresolved dissatisfaction with the Site is to cease using the Site.') . '</dd>
+			</dt>
+			<dt>
+			<h3>' . t('Limitation of Liability') . '</h3>
+			<dd>' . t('You understand and agree that EOL shall not be liable for any direct, indirect, incidental, special, consequential, or exemplary damages resulting from any matter related to you or other persons use of the site.') . '</dd>
+			</dt>
+			</dl>			
+     	</div>
+  	</div>';
+
+  switch($op) {
+    // User is registering.
+    case 'register':
+      // Add a fieldset containing radio buttons to the
+      // user registration form.
+      $fields['terms_conditions'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Terms of Use'),
+        '#weight' => 10,
+      );
+
+   	   $fields['terms_conditions']['terms']= array(
+    	  '#type' => 'markup',
+          '#value' => $terms,
+        );
+      
+      $fields['terms_conditions']['decision'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('I accept') . '&nbsp;<span class="form-required" title="' . t('This field is required') . '">*</span>',
+       	'#default_value' =>  0,
+       	'#return_value' => 1,
+       	'#required' => TRUE,
+      );
+      
+      return $fields;
+
+    // Field values for registration are being checked.
+    // (also called when user edits his/her 'my account' page, but $edit['decision'] is not set in that case).
+    case 'validate':
+      // Make sure the user has checked the checkbox ('I accept').
+      // the validate op is reused when a user updates information on the 'my account' page, so we use isset to test whether we are on the registration page where the decision field is present.
+      if (isset($edit['decision']) && $edit['decision'] != '1') {
+        form_set_error('decision', t('You must accept the terms of use before registration can be completed.'));
+      }
+      break;
+
+    // New user has just been inserted into the database.
+    case 'insert':
+      // Record information for future lawsuit.
+      watchdog('user', t('User %user accepted the terms of the LifeDesks',
+        array('%user' => $user->name)));
+      break;
+  }
+}
+/**
+ * Implementation of hook_theme_registry_alter
+ * 
+ * @param $theme_registry
+ * 
+ */
+function modify_account_theme_registry_alter(&$theme_registry) {
+  if (!empty($theme_registry['username'])) {
+    $theme_registry['username']['function'] = 'modify_account_username';
+  }
+}
+/**
+ * Alter username theme to use modify_account given name and surname.
+ * @param $object user attributes
+ * 
+ */
+function modify_account_username($object) {
+  //Copied from theme.inc
+  if ($object->uid && $object->uid > 0) {
+    $account = user_load(array('uid'=>$object->uid));
+    $fullname = $account->surname . ', ' . $account->givenname;
+    // Shorten the name when it is too long or it will break many tables.
+    if (drupal_strlen($fullname) > 20) {
+      $name = drupal_substr($fullname, 0, 15) .'...';
+    }
+    else {
+      $name = $fullname;
+    }
+
+    if (user_access('access user profiles')) {
+      $output = l($name, 'user/'. $object->uid, array('attributes' => array('title' => t('View user profile.'))));
+    }
+    else {
+      $output = check_plain($name);
+    }
+  }
+  else if ($object->name) {
+    // Sometimes modules display content composed by people who are
+    // not registered members of the site (e.g. mailing list or news
+    // aggregator modules). This clause enables modules to display
+    // the true author of the content.
+    if (!empty($object->homepage)) {
+      $output = l($object->name, $object->homepage, array('attributes' => array('rel' => 'nofollow')));
+    }
+    else {
+      $output = check_plain($object->name);
+    }
+
+    //$output .= ' ('. t('not verified') .')';
+  }
+  else {
+    $output = check_plain(variable_get('anonymous', t('Anonymous')));
+  }
+
+  return $output;
+}
+
+/**
+ * Implementation of hook_token_values().
+ */
+function modify_account_token_values($type = 'all', $object = NULL) {
+  $values = array();
+  if(is_object($object)) {
+	  $values['user-givenname'] = check_plain($object->givenname);
+	  $values['user-surname'] = check_plain($object->surname);
+  }
+  return $values;
+}
+
+/**
+ * Implementation of hook_token_list().
+ */
+function modify_account_token_list($type = 'all') {
+    $tokens['global']['user-givenname'] = t('The given name of the logged in user.');
+    $tokens['global']['user-surname'] = t('The surname of the logged in user.');
+    return $tokens;	
+}

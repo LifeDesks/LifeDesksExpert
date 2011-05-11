@@ -1,0 +1,276 @@
+<?php
+/* $Id:$ */
+
+/** 
+ * @file taxonpage.module
+ * This module is a taxon page that accepts a tid as a parameter and displays relevant content as blocks
+ */
+
+/**
+ * Implementation of hook_init()
+ */
+function taxonpage_init() {
+  $module_path = base_path() . drupal_get_path('module', 'taxonpage');
+  drupal_add_js(array('taxonpage_module_path' => $module_path), 'setting');
+}
+
+/**
+ * Implementation of hook_theme()
+ */
+function taxonpage_theme() {
+   $template_path = drupal_get_path('module', 'taxonpage') . '/templates';
+   return array(
+     'taxonpage_ancestry' => array(
+       'template' => 'taxonpage_ancestry',
+       'path' => $template_path,
+       'arguments' => array('ancestry' => NULL),
+     ),
+     'taxonpage_children' => array(
+       'template' => 'taxonpage_children',
+       'path' => $template_path,
+       'arguments' => array('children' => NULL),
+     ),
+     'taxonpage_images' => array(
+       'template' => 'taxonpage_images',
+       'path' => $template_path,
+       'arguments' => array('images' => NULL),
+     ),
+     'taxonpage_simplemappr' => array(
+       'template' => 'taxonpage_simplemappr',
+       'path' => $template_path,
+       'arguments' => array('simplemappr' => NULL),
+     ),
+     'taxonpage_simplemappr_print' => array(
+       'template' => 'taxonpage_simplemappr_print',
+       'path' => $template_path,
+       'arguments' => array('simplemappr' => NULL),
+     ),
+     'taxonpage_images_print' => array(
+       'template' => 'taxonpage_images_print',
+       'path' => $template_path,
+       'arguments' => array('images' => NULL),
+     ),
+     'taxonpage_chapters' => array(
+       'template' => 'taxonpage_chapters',
+       'path' => $template_path,
+       'arguments' => array('chapters' => NULL),
+     ),
+     'taxonpage_taxonomy' => array(
+       'template' => 'taxonpage_taxonomy',
+       'path' => $template_path,
+       'arguments' => array('taxonomy' => NULL),
+     ),
+     'taxonpage_taxonomic_notes' => array(
+       'template' => 'taxonpage_taxonomic_notes',
+       'path' => $template_path,
+       'arguments' => array(
+         'description' => NULL,
+         'vid' => NULL,
+         'tid' => NULL),
+     ),
+     'taxonpage_vernaculars' => array(
+       'template' => 'taxonpage_vernaculars',
+       'path' => $template_path,
+       'arguments' => array('vernaculars' => NULL),
+     ),
+     'taxonpage_flags' => array(
+       'template' => 'taxonpage_flags',
+       'path' => $template_path,
+       'arguments' => array('flags' => NULL),
+     ),
+     'taxonpage_biblio' => array(
+       'template' => 'taxonpage_biblio',
+       'path' => $template_path,
+       'arguments' => array('biblio' => NULL),
+     ),
+     'taxonpage_biblio_entry' => array(
+       'file' => 'includes/taxonpage.pages.inc',
+       'arguments' => array(
+         'node',
+         'base' => 'biblio',
+         'style_name' => 'apa',
+         'inline' => FALSE),
+     ),
+     'taxonpage_biblio_export_links' => array(
+       'file' => 'includes/taxonpage.pages.inc',
+       'arguments' => array('node'),
+     ),
+     'taxonpage_classification_biblio' => array(
+       'template' => 'taxonpage_classification_biblio',
+       'path' => $template_path,
+       'arguments' => array('classification_biblio' => NULL),
+     ),
+     'taxonpage_attachments' => array(
+       'template' => 'taxonpage_attachments',
+       'path' => $template_path,
+       'arguments' => array('attachments' => NULL),
+     ),
+     'taxonpage_entire' => array(
+       'template' => 'taxonpage_entire',
+       'path' => $template_path,
+       'arguments' => array(
+         'tid' => NULL,
+         'vid' => NULL,
+         'name' => NULL,
+         'canonical' => NULL,
+         'ancestry' => NULL,
+         'children' => NULL,
+         'images' => NULL,
+         'simplemappr' => NULL,
+         'chapters' => NULL,
+         'taxonomy' => NULL,
+         'taxonomic_notes' => NULL,
+         'vernaculars' => NULL,
+         'flags' => NULL,
+         'biblio' => NULL,
+         'classification_biblio' => NULL,
+         'attachments' => NULL,
+         'authors' => NULL,
+         'languages' => NULL,
+        ),
+      ),
+      'taxonpage_print' => array(
+        'template' => 'taxonpage_print',
+        'path' => $template_path,
+        'arguments' => array(
+          'tid' => NULL,
+          'name' => NULL,
+          'ancestry' => NULL,
+          'children' => NULL,
+          'images_print' => NULL,
+          'simplemappr_print' => NULL,
+          'chapters' => NULL,
+          'taxonomy' => NULL,
+          'taxonomic_notes' => NULL,
+          'vernaculars' => NULL,
+          'flags' => NULL,
+          'biblio' => NULL,
+          'classification_biblio' => NULL,
+          'authors' => NULL,
+         ),
+      ),
+     'taxonpage_pdf' => array(
+       'template' => 'taxonpage_pdf',
+       'path' => $template_path,
+       'arguments' => array(
+         'tid' => NULL,
+         'name' => NULL,
+         'ancestry' => NULL,
+         'children' => NULL,
+         'images_print' => NULL,
+         'simplemappr_print' => NULL,
+         'chapters' => NULL,
+         'taxonomy' => NULL,
+         'taxonomic_notes' => NULL,
+         'vernaculars' => NULL,
+         'flags' => NULL,
+         'biblio' => NULL,
+         'classification_biblio' => NULL,
+         'authors' => NULL,
+       ),
+     ),
+     'taxonpage_user' => array(
+       'template' => 'taxonpage_user',
+       'path' => $template_path,
+       'arguments' => array(
+         'tid' => NULL,
+         'vid' => NULL,
+         'profile' => NULL,
+         'name' => NULL,
+         'ancestry' => NULL,
+         'children' => NULL,
+         'images_user' => NULL,
+         'simplemappr_user' => NULL,
+         'chapters_user' => NULL,
+         'taxonomy' => NULL,
+         'taxonomic_notes' => NULL,
+         'vernaculars' => NULL,
+         'flags' => NULL,
+         'biblio' => NULL,
+         'classification_biblio' => NULL,
+         'authors' => NULL,
+         'languages' => NULL,
+       ),
+     ),
+  );
+}
+
+ /**
+ * Menu items
+ */
+function taxonpage_menu() {
+
+  $items['pages/%'] = array(
+    'page callback' => 'taxonpage_term_page',
+    'page arguments' => array(1,'page'),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/taxonpage.pages.inc',
+  );
+
+  $items['pages/%/print'] = array(
+    'page callback' => 'taxonpage_term_page',
+    'page arguments' => array(1,'page','print'),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/taxonpage.pages.inc',
+  );
+
+  $items['pages/%/pdf'] = array(
+    'page callback' => 'taxonpage_term_page',
+    'page arguments' => array(1,'page','pdf'),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/taxonpage.pages.inc',
+  );
+
+  $items['pages/%/user'] = array(
+    'page callback' => 'taxonpage_term_page',
+    'page arguments' => array(1,'page','user',3),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/taxonpage.pages.inc',
+  );
+
+  $items['pages/%/lang'] = array(
+    'page callback' => 'taxonpage_term_page',
+    'page arguments' => array(1,'page','language',3),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/taxonpage.pages.inc',
+  );
+
+  $items['admin/taxonpage/appearance'] = array(
+    'title' => t('Taxon Page Appearance'),
+    'description' => t('Adjust the presentation of your taxon pages.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('taxonpage_settings_form'),
+    'type' => MENU_NORMAL_ITEM,
+    'access arguments' => array('administer taxon pages'),
+    'file' => 'includes/taxonpage.settings.inc',
+  );
+
+  $items['taxonpage/language/chapters'] = array(
+     'page callback' => '_taxonpage_empty_chapters',
+     'access arguments' => array('create taxon description'),
+     'type' => MENU_CALLBACK,
+     'file' => 'includes/taxonpage.pages.inc',
+  );
+       
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function taxonpage_perm() {
+  return array('administer taxon pages');
+}
+
+function taxonpage_term_path($term) {
+
+  if($primary && $term->vid == CLASSIFICATION_PRIMARY) {
+    return 'pages/' . $term->tid;   
+  }
+
+}

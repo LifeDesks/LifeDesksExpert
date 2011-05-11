@@ -1,0 +1,214 @@
+#classification_list {
+	margin-top:20px;
+}
+
+.tree_wrapper {
+  border:0;
+  float:left;
+  width:49%;
+  min-height:550px;
+  height:auto;
+  margin:0 5px 5px 0;
+  _display:inline;
+  overflow:hidden;
+}
+
+/* IE hack for height */
+* html .tree_wrapper {
+	height: 550px;
+}
+
+.tree_wrapper div {
+	margin:5px 0 0 0;
+	padding:0;
+	width:100%;
+	overflow-x:auto;
+	overflow-y:auto;
+}
+
+.clear {
+  clear: both;
+}
+
+#classification_tree {
+  height:500px;
+}
+
+.form-item {
+	margin-bottom:10px;
+}
+
+._leaf {
+	list-style-type: none;
+}
+
+#classification_list {
+	width:60%;
+}
+
+.classification_tree_panel {
+	width:250px;
+	float:right;
+	_position:absolute; /* IE6 fix */
+}
+
+.classification_tree_wrapper {
+	min-height:345px;
+	_position:absolute; /* IE6 fix */
+	_left:620px; /* IE6 fix */
+}
+
+.classification_tree_div {
+  position:absolute;
+  right:10px;
+  width:230px;
+  z-index:1000;
+  min-height:315px;
+  border:2px solid #CCC;
+  background-color:#FFF;
+}
+
+.classification_tree_viewer {
+   min-height:285px;
+   height:285px;
+}
+
+.tree_wrapper_viewer {
+  border:0 none;
+  float:left;
+  height:98%;
+  margin:25px 5px 0 0;
+  overflow:hidden;
+  width:100%;
+}
+
+.tree_wrapper_viewer div {
+  margin:5px 0 0;
+  overflow:auto;
+  padding:0;
+  width:100%;
+}
+
+.fc_tree {
+  margin:20px 0;
+  width:100%;
+}
+
+.c {
+	background:#fff;
+	border:4px solid #ccc;
+	padding:6px 0;
+}
+
+.inner {
+	background:#fff;
+	padding:10px;
+	text-align:center;
+}
+
+.inner ul {
+	text-align:left;
+}
+
+.h {
+	padding:0px;
+	margin:0px;
+	font-size:16px;
+	color:#666;
+	text-transform:uppercase;
+}
+
+.node-form {
+	width:480px;
+	float:left;
+	_position:absolute; /* IE6 fix */
+	_right:400px; /* IE6 fix */
+}
+
+.front_page_links_expand {
+	padding:0px;
+	margin:0px;
+	text-align:left;
+	position:absolute;
+	left:-3px;
+	top:0px;
+	width:25px;
+}
+
+.front_page_links_expand li.expand {
+  list-style-type:none;
+  background:none;
+  font-size:small;
+  width:80px;
+  display:none;
+}
+
+.front_page_links_expand li.contract {
+  list-style-type:none;
+  background:none;
+  font-size:small;
+  width:80px;
+  display:none;
+}
+
+.front_page_links_expand li a {
+	background:none;
+	display: inline;
+	line-height: 20px;
+	height: 20px;
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	outline: none;
+	padding: 1px 5px;
+	padding-left: 24px;
+	text-decoration:none;
+}
+
+.front_page_links_expand li.expand a {
+	 background-image: url(../images/application_side_contract.gif);
+}
+
+.front_page_links_expand li.contract a {
+	 background-image: url(../images/application_side_expand.gif);
+}
+
+.front_page_links {
+	padding:0px;
+	margin:0px auto;
+	width:150px;
+}
+
+.front_page_links li {
+	list-style:none;
+	background:none;
+	font-size:small;
+}
+
+.front_page_links li a {
+	background:none;
+	display: block;
+	line-height: 20px;
+	height: 20px;
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	outline: none;
+	padding: 1px 5px;
+	padding-left: 24px;
+}
+
+.front_page_links li.classification a {
+		background-image: url(../images/chart_organisation_add.gif);
+}
+
+.classification_tree_search {
+  margin: 5px;
+  position:absolute;
+  top:0px;
+  right:5px;
+  background:white;
+  text-align:left;
+}
+
+.classification_tree_search img {
+	vertical-align: middle;
+}

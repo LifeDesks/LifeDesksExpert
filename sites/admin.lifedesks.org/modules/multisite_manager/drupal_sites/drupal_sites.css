@@ -1,0 +1,25 @@
+.sticky-table tr {
+	height:24px;
+}
+
+.drupal_sites_actions {
+	padding-left:28px;
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	font-size:13px;
+}
+span.create {
+  background-image: url("add.png");
+}
+
+span.delete {
+  background-image: url("delete.png");
+}
+
+span.view {
+  background-image: url("world_go.png");
+}
+
+span.edit {
+  background-image: url("application_edit.png");
+}

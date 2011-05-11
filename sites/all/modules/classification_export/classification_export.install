@@ -1,0 +1,118 @@
+<?php
+
+/**
+ * Implementation of hook_install().
+ */
+function classification_export_install() {
+	module_load_include('php', 'classification_export', 'includes/classification_export_uuid');
+	$UUID = new UUID();
+	variable_set('classification_export_gna_uuid',$UUID->v4());
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function classification_export_uninstall() {
+  variable_del('classification_export_citation');
+  variable_del('classification_export_version');
+  variable_del('classification_export_description');
+
+  menu_link_delete(NULL, 'classification');
+  drupal_flush_all_caches();
+}
+
+/**
+ * Implementation of hook_requirements().
+ */
+function classification_export_requirements($phase) {
+    $requirements = array();
+
+    if ($phase == 'runtime' || $phase == 'install') {
+
+    // File paths
+    $classification_export_path = file_create_path('classification_export');
+
+    $current = rtrim($classification_export_path, '/') .'/current';
+    $archive = rtrim($classification_export_path, '/') .'/archive';
+    $shared = rtrim($classification_export_path, '/') . '/shared';
+
+    if (!file_check_directory($classification_export_path, FILE_CREATE_DIRECTORY)) {
+      $requirements['classification_export_dir'] = array(
+        'value' => t('Missing directory'),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => t("A classification export module's directory %classification-export-dir is missing.", array('%classification-export-dir' => $classification_export_path)),
+      );
+    }
+    elseif (!file_check_directory($current, FILE_CREATE_DIRECTORY)) {
+      $requirements['classification_export_dir_current'] = array(
+        'value' => t('Missing directory'),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => t("A classification export module's directory %classification-export-dir-current is missing.", array('%classification-export-dir-current' => $current)),
+      );
+    }
+    elseif (!file_check_directory($archive, FILE_CREATE_DIRECTORY)) {
+      $requirements['classification_export_dir_archive'] = array(
+        'value' => t('Missing directory'),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => t("A classification export module's directory %classification-export-dir-archive is missing.", array('%classification-export-dir-archive' => $archive)),
+      );
+    }
+    elseif (!file_check_directory($shared, FILE_CREATE_DIRECTORY)) {
+      $requirements['classification_export_dir_shared'] = array(
+        'value' => t('Missing directory'),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => t("A classification export module's directory %classification-export-dir-shared is missing.", array('%classification-export-dir-shared' => $shared)),
+      );
+    }
+    else {
+      $requirements['classification_export_dir'] = array(
+        'value' => t('Exists (%path)', array('%path' => $classification_export_path)),
+        'severity' => REQUIREMENT_OK,
+      );
+      $requirements['classification_export_dir_current'] = array(
+        'value' => t('Exists (%path)', array('%path' => $current)),
+        'severity' => REQUIREMENT_OK,
+      );
+      $requirements['classification_export_dir_archive'] = array(
+        'value' => t('Exists (%path)', array('%path' => $archive)),
+        'severity' => REQUIREMENT_OK,
+      );
+      $requirements['classification_export_dir_shared'] = array(
+        'value' => t('Exists (%path)', array('%path' => $shared)),
+        'severity' => REQUIREMENT_OK,
+      );
+    }
+
+    $requirements['classification_export_dir']['title'] = t('Classification export module directory');
+    $requirements['classification_export_dir_current']['title'] = t('Classification export module (current) directory');
+    $requirements['classification_export_dir_archive']['title'] = t('Classification export module (archive) directory');
+    $requirements['classification_export_dir_shared']['title'] = t('Classification export module (shared) directory');
+  }
+
+  return $requirements;
+}
+
+function classification_export_update_6100() {
+	$ret = array();
+	
+	module_load_include('php', 'classification_export', 'includes/classification_export_uuid');
+	$UUID = new UUID();
+	variable_set('classification_export_gna_uuid',$UUID->v4());
+	
+	return $ret;
+}
+
+function classification_export_update_6105() {
+	$ret = array();
+	
+	$var = db_result(db_query("SELECT value FROM variable WHERE name='classification_export'"));
+	
+	if($var) {
+		$var = unserialize($var);
+		$var['published'] = 1;
+		$var['primary_author'] = db_result(db_query("SELECT ur.uid FROM users_roles ur INNER JOIN role r ON (ur.rid=r.rid) WHERE r.name='owner'"));
+		variable_set('classification_export', $var);
+	}
+	
+	return $ret;
+}

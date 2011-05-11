@@ -1,0 +1,10 @@
+name = Classification Notifications
+description = "Notifies users of relevant events in the classification module"
+package = "LifeDesk"
+project = "classification_notifications"
+
+dependencies[] = classification
+
+core = 6.x
+
+version = "6.x"

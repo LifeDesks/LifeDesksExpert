@@ -1,0 +1,129 @@
+body {
+  padding-top: 30px !important;
+}
+#block-lifedesk_greenbar-0 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3em;
+  width: 100%;
+}
+#lifedesk-greenbar-region {
+  background: none repeat scroll 0 0 #EDEDED;
+  height: 30px;
+  border-bottom:1px solid #CCC;
+  font-size:0.85em;
+  padding:0px;
+}
+
+.lifedesk-greenbar {
+  height:30px;
+  line-height:30px;
+  color: rgb(102, 102, 102);
+  text-transform: uppercase;
+}
+
+.lifedesk-greenbar a:link, .lifedesk-greenbar a:visited {
+  text-decoration:none;
+  color:#000;
+  font-weight:bold;
+}
+
+.lifedesk-greenbar a:hover {
+  text-decoration:underline;
+  color:#149ACC;
+}
+
+#lifedesk-greenbar-search {
+  position:absolute;
+  left:5px;
+  width:225px;
+  padding-left:5px;
+}
+
+#lifedesk-greenbar-search .lifedesk-greenbar-search-form-text {
+  height:14px;
+  width:120px;
+  vertical-align:middle;
+  line-height:14px;
+}
+
+#lifedesk-greenbar-search .lifedesk-greenbar-search-form-submit {
+  background-image: url(../images/magnifier.png);
+  background-repeat: no-repeat;
+  border-style: solid;
+  border-width: 1px 1px;
+  border-color: #cccccc #cccccc #555555;
+  background-color: #f2f2f2;
+  background-position:3px center;
+  margin-left:4px;
+  padding-left: 12px;
+  height: 22px;
+  width: 75px;
+  vertical-align:middle;
+}
+
+#lifedesk-greenbar-search-form-dropdown {
+  position:absolute;
+  left:210px;
+  top:5px;
+  height:20px;
+  background-image: url(../images/icon_color_arrow.gif);
+  background-repeat: no-repeat;
+  background-position:2px 50%;
+  border-style: solid;
+  border-width: 1px 1px;
+  border-color: #cccccc #555555 #555555 #cccccc;
+  background-color: #f2f2f2;
+  width: 9px;
+}
+
+#lifedesk-greenbar-next {
+  position:absolute;
+  left:250px;
+  width:125px;
+}
+
+#lifedesk-greenbar-meta {
+  position:absolute;
+  right:5px;
+  top:0px;
+}
+
+#lifedesk-greenbar-meta span {
+  padding-left:20px;
+  background-position:center left;
+  background-repeat: no-repeat;
+  display: inline-block;
+  margin:0px 3px;
+}
+
+#lifedesk-greenbar-meta span.lifedesk-greenbar-create {background-image: url(../images/pencil_add.gif);}
+#lifedesk-greenbar-meta span.lifedesk-greenbar-help {background-image: url(../images/help.gif);}
+#lifedesk-greenbar-meta span.lifedesk-greenbar-new {background-image: url(../images/wand.gif);}
+
+#lifedesk-greenbar-search-menu {
+    -moz-border-radius-bottomleft:5px;
+    -moz-border-radius-bottomright:5px;
+    -webkit-border-bottom-left-radius:5px;
+    -webkit-border-bottom-right-radius:5px;
+    display:none;
+    background-color: #FFF;
+    position:absolute;
+    width:155px;
+    z-index:100;
+    border:1px solid #CCC;
+    text-align:left;
+    padding:12px;
+    top: 24.5px; 
+    left: 138px; 
+    margin-top:5px;
+    margin-right: 0px;
+    *margin-right: -1px;
+}
+
+#lifedesk-greenbar-search-menu p {
+    margin:0;
+    text-transform: uppercase;
+    font-size:1em;
+}

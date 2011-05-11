@@ -1,0 +1,12 @@
+name = Classification Settings
+description = "Allows for widgetized fields on content types depending on vocabulary chosen and works specifically with a primary biological classification."
+package = "LifeDesk"
+project = "classification_settings"
+
+dependencies[] = taxonomy
+dependencies[] = classification
+dependencies[] = jstree
+
+core = 6.x
+
+version = "6.x-6100"

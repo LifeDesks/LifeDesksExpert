@@ -1,0 +1,515 @@
+<?php
+/* $Id:$ */
+
+/** 
+ * @file taxon_list.module
+ * This module presents a list of taxon pages that have been published
+ */
+
+/**
+ * Implementation of hook_theme
+*/
+function taxon_list_theme() {
+  return array(
+    'taxon_list_form' => array(
+      'arguments' => array('form' => NULL),
+    ),
+    'taxon_list_type' => array(
+      'arguments' => array('type' => NULL, 'name' => NULL),
+      'template' => 'taxon-list-type',
+    ),
+  );
+}
+
+ /**
+ * Menu items
+ */
+function taxon_list_menu() {   
+  $items['taxa'] = array(
+    'title' => t('Taxon Pages'),
+    'description' => t('View a list of all taxon pages'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('taxon_list_form'),
+    'access callback' => 'user_access',
+    'access arguments' => array('access content'),
+  );
+
+  $items["taxa/list"] = array(
+    'title'             => t('List'),
+    'type'              => MENU_DEFAULT_LOCAL_TASK,
+    'weight'            => -10
+  );
+
+  $items['taxa/filter'] = array(
+    'title'             => t('Filter'),
+    'page callback'     => 'drupal_get_form',
+    'page arguments'    => array('taxon_list_filter_form'),
+    'access callback' => 'user_access',
+    'access arguments'  => array('access content'),
+    'type'              => MENU_LOCAL_TASK,
+    'weight'            => -9
+  );
+
+  $items["taxa/filter/clear"] = array(
+    'title'             => '',
+    'page callback'     => 'taxon_list_filter_clear',
+    'access callback'   => 'user_access',
+    'access arguments'  => array('access content'),
+    'type'              => MENU_CALLBACK
+  );
+    
+    return $items;
+}
+
+function taxon_list_filter_form(&$form_state) {
+
+  $session = $_SESSION['taxon_list_overview_filter'];
+  $session = is_array($session) ? $session : array();
+  $filters = _get_taxon_list_filters();
+
+  // general settings display (max rows & content kind)
+  $form['general'] = array('#type' => 'fieldset',
+    '#title' => t('General Settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  ); 
+  $form['general']['max-rows'] = array(
+    '#type' => 'textfield', 
+    '#title' => t('Max rows'),
+    '#size' => 5,
+    '#default_value' => isset($_SESSION['taxon_list_max_rows']) ? $_SESSION['taxon_list_max_rows'] : 50,
+    '#prefix' => '<div class="container-inline">',
+    '#suffix' => '</div>',
+  );
+  $form['general']['buttons']['apply'] = array(
+    '#type' => 'submit', 
+     '#value' => t('Apply'),
+  );
+
+
+  $i = 0;
+  $form['filters'] = array('#type' => 'fieldset',
+    '#title' => t('Show only items where'),
+    '#theme' => 'node_filters',
+    '#prefix' => '<div id="node-admin-filter">',
+    '#suffix' => '</div>',
+  );
+  foreach ($session as $filter) {
+    list($type, $value) = $filter;
+    $value = $filters[$type]['options'][$value];
+    // avoid not applicable filter verbose
+    if ($true && !($type == 'user')) {
+      $string = ($i++ ? '<em>and</em> where <strong>%a</strong> is <strong>%b</strong>' : 
+        '<strong>%a</strong> is <strong>%b</strong>');
+      $form['filters']['current'][] = array('#value' => t($string, 
+        array('%a' => $filters[$type]['title'] , '%b' => $value)));
+    }
+    else {
+      $string = ($i++ ? '<em>and</em> where <strong>%a</strong> is <strong>%b</strong>' : 
+        '<strong>%a</strong> is <strong>%b</strong>');
+      $form['filters']['current'][] = array('#value' => t($string, 
+        array('%a' => $filters[$type]['title'], '%b' => $value)));    
+    }
+    // those ifs remove the respective option if it is already being filtered on.
+    if ($type == 'user') {
+      unset($filters['user']);
+    }
+  }
+
+  // preparing select boxes
+  foreach ($filters as $key => $filter) {
+    $names[$key] = $filter['title'];
+
+    switch ($key) {
+      case 'user':
+        $form['filters']['status'][$key] = array(
+          '#type'     => 'select', 
+          '#options'  => $filter['options'], 
+        );
+        break;
+        
+      default: 
+        $form['filters']['status'][$key] = array(
+          '#type'    => 'select', 
+          '#options' => $filter['options'],
+        );
+    }
+  }
+  // building radio buttons
+  $keyz = array_keys($names);
+  $form['filters']['filter'] = array(
+    '#type'          => 'radios',
+    '#options'       => $names,
+    '#default_value' => $keyz[0],
+  );
+  // building buttons depending on the filter state
+  $form['filters']['buttons']['submit'] = array(
+    '#type'  => 'submit', 
+    '#value' => (count($session) ? t('Refine') : t('Filter')),
+  );
+  if (count($session)) {
+    $form['filters']['buttons']['undo'] = array(
+      '#type'  => 'submit', 
+      '#value' => t('Undo'),
+    );
+    $form['filters']['buttons']['reset'] = array(
+      '#type'  => 'submit', 
+      '#value' => t('Reset'),
+    );
+  }
+
+  return  $form;
+}
+
+function _get_taxon_list_filters() {
+  global $user;
+
+  $types = node_get_types('names');
+  if(!user_access('administer site configuration')) unset($types['page'], $types['story'], $types['oai2']);
+
+  $filters['user'] = array('title' => t('compiler'), 'options' => _get_taxon_list_users());
+  $filters['type'] = array('title' => t('type'), 'options' => $types);
+  if($user->uid > 0) {
+  $options = array(
+    CLASSIFICATION_PRIMARY => t('present'),
+    CLASSIFICATION_DELETIONS => t('deleted'),
+  );
+  if(CLASSIFICATION_LOST_FOUND) $options[CLASSIFICATION_LOST_FOUND] = t('lost & found');
+    $filters['status'] = array('title' => t('status'), 'options' => array(0 => t('draft'), 1 => t('published')));
+    $filters['taxon'] = array('title' => t('taxon'), 'options' => $options);    
+  }
+  $filters['language'] = array('title' => t('language'), 'options' => locale_language_list());
+
+  return $filters;
+}
+
+function _get_taxon_list_users() {
+
+  $ld_support = variable_get('lifedesk_support', 0);
+  $qry = db_query('
+        SELECT uid, surname, givenname
+        FROM {users}
+        WHERE uid > 1 AND uid != '.$ld_support.' AND status = 1
+        ORDER BY surname'
+  );
+  
+  $users = array();
+
+  while ($user = db_fetch_object($qry)) {
+    $users[$user->uid] = $user->surname . ', ' . $user->givenname;
+  }
+  
+  return $users;
+}
+
+/** 
+ * Handle post-validation form submission.
+ *
+ * @ingroup forms
+ * @see cmf_filter_form($form_state, )
+ *
+ * @param the ID of the passed form
+ * @param array with the form properties values
+ */ 
+function taxon_list_filter_form_submit($form, &$form_state) {
+
+  $filters = _get_taxon_list_filters();
+
+  switch ($form_state['values']['op']) {
+    case t('Filter'):
+    case t('Refine'):
+      if (isset($form_state['values']['filter'])) {
+        $filter = $form_state['values']['filter'];
+        $flat_options = form_options_flatten($filters[$filter]['options']);
+        if (isset($flat_options[$form_state['values'][$filter]])) {
+          if($filter == 'type') {
+            $_SESSION['taxon_list_overview_filter']['type'] = array($filter, $form_state['values'][$filter]);
+          }
+          else {
+            $_SESSION['taxon_list_overview_filter'][] = array($filter, $form_state['values'][$filter]);
+          }
+        }
+      }
+      break;
+    case t('Undo'):
+      array_pop($_SESSION['taxon_list_overview_filter']);
+      break;
+    case t('Reset'):
+      $_SESSION['taxon_list_overview_filter'] = array();
+      break;
+    case t('Apply'):
+      $_SESSION['taxon_list_max_rows'] = $form_state['values']['max-rows'];
+      break;
+  }
+
+  cache_clear_all();
+  $form_state['redirect'] = 'taxa';
+}
+
+function taxon_list_form(&$form_state) {
+  global $user, $NAMES;
+
+  $session = $_SESSION['taxon_list_overview_filter'];
+
+  $where = array();
+
+  $module_path = drupal_get_path('module', 'taxon_list') .'/';
+  drupal_add_css($module_path .'taxon_list.css');
+
+  $header = array(
+    array('data' => t('Taxon'), 'field' => 'td.name'),
+    array('data' => t('Object(s)')),
+    array('data' => t('Compiler(s)'), 'field' => 'u.surname'),
+    array('data' => t('Language(s)'), 'field' => 'l.native'),
+  );
+
+  if($user->uid > 0) {
+    $header[] = array('data' => t('Last Modified'), 'field' => 'n.changed');
+  }
+
+  if($user->uid == 0) {
+    $where[] = 'n.status = 1';
+  }
+
+  if(!$session) {
+    $where[] = "(n.type = 'image' OR n.type = 'taxon_description' OR n.type = 'biblio' OR n.type = 'simplemappr')";
+    if($user->uid > 0) {
+      $lost = (CLASSIFICATION_LOST_FOUND) ? " OR td.vid = ".CLASSIFICATION_LOST_FOUND : "";
+      $where[] = "(td.vid = ".CLASSIFICATION_PRIMARY." OR td.vid = ".CLASSIFICATION_DELETIONS."$lost)";
+    }
+    else {
+      $where[] = "td.vid = ".CLASSIFICATION_PRIMARY;
+    }
+  }
+
+  $node_types = node_get_types('names');
+
+  foreach ($session as $index => $filter) {
+    list($key, $value) = $filter;
+    switch ($key) {
+      case 'user':
+        $where[] = "n.uid = ".$value; 
+        break;
+      case 'type':
+          $where['type'] = "n.type = '".$value."'";
+        break;
+      case 'taxon':
+          $where['taxon'] = "td.vid = " . $value;
+        break;
+      case 'language':
+          $where['language'] = "n.language = '" . $value . "'";
+        break;
+      case 'status':
+        $where['status'] = "n.status = " . $value;
+        break;
+    }
+  }
+
+  $sql = "
+    SELECT
+      GROUP_CONCAT(n.type) as type,
+      GROUP_CONCAT(n.language) as language,
+      n.changed,
+      n.status,
+      td.name as taxon,
+      td.tid,
+      td.vid,
+      GROUP_CONCAT(u.uid) as contributor
+    FROM 
+      {node} n 
+    LEFT JOIN
+      {languages} l ON n.language = l.language
+    INNER JOIN 
+      {users} u ON n.uid = u.uid 
+    INNER JOIN 
+      {term_node} tn ON n.nid = tn.nid 
+    INNER JOIN 
+      {term_data} td ON td.tid = tn.tid 
+    WHERE  ".implode(' AND ', $where)."
+    GROUP BY td.name";
+
+  $sql .= tablesort_sql($header);
+
+  $query_count = "
+    SELECT 
+      COUNT(DISTINCT tn.tid) 
+    FROM 
+      {term_node} tn 
+    INNER JOIN 
+      {term_data} td ON (tn.tid = td.tid)
+    INNER JOIN 
+      {node} n ON (tn.nid = n.nid) 
+    WHERE " . implode(' AND ', $where);
+
+  $result = pager_query($sql, ($_SESSION['taxon_list_max_rows']) ? $_SESSION['taxon_list_max_rows'] : 50, 0, $query_count);
+
+  $taxa = array();
+  while ($taxon = db_fetch_object($result)) {
+
+    $taxa[$taxon->tid] = '';
+    $name = classification_check_italicize($taxon->tid) ? $NAMES->italicized_form($taxon->taxon) : $taxon->taxon;
+
+    if($taxon->status == 0) {
+      if(user_access('edit any taxon description') || (user_access('edit own taxon description') && $user->uid == $taxon->uid)) {
+        if($taxon->vid == CLASSIFICATION_DELETIONS || $taxon->vid == CLASSIFICATION_LOST_FOUND) {
+          $form['name'][] = array('#value' => '<span class="taxon-list-del-name">'. $name .'</span> <span class="taxon_list_draft">' . t('Draft') . '</span>');
+        }
+        else {
+          $form['name'][] = array('#value' => l($name,'pages/' . $taxon->tid, array('html' => TRUE)) . ' <span class="taxon_list_draft">' . t('Draft') . '</span>');
+        }
+      }
+      else {
+        if($taxon->vid == CLASSIFICATION_DELETIONS || $taxon->vid == CLASSIFICATION_LOST_FOUND) {
+          $form['name'][] = array('#value' => '<span class="taxon-list-del-name">'. $name .'</span> <span class="taxon_list_draft">' . t('Draft') . '</span>');
+        }
+        else {
+          $form['name'][] = array('#value' => $name . ' <span class="taxon_list_draft">' . t('Draft') . '</span>');
+        }
+      }
+    }
+    else {
+      if($taxon->vid == CLASSIFICATION_DELETIONS || $taxon->vid == CLASSIFICATION_LOST_FOUND) {
+        $form['name'][] = array('#value' => '<span class="taxon-list-del-name">'. $name .'</span>');
+      }
+      else {
+        $form['name'][] = array('#value' => l($name,'pages/' . $taxon->tid, array('html' => TRUE)));    
+      }
+    }
+
+    $types = array();
+    $node_types = array_filter(explode(',', $taxon->type));
+
+    foreach($node_types as $type) {
+      $types[$type] = theme('taxon_list_type', $type, '');
+    }
+    
+    if(!array_key_exists('biblio', $types)) $types['biblio'] = theme('taxon_list_type', 'biblio_missing', '');
+    if(!array_key_exists('image', $types)) $types['image'] = theme('taxon_list_type', 'image_missing', '');
+    if(!array_key_exists('taxon_description', $types)) $types['taxon_description'] = theme('taxon_list_type', 'taxon_description_missing', '');
+    if(!array_key_exists('simplemappr', $types)) $types['simplemappr'] = theme('taxon_list_type', 'simplemappr_missing', '');
+
+    if($session['type']) {
+      foreach($types as $type => $value) {
+        if($type != $session['type'][1]) $types[$type] = theme('taxon_list_type', '', '');  
+      }
+    }
+
+    ksort($types);
+    $form['type'][] = array('#value' => implode(' ', $types));
+
+    $author = array();
+    $contributors = array_filter(explode(',',$taxon->contributor));
+    foreach($contributors as $uid) {
+      $user_obj = new stdClass();
+      $user_obj->uid = $uid;
+      $author[$uid] = theme('username', $user_obj);
+    }
+    $form['author'][] = array('#value' => implode('; ', $author));
+
+    $language = array();
+    $langs = array_filter(explode(',', $taxon->language));
+    foreach($langs as $lang) {
+      $language[$lang] = $lang;
+    }
+    $form['language'][] = array('#value' => implode(', ', $language));
+    if($user->uid > 0) {
+      $form['modified'][] = array('#value' => $taxon->changed ? t('@time ago', array('@time' => format_interval(time() - $taxon->changed))) : t('never'));
+    }
+    $form['pager'] = array('#value' => theme('pager', NULL, 50, 0));
+  }
+
+  return $form;
+}
+
+function theme_taxon_list_form($form) {
+  global $user;
+
+  $header = array(
+    array('data' => t('Taxon'), 'field' => 'td.name', 'sort' => 'asc', 'class' => 'taxon-list-names'),
+    array('data' => t('Object(s)'), 'class' => 'taxon-list-objects'),
+    array('data' => t('Compiler(s)'), 'class' => 'taxon-list-authors'),
+    array('data' => t('Lang(s)'), 'class' => 'taxon-list-languages'),
+  );
+
+  if($user->uid > 0) {
+    $header[] = array('data' => t('Last Modified'), 'field' => 'n.changed', 'class' => 'taxon-list-modified');
+  }
+
+  if (isset($form['name']) && is_array($form['name'])) {
+    foreach (element_children($form['name']) as $key) {
+      $rows[] = array(
+        drupal_render($form['name'][$key]),
+        drupal_render($form['type'][$key]),
+        drupal_render($form['author'][$key]),
+        drupal_render($form['language'][$key]),
+      );
+      if($user->uid > 0) array_push($rows[$key], drupal_render($form['modified'][$key]));
+    }
+  }
+  else {
+    $rows[] = array('data' => t('No taxon pages published.'), 'colspan' => '4');
+  }
+
+  $output  = '<div id="taxon-list-objects">';
+  $output .= '<span class="taxon-list-legend biblio">' . t('Biblio') . '</span>';
+  $output .= '<span class="taxon-list-legend image">' . t('Image') . '</span>';
+  $output .= '<span class="taxon-list-legend taxon_description">' . t('Text Description') . '</span>';
+  $output .= '<span class="taxon-list-legend simplemappr">' . t('Shaded Map') . '</span>';
+  $output .= '</div>';
+
+  $output .= '<div id="taxon-list-languages">';
+  $langs = locale_language_list();
+  $enabled_langs = array();
+  foreach($langs as $key => $lang) {
+    $enabled_langs[] = $key . ' = ' . $lang;    
+  }
+  $output .= implode(', ', $enabled_langs);
+  $output .= '</div>';
+
+  $output .= _taxon_list_filter_info_line();
+
+  $output .= theme('table', $header, $rows);
+  if ($form['pager']['#value']) {
+    $output .= drupal_render($form['pager']);
+  }
+
+  $output .= drupal_render($form);
+
+  return $output;
+}
+
+function _taxon_list_filter_info_line() {
+  $content = '';
+  $session = ($_SESSION['taxon_list_overview_filter']) ? $_SESSION['taxon_list_overview_filter'] : array();
+  $filters = _get_taxon_list_filters();
+
+  if($session) {
+      foreach ($session as $filter) {
+        list($type, $value) = $filter;
+        $value = $filters[$type]['options'][$value];
+        if ($type == 'user') {
+          $string = ($i++ ? '<em>and</em> where <strong>%a</strong> is <strong>%b</strong> ' : 
+            '<strong>%a</strong> is <strong>%b</strong> ');
+          $filtercontent .= t($string, array('%a' => $filters[$type]['title'] , '%b' => $value));
+        }
+        else {
+          $string = ($i++ ? '<em>and</em> where <strong>%a</strong> is <strong>%b</strong> ' : 
+            '<strong>%a</strong> is <strong>%b</strong> ');
+          $filtercontent .= t($string, array('%a' => $filters[$type]['title'], '%b' => $value));    
+        }
+      }
+      $content .= '<div class="taxon-list-current-filters"><b>'.t('Filters').': </b>';
+      $content .= $filtercontent;
+
+      $content .= '&nbsp;&nbsp;'.l('['.t('Clear All Filters').']',"taxa/filter/clear");
+      $content .= '</div>'; 
+  }
+
+  return $content;
+}
+
+function taxon_list_filter_clear() {
+  $_SESSION['taxon_list_overview_filter'] = array();
+  cache_clear_all();
+  drupal_goto('taxa');
+}

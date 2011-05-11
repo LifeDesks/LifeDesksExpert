@@ -1,0 +1,236 @@
+<?php
+// $Id
+/**
+ * @file classification.test
+ * Test classes extending Simpletest's DrupalWebTestCase and DrupalUnitTestCase.
+ */
+module_load_include('test', 'classification', 'tests/classification.data_monitoring');
+
+/**
+ * Parent class for classification module Web test cases.
+ * Global/shared setup should be configured here.
+ *
+ */
+class ClassificationWebTestCase extends DrupalWebTestCase {
+
+  protected $authorised_user;
+  protected $dummy_terms;
+
+  public function setUp() {
+    // Enable any modules required for the test.
+    parent::setUp(
+      'classification',
+      'classification_biblio',
+      'classification_settings',
+      'data_monitoring',
+      'jstree',
+      'transaction',
+      'biblio',
+      'jquery_update',
+      'help'
+    );
+    // Create authorised user
+    $this->authorised_user = $this->drupalCreateUser(array(
+      'administer nodes',
+      'administer taxonomy',
+      'access classification pages',
+      'create classification',
+      'edit classification',
+      'delete classification',
+      'settings for classification',
+      'administer monitoring',
+      'administer responding',
+      'access monitoring logs'));
+    $this->drupalLogin($this->authorised_user);
+    // Note: drupalLogin requires a 'Log out' link to appear on the page
+    // after the user has logged in, in order for test to return pass.
+    // Therefore drupalLogin test may appear to fail even when login is actually successful.
+    // A 'Log out' link may not appear if menus have been altered through themes. In such cases
+    // it may be safe to ignore the 'failed' test, if it does not appear to have any impact on
+    // subsequent tests.
+
+  }
+
+
+  /**
+   * Helper function to generate dummy classification terms.
+   * TODO: Convert this to separate core test and use db_inserts to
+   * generate dummy data on setup, i.e. so that not testing generation of
+   * dummy data on every test.
+   */
+  protected function generateDummyClassificationData() {
+    // Add dummy terms to primary classification:
+    // family0 tid=260
+    // family1 tid=261
+    // family2 tid=262
+    //     synonym3 tid=263
+    //     synonym4 tid=264
+    //     genus5 tid=265
+    //     genus6 tid=266
+    //         species7 tid=267
+    //         species8 tid=268
+    //             variety9 tid=269
+
+    $i = 0;
+    $terms = array();
+    while ($i < 10) {
+      $terms[$i]['vid'] = CLASSIFICATION_PRIMARY;
+      if ($i < 3) { // 0, 1, 2
+        $terms[$i]['parent'] = 0;
+        $terms[$i]['rank']['name'] = 'family';
+        $metadata_query = array();
+      }
+      elseif ($i < 5) { // 3, 4
+        $terms[$i]['parent'] = $terms[2]['tid'];
+        $terms[$i]['relation']['name'] = 'synonym';
+      }
+      elseif ($i < 7) { // 5, 6
+        $terms[$i]['parent'] = $terms[2]['tid'];
+        $terms[$i]['rank']['name'] = 'genus';
+      }
+      elseif ($i < 9) { // 7, 8
+        $terms[$i]['parent'] = $terms[6]['tid'];
+        $terms[$i]['rank']['name'] = 'species';
+      }
+      elseif ($i == 9) { // 9
+        $terms[$i]['parent'] = $terms[8]['tid'];
+        $terms[$i]['rank']['name'] = 'variety';
+      }
+
+      $update_metadata_query = array();
+      if (isset($terms[$i]['rank']['name'])) {
+        $terms[$i]['rank']['tid'] = db_result(db_query("SELECT tid FROM {term_data} WHERE name = '%s' AND vid = %d", $terms[$i]['rank']['name'], CLASSIFICATION_RANKS));
+        if ($terms[$i]['rank']['tid']) $update_metadata_query['classification_flags[' . CLASSIFICATION_RANKS . ']'] = $terms[$i]['rank']['tid'];
+      }
+      if (isset($terms[$i]['relation']['name'])) {
+        $terms[$i]['relation']['tid'] = db_result(db_query("SELECT tid FROM {term_data} WHERE name = '%s' AND vid = %d", $terms[$i]['relation']['name'], CLASSIFICATION_RELATIONS));
+        if ($terms[$i]['relation']['tid']) $update_metadata_query['classification_flags[' . CLASSIFICATION_RELATIONS . ']'] = $terms[$i]['relation']['tid'];
+      }
+
+      $add_term_response = json_decode($this->drupalGet('classification/add_name', array('query' => array('vid' => $terms[$i]['vid'], 'parent_tid' => $terms[$i]['parent'], 'name' => $this->randomName(10)))), TRUE);
+      if ($this->assertTrue((is_numeric($add_term_response['tid']) && $add_term_response['tid'] > 0), t('When a term is added a tid (!tid) is returned as json.', array('!tid' => $add_term_response['tid'])), t('Classification'))) {
+        $terms[$i]['tid'] = $add_term_response['tid'];
+        $this->assertEqual($terms[$i]['tid'], db_result(db_query("SELECT tid FROM {term_data} WHERE tid = %d AND vid = %d", $terms[$i]['tid'], CLASSIFICATION_PRIMARY)),
+                               t('When a term is added a term data record with tid (!tid) is added to the primary classification vocabulary (!vid)', array('!tid' => $terms[$i]['tid'], '!vid' => CLASSIFICATION_PRIMARY)),
+                               t('Classification'));
+        $get_metadata_response = json_decode(urldecode(str_replace('\x','%', $this->drupalGet('classification/get_metadata/' . $terms[$i]['vid'] . '/' . $terms[$i]['tid']))), TRUE);
+        if ($this->assertEqual($get_metadata_response['data']['tid'], $terms[$i]['tid'], t('When we get metadata for a term the tid (!tid), and vid (!vid) is returned along with other metadata as json.', array('!tid' => $get_metadata_response['data']['tid'], '!vid' => $get_metadata_response['data']['vid'])), t('Classification'))) {
+          $update_metadata_query['original'] = json_encode($get_metadata_response['data']);
+          $update_metadata_response = json_decode($this->drupalGet('classification/update_metadata', array('query' => $update_metadata_query)), TRUE);
+          if ($this->assertEqual($update_metadata_response['status'], 'edited', t('When term metadata is updated a status value of <em>edited</em> is returned as json.'), t('Classification'))) {
+            if (isset($terms[$i]['rank']['tid']) && is_numeric($terms[$i]['rank']['tid']) && $terms[$i]['rank']['tid'] > 0) {
+              // Check db for relation between term and taxonomic rank.
+              $relation = db_fetch_array(db_query("SELECT * FROM {term_relation} tr JOIN {term_data} td ON tr.tid2 = td.tid WHERE tr.tid1 = %d AND td.vid = %d", $terms[$i]['tid'], CLASSIFICATION_RANKS));
+              $this->assertEqual($terms[$i]['rank']['tid'], $relation['tid2'],
+                                 t('When term metadata taxonomic rank is updated a term relation record is added linking term tid (!tid) and rank tid (!rank_tid = !rank_name) where rank tid belongs to classification ranks vocabulary (!vid)', array('!tid' => $terms[$i]['tid'], '!rank_tid' => $terms[$i]['rank']['tid'], '!rank_name' => $terms[$i]['rank']['name'], '!vid' => CLASSIFICATION_RANKS)),
+                                 t('Classification'));
+              // Check db for relation has type taxonomic rank.
+              $this->assertEqual(CLASSIFICATION_RANKS, db_result(db_query("SELECT trt.vid FROM {term_relation_types} trt JOIN {term_relation_has_type} trht ON trt.rtid = trht.rtid JOIN {term_relation} tr ON tr.trid = trht.trid WHERE tr.trid = %d", $relation['trid'])),
+                                 t('When term metadata taxonomic rank is updated a term relation has type record is added linking the term relation to the taxonomic rank relation type.'),
+                                 t('Classification'));
+              unset($relation);
+
+            }
+            if (isset($terms[$i]['relation']['tid']) && is_numeric($terms[$i]['relation']['tid']) && $terms[$i]['relation']['tid'] > 0) {
+              // Check db for relation between term and taxonomic status.
+              $relation = db_fetch_array(db_query("SELECT * FROM {term_relation} tr JOIN {term_data} td ON tr.tid2 = td.tid WHERE tid1 = %d AND td.vid = %d", $terms[$i]['tid'], CLASSIFICATION_RELATIONS));
+              $this->assertEqual($terms[$i]['relation']['tid'], $relation['tid2'],
+                                 t('When term metadata taxonomic relationship is updated a term relation record is added linking term tid (!tid) and relation tid (!relation_tid = !relation_name) where relation tid belongs to classification relations vocabulary (!vid)', array('!tid' => $terms[$i]['tid'], '!relation_tid' => $terms[$i]['relation']['tid'], '!relation_name' => $terms[$i]['relation']['name'], '!vid' => CLASSIFICATION_RELATIONS)),
+                                 t('Classification'));
+              // Check db for relation has type taxonomic relation.
+              $this->assertEqual(CLASSIFICATION_RELATIONS, db_result(db_query("SELECT trt.vid FROM {term_relation_types} trt JOIN {term_relation_has_type} trht ON trt.rtid = trht.rtid JOIN {term_relation} tr ON tr.trid = trht.trid WHERE tr.trid = %d", $relation['trid'])),
+                                 t('When term metadata taxonomic relationship is updated a term relation has type record is added linking the term relation to the taxonomic relationship relation type.'),
+                                 t('Classification'));
+              unset($relation);
+            }
+          }
+        }
+        unset($get_metadata_response);
+        unset($update_metadata_query);
+        unset($update_metadata_response);
+      }
+      else {
+        return FALSE;
+      }
+      unset($response);
+      $i++;
+    }
+    $this->dummy_terms = $terms;
+    $this->assertTrue(is_array($this->dummy_terms), t('When dummy classification data is generated an array of terms is added to the test object.'), t('Classification'));
+
+    return $terms;
+  }
+
+  /**
+   * Helper function to generate nodes.
+   */
+  protected function generateNodeData($type = 'page', $num = 2) {
+    $i = 0;
+    while ($i < $num) {
+      $edit = array();
+      $edit['title'] = $this->randomName(8);
+      $edit['body'] = $this->randomName(16);
+      $this->drupalPost('node/add/' . $type, $edit, t('Save'));
+      $this->assertText(t('@title has been created.', array('@title' => $edit['title'])));
+      $i++;
+    }
+  }
+}
+
+/**
+ * Web test cases for classification core functions.
+ *
+ */
+class ClassificationCoreWebTestCase extends ClassificationWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => t('Classification core web tests'),
+      'description' => t('Web tests for core classification module functionality.'),
+      'group' => t('Classification'),
+    );
+  }
+
+  public function testClassificationInit() {
+    // Test basic install of classification module.
+
+    // Note we cannot rely on constants for testing if they are assigned values from the database because
+    // they retain the value from the master database and not values from the test database.
+    // Since the Classification module uses constants to store information from the database we should ensure
+    // that our master database is a fresh install before running tests - i.e. classification constants should
+    // have the values defined in the following tests - which assume a fresh install:
+    $this->assertEqual(CLASSIFICATION_PRIMARY, 1, t('When enable classification module, primary classification vocabulary id (!vid) should be 1.', array('!vid' => CLASSIFICATION_PRIMARY)), t('Classification'));
+    $this->assertEqual(CLASSIFICATION_DELETIONS, 2, t('When enable classification module, deleted names vocabulary id (!vid) should be 2.', array('!vid' => CLASSIFICATION_DELETIONS)), t('Classification'));
+    $this->assertEqual(CLASSIFICATION_RELATIONS, 3, t('When enable classification module, taxonomic relationships vocabulary id (!vid) should be 3.', array('!vid' => CLASSIFICATION_RELATIONS)), t('Classification'));
+    $this->assertEqual(CLASSIFICATION_RANKS, 4, t('When enable classification module, taxonomic ranks vocabulary id (!vid) should be 4.', array('!vid' => CLASSIFICATION_RANKS)), t('Classification'));
+    $this->assertEqual(CLASSIFICATION_VERNS, 5, t('When enable classification module, vernacular languages vocabulary id (!vid) should be 5.', array('!vid' => CLASSIFICATION_VERNS)), t('Classification'));
+    $this->assertEqual(CLASSIFICATION_LOST_FOUND, '', t('When enable classification module, lost and found vocabulary id (!vid) should be empty.', array('!vid' => CLASSIFICATION_LOST_FOUND)), t('Classification'));
+  }
+
+}
+
+/**
+ * Parent unit test class for classification module in which shared elements can be defined.
+ *
+ */
+class ClassificationUnitTestCase extends DrupalUnitTestCase {
+  // Main class for classification module unit tests.
+  // Specify any global shared elements here.
+}
+
+/**
+ * Class defining unit tests for core classification functions.
+ *
+ */
+class ClassificationCoreUnitTestCasse extends ClassificationUnitTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => t('Classification core unit tests'),
+      'description' => t('Unit tests for core classification module functions.'),
+      'group' => t('Classification'),
+    );
+  }
+
+  // Insert unit tests here.
+}

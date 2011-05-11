@@ -1,0 +1,1516 @@
+<?php
+
+/**
+ * Implementation of hook_install().
+ */
+function lifedesk_alter_install() {
+  global $base_url;
+
+  // Set the module's weight high so that it runs after other modules.
+  db_query("UPDATE {system} SET weight = 99 WHERE name = 'lifedesk_alter' and type = 'module'");
+
+  //create the apache Solr site hash here (cannot be done in the profile)
+  $hash = substr(md5(md5($base_url . drupal_get_private_key() . 'apachesolr')), 0, 12);
+  variable_set('apachesolr_site_hash', $hash);
+
+  //create the OpenSearch variable here for the shortname
+  $site_name = db_result(db_query("SELECT value FROM {variable} WHERE name='site_name'"));
+  variable_set('opensearch_shortname', unserialize($site_name));
+
+  //import the views for the image gallery here somehow
+}
+
+function lifedesk_alter_enable() {
+    //add records into the term_display table
+    $classification_primary = db_result(db_query("SELECT value FROM {variable} WHERE name='classification_primary'"));
+      db_query("INSERT INTO {term_display} (vid, style, weight) VALUES (".unserialize($classification_primary).", 'load', 0)");
+
+    $gallery_vid = db_result(db_query("SELECT value FROM {variable} WHERE name='image_gallery_nav_vocabulary'"));
+    db_query("INSERT INTO {term_display} (vid, style, weight) VALUES (".unserialize($gallery_vid).", 'load', 0)");
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function lifedesk_alter_uninstall() {
+  $current_theme = variable_get('theme_default', 'expert');
+  db_query("DELETE FROM {menu_custom} WHERE menu_name = 'menu-action-links'");
+  db_query("DELETE FROM {menu_links} WHERE module = 'lifedesk_alter'");
+  db_query("DELETE FROM {blocks} WHERE module = 'menu' AND (delta = 'menu-action-links')");
+  db_query("UPDATE {blocks} SET status = %d WHERE module = '%s' AND delta = '%s' AND theme = '%s'", 1, 'user', '1', $current_theme);
+}
+
+function lifedesk_alter_update_6100() {
+    $ret = array();
+
+    //update the frontpage variables
+    $anon = db_result(db_query("SELECT value FROM variable WHERE name='front_welcome_anonymous'"));
+    $ret[] = variable_set('front_welcome_anonymous',array('body' => unserialize($anon), 'format' => 1));
+
+    $auth = db_result(db_query("SELECT value FROM variable WHERE name='front_welcome_authenticated'"));
+    $ret[] = variable_set('front_welcome_authenticated',array('body' => unserialize($auth), 'format' => 1));
+    
+    //update the filter variable
+    $ret[] = variable_set('allowed_html_1','<a> <em> <strong> <cite> <code> <ul> <ol> <li> <dl> <dt> <dd> <p> <img> <sub> <sup> <p> <br>');
+    
+    $wysiwyg_config = array(
+        'default' => 1,
+        'user_choose' => 0,
+        'show_toggle' => 0,
+        'theme' => 'advanced',
+        'language' => 'en',
+        'buttons' => array(
+          'default' => array(
+              'bold' => 1,
+              'italic' => 1,
+              'undo' => 1,
+              'redo' => 1,
+              'link' => 1,
+              'unlink' => 1,
+              'sup' => 1,
+              'sub' => 1,
+              'charmap' => 1,
+              'code' => 1,
+              'cut' => 1,
+              'copy' => 1,
+              'paste' => 1,
+          ),
+          'paste' => array(
+              'pasteword' => 1,
+          ),
+          'safari' => array(
+              'safari' => 1,
+          ),
+        ),
+        'toolbar_loc' => 'top',
+        'toolbar_align' => 'left',
+        'path_loc' => 'none',
+        'resizing' => 1,
+        'verify_html' => 1,
+        'preformatted' => 0,
+        'convert_fonts_to_spans' => 1,
+        'remove_linebreaks' => 1,
+        'apply_source_formatting' => 0,
+        'paste_auto_cleanup_on_paste' => 1,
+        'block_formats' => 'p,address,pre,h2,h3,h4,h5,h6,div',
+        'css_setting' => 'theme',
+        'css_path' => '',
+        'css_classes' => '',
+        'form_build_id' => 'form-15e5b8550111062cc773820bdc07d438',
+    );
+
+      //filtered HTML
+      $ret[] = db_query("INSERT INTO wysiwyg (format,editor,settings) VALUES (%d,'%s','%s')",1,'tinymce',serialize($wysiwyg_config)); 
+
+      //full HTML
+      $ret[] = db_query("INSERT INTO wysiwyg (format,editor,settings) VALUES (%d,'%s','%s')",2,'tinymce',serialize($wysiwyg_config));
+    
+      return $ret;
+}
+
+function lifedesk_alter_update_6200() {
+    $ret = array();
+    
+    //config smtp
+    variable_set("smtp_on", "1");
+    variable_set("smtp_host", "10.19.19.213");
+    variable_set("smtp_hostbackup", "128.128.172.10");
+    variable_set("smtp_port", "25");
+    variable_set("smtp_protocol", "standard");
+    variable_set("smtp_username","");
+    variable_set("smtp_password", "");
+    variable_set("smtp_from", "");
+    variable_set("smtp_fromname", "");
+    variable_set("smtp_debugging", 0);
+    variable_set("smtp_library", "sites/all/modules/smtp/smtp.module");
+
+    //enable tables in allowed_html_1
+    variable_set('allowed_html_1','<a> <em> <strong> <cite> <code> <ul> <ol> <li> <dl> <dt> <dd> <p> <img> <sub> <sup> <p> <br> <table> <thead> <tbody> <tr> <td>');
+
+    //update the WYSIWYG config as well
+    $wysiwyg_config = array(
+        'default' => 1,
+        'user_choose' => 0,
+        'show_toggle' => 0,
+        'theme' => 'advanced',
+        'language' => 'en',
+        'buttons' => array(
+          'default' => array(
+              'bold' => 1,
+              'italic' => 1,
+              'undo' => 1,
+              'redo' => 1,
+              'link' => 1,
+              'unlink' => 1,
+              'sup' => 1,
+              'sub' => 1,
+              'charmap' => 1,
+              'code' => 1,
+              'cut' => 1,
+              'copy' => 1,
+              'paste' => 1,
+          ),
+          'paste' => array(
+              'pasteword' => 1,
+          ),
+          'table' => array(
+              'tablecontrols' => 1,
+          ),
+          'safari' => array(
+              'safari' => 1,
+          ),
+        ),
+        'toolbar_loc' => 'top',
+        'toolbar_align' => 'left',
+        'path_loc' => 'none',
+        'resizing' => 1,
+        'verify_html' => 1,
+        'preformatted' => 0,
+        'convert_fonts_to_spans' => 1,
+        'remove_linebreaks' => 1,
+        'apply_source_formatting' => 0,
+        'paste_auto_cleanup_on_paste' => 1,
+        'block_formats' => 'p,address,pre,h2,h3,h4,h5,h6,div',
+        'css_setting' => 'theme',
+        'css_path' => '',
+        'css_classes' => '',
+        'form_build_id' => 'form-15e5b8550111062cc773820bdc07d438',
+    );
+
+      $ret[] = update_sql("DELETE FROM wysiwyg WHERE editor='wysiwyg'");
+
+      //filtered HTML
+      db_query("INSERT INTO wysiwyg (format,editor,settings) VALUES (%d,'%s','%s')",1,'tinymce',serialize($wysiwyg_config));
+
+      //full HTML
+      db_query("INSERT INTO wysiwyg (format,editor,settings) VALUES (%d,'%s','%s')",2,'tinymce',serialize($wysiwyg_config));
+
+    return $ret;
+}
+
+function lifedesk_alter_update_6201() {
+    $ret = array();
+
+    variable_set('filter_html_1','1');
+    variable_set('filter_default_format','1');
+    variable_set('filter_html_help_1',0);
+    variable_set('allowed_html_1','<a> <em> <strong> <cite> <code> <ul> <ol> <li> <dl> <dt> <dd> <p> <img> <sub> <sup> <p> <br> <table> <thead> <tbody> <tr> <td>');
+
+    //update the WYSIWYG config as well
+    $wysiwyg_config_1 = array(
+        'default' => 1,
+        'user_choose' => 0,
+        'show_toggle' => 0,
+        'theme' => 'advanced',
+        'language' => 'en',
+        'buttons' => array(
+          'default' => array(
+              'bold' => 1,
+              'italic' => 1,
+              'undo' => 1,
+              'redo' => 1,
+              'link' => 1,
+              'unlink' => 1,
+              'sup' => 1,
+              'sub' => 1,
+              'charmap' => 1,
+              'code' => 1,
+              'cut' => 1,
+              'copy' => 1,
+              'paste' => 1,
+          ),
+          'paste' => array(
+              'pasteword' => 1,
+          ),
+          'table' => array(
+              'tablecontrols' => 1,
+          ),
+          'safari' => array(
+              'safari' => 1,
+          ),
+        ),
+        'toolbar_loc' => 'top',
+        'toolbar_align' => 'left',
+        'path_loc' => 'none',
+        'resizing' => 1,
+        'verify_html' => 1,
+        'preformatted' => 0,
+        'convert_fonts_to_spans' => 1,
+        'remove_linebreaks' => 1,
+        'apply_source_formatting' => 0,
+        'paste_auto_cleanup_on_paste' => 1,
+        'block_formats' => 'p,address,pre,h2,h3,h4,h5,h6,div',
+        'css_setting' => 'theme',
+        'css_path' => '',
+        'css_classes' => '',
+    );
+
+    $wysiwyg_config_2 = array(
+      'default' => 0,
+      'user_choose' => 0,
+      'show_toggle' => 0,
+      'theme' => 'advanced',
+      'language' => 'en',
+      'buttons' => array(
+      ),
+      'toolbar_loc' => 'top',
+      'toolbar_align' => 'left',
+      'path_loc' => 'none',
+      'resizing' => 1,
+      'verify_html' => 1,
+      'preformatted' => 0,
+      'convert_fonts_to_spans' => 1,
+      'remove_linebreaks' => 1,
+      'apply_source_formatting' => 0,
+      'paste_auto_cleanup_on_paste' => 1,
+      'block_formats' => 'p,address,pre,h2,h3,h4,h5,h6,div',
+      'css_setting' => 'theme',
+      'css_path' => '',
+      'css_classes' => '',
+    );
+
+    $filtered_html = serialize($wysiwyg_config_1);
+    $full_html = serialize($wysiwyg_config_2);
+
+    $ret[] = update_sql("DELETE FROM wysiwyg WHERE editor='tinymce'");
+
+    //NOTE!: cannot use update_sql with serialized data because braces get stripped AND one MUST use parameters
+
+    //filtered HTML
+    db_query("INSERT INTO wysiwyg (format,editor,settings) VALUES (%d,'%s','%s')",1,'tinymce',$filtered_html);
+
+    //full HTML
+    db_query("INSERT INTO wysiwyg (format,editor,settings) VALUES (%d,'%s','%s')",2,'tinymce',$full_html);
+
+    //fix the roles
+    $ret[] = update_sql("UPDATE filter_formats SET roles=',1,2,5,3,4,6,' WHERE format=1");
+    $ret[] = update_sql("UPDATE filter_formats SET roles=',,' WHERE format=2");
+    
+    return $ret;
+}
+
+function lifedesk_alter_update_6202() {
+    $ret = array();
+    
+    $result = db_result(db_query("SELECT redirect FROM path_redirect WHERE redirect='%s'",'pages/*'));
+    if(!$result) {
+      $ret[] = update_sql("INSERT INTO path_redirect (path,redirect,type) VALUES ('taxonomy/term/*','pages/*',301)");   
+    }
+    
+    variable_set('override_node_options_pocollapsed',0);
+    
+    //remove the edit button from the frontpage because is now hardcoded
+    $welcome = db_result(db_query("SELECT value FROM variable WHERE name='front_welcome_authenticated'"));
+    if($welcome) {
+        $welcome = unserialize($welcome);
+        if($welcome) {
+            $existing = '<ul class="front_page_links"><li class="edit"><a href="/admin/build/frontpage">Edit This Box</a></li></ul>';
+            $welcome = str_replace($existing, '', $welcome['body']);
+            $newwelcome = array();
+            $newwelcome['body'] = $welcome;
+            $newwelcome['format'] = 1;
+            variable_set('front_welcome_authenticated', $newwelcome);   
+        }   
+    }
+
+    $message_approval =  t("A new user with username: !username, and email: !mailto requested an account on your LifeDesk !site. Activation of !username's account is pending your approval.") . "\n\n" . t("To view and activate the account, log in to your LifeDesk: !uri and edit !username's profile (!edit_uri), selecting 'active' under account status.") . "\n\n" . t("For further information on activating new user accounts in your LifeDesk, please visit http://help.lifedesks.org/members/new.");
+    variable_set('user_mail_register_pending_approval_admin_subject', t('A new user (!username) has requested an account on your !site LifeDesk.'));
+    variable_set('user_mail_register_pending_approval_admin_body',$message_approval);
+    
+    return $ret;
+}
+
+function lifedesk_alter_update_6203() {
+    $ret = array();
+    $shortname = db_switch_variable_get('shortname', 'lifedesk');
+    $hash = substr(md5(md5('http://' . $shortname . '.lifedesks.org' . drupal_get_private_key() . 'apachesolr')), 0, 12);
+    variable_set('apachesolr_site_hash', $hash);
+    variable_set('search_cron_limit', '200');
+    variable_set('minimum_word_size', '3');
+    variable_set('apachesolr_host', '10.19.19.43');  //change to Solr host for production env't
+    variable_set('apachesolr_port', '8080');
+    variable_set('apachesolr_path', '/solr/lifedesks');
+    variable_set('apachesolr_cron_limit', '100');
+    variable_set('apachesolr_rows', '10');
+    variable_set('apachesolr_failure', 'show_no_results');
+    variable_set('apachesolr_search_make_default', '1');
+    variable_set('apachesolr_search_spellcheck', 0);
+    variable_set('apachesolr_search_taxonomy_links', '1');
+    $apachesolr_search = array(
+    'apachesolr_search' => array(),
+    );
+    variable_set('apachesolr_enabled_facets', $apachesolr_search);
+    return $ret;
+}
+
+function lifedesk_alter_update_6204() {
+    $ret = array();
+    $ret[] = update_sql("DELETE FROM path_redirect where path='taxonomy/term/*'");
+    $ret[] = update_sql("INSERT INTO blocks (module,delta,theme,status,weight,region,custom,throttle,visibility,pages,title,cache) VALUES ('lifedesk_greenbar', '0', 'eol', 1, 0, 'bannerbar', 0, 0, 0, '', '<none>', -1)");
+    return $ret;
+}
+
+function lifedesk_alter_update_6205() {
+  $ret = array();
+  $ret[] = update_sql("DELETE FROM node_type WHERE type='story'");
+  variable_set('invite_target_role_default', '3');
+  variable_set('invite_target_role_administrator', '3');
+  variable_set('invite_target_role_editor', '3');
+  variable_set('invite_target_role_owner', '3');
+  variable_set('invite_expiry', '30');
+  variable_set('invite_subject', '[user-givenname] [user-surname] has sent you an invite!');
+  variable_set('invite_subject_editable', '');
+  $template = "Your friend, [user-givenname] [user-surname], has invited you to join [site-name] at [site-url].
+
+    To become a member of [site-name], click the link below or paste it into the address bar of your browser.
+
+    [join-link]
+
+    ----------
+    [invite-message-raw]";
+  variable_set('invite_default_mail_template', $template);
+  variable_set('invite_use_users_email', '1');
+  variable_set('invite_use_users_email_replyto', '1');
+  variable_set('invite_manual_from', '');
+  variable_set('invite_manual_reply_to', '');
+  variable_set('invite_page_title', t('Invite a friend'));
+
+  //OpenSearch
+  $site_name = db_result(db_query("SELECT value FROM {variable} WHERE name='site_name'"));
+  variable_set('opensearch_shortname', unserialize($site_name));
+  return $ret;
+}
+
+function lifedesk_alter_update_6206() {
+  $ret = array();
+  $ret[] = update_sql("UPDATE blocks SET region='footer' WHERE module='lifedesk_greenbar' AND delta='0' AND theme='eol'");
+  $ret[] = update_sql("UPDATE blocks SET region='' WHERE module='system' AND delta='0' AND theme='eol'");
+  return $ret;
+}
+
+function lifedesk_alter_update_6207() {
+    
+  //include the crud.inc
+  include_once('includes/crud.inc');
+
+  $ret = array();
+  $ret[] = update_sql("DELETE FROM system WHERE name = 'modify_menu'");
+
+  //flush the css and javascript caches
+  $string_history = unserialize(db_result(db_query("SELECT value FROM {variable} WHERE name='css_js_query_string'")));
+  $new_character = $string_history[0];
+  // Not including 'q' to allow certain JavaScripts to re-use query string.
+  $characters = 'abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  while (strpos($string_history, $new_character) !== FALSE) {
+    $new_character = $characters[mt_rand(0, strlen($characters) - 1)];
+  }
+  variable_set('css_js_query_string', $new_character . substr($string_history, 0, 19));
+
+  //clear the cache tables
+  $caches = array('cache', 'cache_block', 'cache_filter', 'cache_form', 'cache_page', 'cache_menu');
+  foreach ($caches as $table) {
+    $ret[] = update_sql("TRUNCATE TABLE ". $table ."");
+  }
+
+  //set the theme settings variable
+  $theme_settings = array(
+    'mission' => '',
+    'default_logo' => 1,
+    'logo_path' => '',
+    'default_favicon' => 1,
+    'favicon_path' => '',
+    'primary_links' => 1,
+    'secondary_links' => 1,
+    'toggle_logo' => 1,
+    'toggle_favicon' => 1,
+    'toggle_name' => 1,
+    'toggle_search' => 0,
+    'toggle_slogan' => 0,
+    'toggle_mission' => 1,
+    'toggle_node_user_picture' => 0,
+    'toggle_comment_user_picture' => 0,
+    'toggle_primary_links' => 1,
+    'toggle_secondary_links' => 1,
+    'toggle_node_info_image' => 1,
+    'toggle_node_info_taxon_description' => 1,
+    'toggle_node_info_biblio' => 1,
+    'toggle_node_info_page' => 0,
+    'logo_upload' => '',
+    'favicon_upload' => '',
+    'expert_help' => 0,
+    'zen_block_editing' => 0,
+    'zen_breadcrumb' => 'yes',
+    'zen_breadcrumb_separator' => ' › ',
+    'zen_breadcrumb_home' => 1,
+    'zen_breadcrumb_trailing' => 0,
+    'zen_breadcrumb_title' => 0,
+    'zen_rebuild_registry' => 0,
+    'zen_wireframes' => 0,
+  );
+
+  variable_set('theme_settings', $theme_settings);
+
+  //get the existing theme settings
+  $current_theme = array();
+  $current_theme_settings = db_result(db_query("SELECT value FROM variable WHERE name = 'theme_eol_settings'"));
+  if($current_theme_settings) {
+    $current_theme = unserialize($current_theme_settings);  
+  }
+
+  $default_logo = ($current_theme && $current_theme['default_logo'] == 0) ? 0 : 1;
+  $logo_path = ($current_theme && $current_theme['logo_path']) ? $current_theme['logo_path'] : '';
+  $toggle_logo = ($current_theme && $current_theme['toggle_logo']) ? $current_theme['toggle_logo'] : 1;
+  $toggle_name = ($current_theme && $current_theme['toggle_name']) ? $current_theme['toggle_name'] : 1;
+  $toggle_node_user_picture = ($current_theme && $current_theme['toggle_node_user_picture']) ? $current_theme['toggle_node_user_picture'] : 0;
+  $toggle_comment_user_picture = ($current_theme && $current_theme['toggle_comment_user_picture']) ? $current_theme['toggle_comment_user_picture'] : 0;
+  $scheme = ($current_theme && $current_theme['scheme']) ? $current_theme['scheme'] : '';
+  $palette_link = ($current_theme && $current_theme['palette']['link']) ? $current_theme['palette']['link'] : '#149ACC';
+  $palette_top = ($current_theme && $current_theme['palette']['top']) ? $current_theme['palette']['top'] : '#ffffff';
+  $palette_bottom = ($current_theme && $current_theme['palette']['bottom']) ? $current_theme['palette']['bottom'] : '#ffffff';
+  $palette_text = ($current_theme && $current_theme['palette']['text']) ? $current_theme['palette']['text'] : '#333333';
+  $info_fill_link_0 = ($current_theme && $current_theme['info']['fill']['link'][0]) ? $current_theme['info']['fill']['link'][0] : 59;
+  $info_fill_link_1 = ($current_theme && $current_theme['info']['fill']['link'][1]) ? $current_theme['info']['fill']['link'][1] : 122;
+  $info_fill_link_2 = ($current_theme && $current_theme['info']['fill']['link'][2]) ? $current_theme['info']['fill']['link'][2] : 12;
+  $info_fill_link_3 = ($current_theme && $current_theme['info']['fill']['link'][3]) ? $current_theme['info']['fill']['link'][3] : 20;
+  $info_fill_text_0 = ($current_theme && $current_theme['info']['fill']['text'][0]) ? $current_theme['info']['fill']['text'][0] : 193;
+  $info_fill_text_1 = ($current_theme && $current_theme['info']['fill']['text'][1]) ? $current_theme['info']['fill']['text'][1] : 97;
+  $info_fill_text_2 = ($current_theme && $current_theme['info']['fill']['text'][2]) ? $current_theme['info']['fill']['text'][2] : 5;
+  $info_fill_text_3 = ($current_theme && $current_theme['info']['fill']['text'][3]) ? $current_theme['info']['fill']['text'][3] : 1;
+
+  $theme_expert_settings = array(
+    'expert_help' => 0,
+    'zen_block_editing' => 0,
+    'zen_breadcrumb' => 'yes',
+    'zen_breadcrumb_separator' => ' › ',
+    'zen_breadcrumb_home' => 1,
+    'zen_breadcrumb_trailing' => 0,
+    'zen_breadcrumb_title' => 0,
+    'zen_rebuild_registry' => 0,
+    'zen_wireframes' => 0,
+    'mission' => '',
+    'default_logo' => $default_logo,
+    'logo_path' => $logo_path,
+    'default_favicon' => 1,
+    'favicon_path' => '',
+    'primary_links' => 1,
+    'secondary_links' => 1,
+    'toggle_logo' => $toggle_logo,
+    'toggle_favicon' => 1,
+    'toggle_name' => $toggle_name,
+    'toggle_search' => 0,
+    'toggle_slogan' => 0,
+    'toggle_mission' => 1,
+    'toggle_node_user_picture' => $toggle_node_user_picture,
+    'toggle_comment_user_picture' => $toggle_comment_user_picture,
+    'toggle_primary_links' => 1,
+    'toggle_secondary_links' => 1,
+    'toggle_node_info_image' => 1,
+    'toggle_node_info_taxon_description' => 1,
+    'toggle_node_info_biblio' => 1,
+    'toggle_node_info_page' => 0,
+    'logo_upload' => '',
+    'favicon_upload' => '',
+    'scheme' => $scheme,
+    'palette' => array(
+        'base' => '#f1f1ee',
+        'link' => $palette_link,
+        'top' => $palette_top,
+        'bottom' => $palette_bottom,
+        'text' => $palette_text,
+    ),
+
+    'theme' => 'expert',
+    'info' => array(
+        'schemes' => array(
+            '#f1f1ee,#149ACC,#ffffff,#ffffff,#333333' => 'LifeDesk (Default)',
+            '#f1f1ee,#149ACC,#6598cb,#6598cb,#333333' => 'Bluemarine',
+            '#f1f1ee,#b43131,#ffffff,#d35445,#333333' => 'Cinnamon',
+            '#f1f1ee,#399d3e,#95d293,#399d3e,#333333' => 'Forest Green',
+            '' => 'Custom'
+        ),
+
+        'copy' => array(
+            '0' => 'images/toc.png',
+        ),
+
+        'css' => array(
+            '0' => 'css/page-backgrounds.css',
+            '1' => 'css/html-reset.css',
+        ),
+
+        'gradient' => array(
+            '0' => 40,
+            '1' => 0,
+            '2' => 500,
+            '3' => 90,
+        ),
+
+        'fill' => array(
+            'base' => array(
+                '0' => 0,
+                '1' => 0,
+                '2' => 600,
+                '3' => 465,
+            ),
+
+            'link' => array(
+                '0' => $info_fill_link_0,
+                '1' => $info_fill_link_1,
+                '2' => $info_fill_link_2,
+                '3' => $info_fill_link_3,
+            ),
+
+            'text' => array(
+                '0' => $info_fill_text_0,
+                '1' => $info_fill_text_1,
+                '2' => $info_fill_text_2,
+                '3' => $info_fill_text_3,
+            ),
+
+        ),
+
+        'slices' => array(
+            'images/bg_body.png' => array(
+                '0' => 1,
+                '1' => 1,
+                '2' => 1,
+                '3' => 1,
+            ),
+
+        'images/bg_header.png' => array(
+            '0' => 40,
+            '1' => 0,
+            '2' => 1,
+            '3' => 90,
+        ),
+
+        'images/bg_gradient_left.png' => array(
+            '0' => 0,
+            '1' => 0,
+            '2' => 39,
+            '3' => 1,
+        ),
+
+        'images/bg_gradient_right.png' => array(
+            '0' => 561,
+            '1' => 0,
+            '2' => 39,
+            '3' => 1,
+        ),
+
+        'images/bg_horizontal_separator.png' => array(
+            '0' => 40,
+            '1' => 90,
+            '2' => 1,
+            '3' => 6,
+        ),
+
+        'images/bg_vertical_separator.png' => array(
+            '0' => 193,
+            '1' => 97,
+            '2' => 9,
+            '3' => 1,
+        ),
+
+        'images/toc_hover.png' => array(
+            '0' => 59,
+            '1' => 122,
+            '2' => 12,
+            '3' => 20,
+        ),
+
+        'logo.png' => array(
+            '0' => 40,
+            '1' => 0,
+            '2' => 268,
+            '3' => 80,
+        ),
+
+        'screenshot.png' => array(
+            '0' => 40,
+            '1' => 0,
+            '2' => 400,
+            '3' => 240,
+        ),
+
+    ),
+
+    'blend_target' => '#ffffff',
+    'preview_image' => 'color/preview.png',
+    'preview_css' => 'color/preview.css',
+    'base_image' => 'color/base.png',
+    ),
+
+  );
+
+  variable_set('theme_expert_settings', $theme_expert_settings);
+
+  $color_palette = db_result(db_query("SELECT name FROM variable WHERE name = 'color_eol_palette'"));
+  if($color_palette) {
+    variable_set('color_expert_palette', $theme_expert_settings['palette']);
+  }
+
+  //set the default theme to expert
+  variable_set('theme_default', 'expert');
+
+  //trash the eol theme
+  $ret[] = update_sql("DELETE FROM system WHERE name = 'eol'");
+  $ret[] = update_sql("DELETE FROM blocks WHERE theme = 'eol'");
+  $ret[] = update_sql("DELETE FROM variable WHERE name LIKE 'color_eol%'");
+
+  //activate the expert theme
+  $ret[] = update_sql("UPDATE system SET status = 1 WHERE type = 'theme' and name = 'expert'");
+
+  // Create and position the lifedesk_announcements block
+  $ret[] = update_sql("INSERT INTO blocks (module, delta, theme, status, weight, region, title) VALUES ('lifedesk_announcements', '0', 'expert', 1, -15, 'sidebar_first', '<none>')");
+
+  // Create and position the primary-links menu block
+  $ret[] = update_sql("INSERT INTO blocks (module, delta, theme, status, weight, region, title) VALUES ('menu', 'primary-links', 'expert', 1, -14, 'sidebar_first', '<none>')");
+
+  // Create and position new actions menu block
+  $ret[] = update_sql("INSERT INTO blocks (module, delta, theme, status, weight, region, title) VALUES ('menu', 'menu-action-links', 'expert', 1, -13, 'sidebar_first', '<none>')");
+
+  // Create and position the login block
+  $ret[] = update_sql("INSERT INTO blocks (module, delta, theme, status, weight, region, title) VALUES ('user', '0', 'expert', 1, -12, 'sidebar_first', '<none>')");
+
+  // Create and position the lifedesk_greenbar block
+  $ret[] = update_sql("INSERT INTO blocks (module, delta, theme, status, weight, region, title) VALUES ('lifedesk_greenbar', '0', 'expert', 1, 0, 'footer', '<none>')");
+
+  //update all user-generated menu items such that they appear in primary-links
+  $ret[] = update_sql("UPDATE menu_links SET menu_name = 'primary-links', plid = 0 WHERE external=1");
+  $ret[] = update_sql("UPDATE menu_links SET menu_name = 'primary-links', plid = 0 WHERE router_path='node/%'");
+
+  //remove the breadcrumb-like items for primary-links
+  variable_set('menu_primary_links_source', '');
+
+  // Create new actions menu
+  $ret[] = update_sql("INSERT INTO menu_custom (menu_name, title, description) VALUES ('menu-action-links', 'Actions', 'Links for adding, editing and deleting site content, and modifying site settings.')");
+
+  // Add new menu items to action-links menu
+  $items[] = array(
+    'link_title' => 'My Account',
+    'link_path' => 'user/%',
+    'menu_name' => 'action-links',
+    'module' => 'lifedesk_alter',
+    'weight' => -10,
+  );
+  $items[] = array(
+    'link_title' => 'Create Content',
+    'link_path' => 'node/add',
+    'menu_name' => 'action-links',
+    'module' => 'lifedesk_alter',
+    'weight' => -9,
+  );
+  $items[] = array(
+    'link_title' => 'Manage Classification',
+    'link_path' => 'admin/classification/biological',
+    'menu_name' => 'action-links',
+    'module' => 'lifedesk_alter',
+    'weight' => -8,
+  );
+  $items[] = array(
+    'link_title' => 'Invite a Friend',
+    'link_path' => 'invite',
+    'menu_name' => 'action-links',
+    'module' => 'lifedesk_alter',
+    'weight' => -7,
+  );
+  $items[] = array(
+    'link_title' => 'Administration',
+    'link_path' => 'admin',
+    'menu_name' => 'action-links',
+    'module' => 'lifedesk_alter',
+    'weight' => -6,
+  );
+  $items[] = array(
+    'link_title' => 'Log out',
+    'link_path' => 'logout',
+    'menu_name' => 'action-links',
+    'module' => 'lifedesk_alter',
+    'weight' => -5,
+  );
+  // Add new menu items to primary-links menu
+  $items[] = array(
+    'link_title' => 'Image Gallery',
+    'link_path' => 'image_gallery',
+    'menu_name' => 'primary-links',
+    'module' => 'lifedesk_alter',
+    'weight' => -10,
+  );
+  $items[] = array(
+    'link_title' => 'Taxon Pages',
+    'link_path' => 'taxa',
+    'menu_name' => 'primary-links',
+    'module' => 'lifedesk_alter',
+    'weight' => -9,
+  );
+  $items[] = array(
+    'link_title' => 'Bibliography',
+    'link_path' => 'biblio',
+    'menu_name' => 'primary-links',
+    'module' => 'lifedesk_alter',
+    'weight' => -8,
+  );
+  $items[] = array(
+    'link_title' => 'Members',
+    'link_path' => 'members',
+    'menu_name' => 'primary-links',
+    'module' => 'lifedesk_alter',
+    'weight' => -7,
+  );
+
+  install_menu_create_menu_items($items);
+
+  //fix the node/add/% parenting
+  $node_add_mlid = db_result(db_query("SELECT mlid FROM menu_links WHERE menu_name = 'navigation' AND link_path = 'node/add'"));
+  $ret[] = update_sql("UPDATE menu_links SET plid = " . $node_add_mlid . " WHERE menu_name = 'navigation' AND link_path LIKE 'node/add/%'");
+
+  //redirect the theme config page to expert theme settings
+  $ret[] = update_sql("INSERT INTO path_redirect (path,redirect,type) VALUES ('admin/build/themes', 'admin/build/themes/settings/expert', 301)");
+  $ret[] = update_sql("INSERT INTO path_redirect (path,redirect,type) VALUES ('admin/build/menu', 'admin/build/menu-customize/primary-links', 301)");
+
+  //update permissions
+
+  //revoke perms
+  module_load_include('module','permissions_api');
+  $revoke_permissions = array();
+
+  $revoke_permissions['administrator'] = array(
+    'administer menu',
+    'settings for catalog'
+  );
+  $revoke_permissions['owner'] = array(
+    'administer menu',
+    'settings for catalog'
+  );
+
+  foreach($revoke_permissions as $role => $perms) {
+    permissions_revoke_permissions($role, $perms);
+  }
+
+  //add perms
+  $add_permissions['administrator'] = array(
+      'administer primary-links menu items',
+      'create users',
+  );
+  $add_permissions['owner'] = array(
+      'administer primary-links menu items',
+      'create users',
+  );
+
+  foreach($add_permissions as $role => $perms) {
+    permissions_grant_permissions($role, $perms);   
+  }  
+
+  //CTM(i.e.Menu Settings per Content Type) settings
+  $ret[] = variable_set('page_menu_settings', array('primary-links'=>'primary-links'));
+
+  //trash the Taxonomic Catalog module
+  $catalog = db_result(db_query("SELECT name FROM system WHERE name = 'catalog'"));
+
+  if($catalog) {
+      $ret[] = update_sql("DELETE FROM system WHERE name = 'catalog'");
+      $ret[] = update_sql("DELETE FROM menu_links WHERE link_path = 'catalog'");
+      $ret[] = update_sql("DELETE FROM menu_router WHERE path = 'catalog'");
+      $ret[] = update_sql("DELETE FROM variable WHERE name LIKE 'catalog_%'");  
+  }
+
+  return $ret;
+}
+
+function lifedesk_alter_update_6208() {
+    $ret = array();
+    
+    module_load_include('module','permissions_api');
+    //add perms
+    $add_permissions['administrator'] = array(
+      'display site configuration menu',
+    );
+    $add_permissions['owner'] = array(
+      'display site configuration menu',
+    );
+
+    foreach($add_permissions as $role => $perms) {
+      permissions_grant_permissions($role, $perms); 
+    }
+    
+    variable_set('image_max_upload_size', '5120'); //image file upload limit as 5MB
+    
+    $ret[] = update_sql("INSERT INTO blocks (module, delta, theme, status, weight, region, title) VALUES ('lifedesk_foot', '0', 'expert', 1, -15, 'footer', '<none>')");
+    
+    return $ret;
+}
+
+function lifedesk_alter_update_6209() {
+  $ret = array();
+
+  variable_set('language_content_type_taxon_description',1);
+  variable_set('i18n_required_node_taxon_description',1);
+  variable_set('language_content_type_image',1);
+  variable_set('i18n_required_node_image',1);
+  variable_set('language_content_type_page',1);
+  variable_set('i18n_required_node_page',1);
+
+  return $ret;
+}
+
+function lifedesk_alter_update_6210() {
+  $ret = array();
+  $qry = db_query("SELECT nid FROM {node} WHERE language = '' AND type='taxon_description'");
+  while($result = db_fetch_object($qry)) {
+    $ret[] = update_sql("UPDATE {node} SET language='en' WHERE nid=$result->nid");
+  }
+  return $ret;
+}
+
+function lifedesk_alter_update_6211() {
+  $ret = array();
+  $qry = db_query("SELECT nid FROM {node} WHERE language = '' AND type='image'");
+  while($result = db_fetch_object($qry)) {
+    $ret[] = update_sql("UPDATE {node} SET language='en' WHERE nid=$result->nid");
+  }
+  return $ret;
+}
+
+function lifedesk_alter_update_6212() {
+    $ret = array();
+    
+    module_load_include('module','permissions_api');
+    //add perms
+    $add_permissions['administrator'] = array(
+      'administer languages',
+      'administer taxon pages'
+    );
+    $add_permission['owner'] = array(
+      'administer taxon pages'
+    );
+    foreach($add_permissions as $role => $perms) {
+      permissions_grant_permissions($role, $perms); 
+    }
+
+    $availableLanguages = array(
+        "en" => array("English"),
+        "es" => array("Spanish", "Español"),
+        "fr" => array("French", "Français"),
+        "pt-pt" => array("Portuguese, Portugal", "Português"),
+        "pt-br" => array("Portuguese, Brazil", "Português"),
+        "ro" => array("Romanian", "Română"),
+        "sw" => array("Swahili", "Kiswahili"),
+    );
+    variable_set('lifedesk_languages', $availableLanguages);
+    
+    //Creativecommons Lite Settings
+    variable_del('creativecommons_lite_default_licence');
+    variable_set('creativecommons_lite_default_license','by-nc');
+    variable_set('creativecommons_lite_mandatory',1);
+    variable_set('creativecommons_lite_jurisdiction',0);
+    variable_set('creativecommons_lite_icon_style','buttons_small');
+    variable_set('creativecommons_lite_no_text',1);
+    variable_set('creativecommons_lite_license_options',array (
+      'by' => 'by',
+      'by-nc' => 'by-nc',
+      'by-nc-sa' => 'by-nc-sa',
+      'by-sa' => 'by-sa',
+      'publicdomain' => 'publicdomain',
+    ));
+
+    return $ret;
+}
+
+function lifedesk_alter_update_6213() {
+    $ret = array();
+    
+    module_load_include('module','permissions_api');
+    
+    //fix the role for the ldsupport account
+    $role = permissions_get_role("administrator");
+    $support_account = db_result(db_query("SELECT uid FROM {users} WHERE name='ldsupport'"));
+    if($support_account) {
+      $ret[] = update_sql("UPDATE {users_roles} SET rid=" . $role->rid . " WHERE uid=" . $support_account); 
+    }
+    return $ret;
+}
+
+function lifedesk_alter_update_6214() {
+    $ret = array();
+    module_load_include('module','permissions_api');
+    $add_permissions['anonymous user'] = array(
+      'access content',
+      'view revisions',
+      'view uploaded files',
+      'access user profiles',
+      'access biblio content',
+      'show export links',
+      'show download links',
+      'show filter tab',
+      'show sort links',
+      'view full text',
+      'view user content list',
+      'view original images',
+      'view taxon description',
+      'access comments',
+      'inspect all votes',
+      'vote on polls',
+      'search content',
+    );
+    $add_permissions['authenticated user'] = array(
+      'access content',
+      'view revisions',
+      'view uploaded files',
+      'access user profiles',
+      'access biblio content',
+      'show export links',
+      'show download links',
+      'show filter tab',
+      'show sort links',
+      'view full text',
+      'view user content list',
+      'view original images',
+      'view taxon description',
+      'access comments',
+      'inspect all votes',
+      'vote on polls',
+      'search content',
+      'post comments',
+      'post comments without approval',
+      'cancel own vote',
+      'change own username'
+    );
+    foreach($add_permissions as $role => $perms) {
+      permissions_grant_permissions($role, $perms); 
+    }
+    return $ret;
+}
+
+function lifedesk_alter_update_6215() {
+    $ret = array();
+    module_load_include('module','permissions_api');
+    $add_permissions['anonymous user'] = array(
+      'access content',
+      'view revisions',
+      'view uploaded files',
+      'access user profiles',
+      'access biblio content',
+      'show export links',
+      'show download links',
+      'show filter tab',
+      'show sort links',
+      'view full text',
+      'view user content list',
+      'view original images',
+      'view taxon description',
+      'access comments',
+      'inspect all votes',
+      'vote on polls',
+      'search content',
+    );
+    $add_permissions['authenticated user'] = array(
+      'access content',
+      'view revisions',
+      'view uploaded files',
+      'access user profiles',
+      'access biblio content',
+      'show export links',
+      'show download links',
+      'show filter tab',
+      'show sort links',
+      'view full text',
+      'view user content list',
+      'view original images',
+      'view taxon description',
+      'access comments',
+      'inspect all votes',
+      'vote on polls',
+      'search content',
+      'post comments',
+      'post comments without approval',
+      'cancel own vote',
+      'change own username'
+    );
+    foreach($add_permissions as $role => $perms) {
+      permissions_grant_permissions($role, $perms); 
+    }
+    return $ret;
+}
+
+function lifedesk_alter_update_6216() {
+    $ret = array();
+    $add_permissions['anonymous user'] = array(
+      'access content',
+      'view revisions',
+      'view uploaded files',
+      'access user profiles',
+      'access biblio content',
+      'show export links',
+      'show download links',
+      'show filter tab',
+      'show sort links',
+      'view full text',
+      'view user content list',
+      'view original images',
+      'view taxon description',
+      'access comments',
+      'inspect all votes',
+      'vote on polls',
+      'search content',
+    );
+    $add_permissions['authenticated user'] = array(
+      'access content',
+      'view revisions',
+      'view uploaded files',
+      'access user profiles',
+      'access biblio content',
+      'show export links',
+      'show download links',
+      'show filter tab',
+      'show sort links',
+      'view full text',
+      'view user content list',
+      'view original images',
+      'view taxon description',
+      'access comments',
+      'inspect all votes',
+      'vote on polls',
+      'search content',
+      'post comments',
+      'post comments without approval',
+      'cancel own vote',
+      'change own username'
+    );
+    foreach($add_permissions as $role => $perms) {
+      $rid = db_result(db_query("SELECT rid FROM {role} WHERE name = '%s'", $role));
+      $perm_string = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", $rid));
+      if (strlen($perm_string) > 0) {
+        $permissions = array();
+        foreach(explode(',', $perm_string) as $perm){
+          $permissions[] = trim($perm);
+        }
+        foreach($perms as $perm) {
+          if(!in_array($perm, $permissions)) {
+            $permissions[] = trim($perm);
+          }
+        }
+        // rebuild the permission string
+        $ret[] = update_sql("UPDATE {permission} SET perm='" . join(', ', $permissions) . "' WHERE rid=" . $rid);
+      }
+    }
+
+    return $ret;
+}
+
+function lifedesk_alter_update_6217() {
+    $ret = array();
+    
+    //add biblio permissions because upload of file appears not to work w/o 'administer biblio' permission
+    $add_permissions['contributor'] = array(
+      'administer biblio',
+    );
+    $add_permissions['editor'] = array(
+      'administer biblio',
+    );
+    foreach($add_permissions as $role => $perms) {
+      $rid = db_result(db_query("SELECT rid FROM {role} WHERE name = '%s'", $role));
+      $perm_string = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", $rid));
+      if (strlen($perm_string) > 0) {
+        $permissions = array();
+        foreach(explode(',', $perm_string) as $perm){
+          $permissions[] = trim($perm);
+        }
+        foreach($perms as $perm) {
+          if(!in_array($perm, $permissions)) {
+            $permissions[] = trim($perm);
+          }
+        }
+        // rebuild the permission string
+        $ret[] = update_sql("UPDATE {permission} SET perm='" . join(', ', $permissions) . "' WHERE rid=" . $rid);
+      }
+    }
+
+    //deactivate unused languages
+    $qry = db_query("SELECT l.language FROM {languages} l LEFT JOIN {node} n ON l.language = n.language WHERE n.language IS NULL");
+    while($lang = db_fetch_object($qry)) {
+      $ret[] = update_sql("UPDATE {languages} SET enabled = 0 WHERE language = '".$lang->language."'");
+    }
+
+    return $ret;
+}
+
+function lifedesk_alter_update_6218() {
+  $ret = array();
+  $result = db_result(db_query("SELECT COUNT(*) FROM {languages} WHERE enabled = 1"));
+  if(!$result) {
+    $ret[] = update_sql("UPDATE {languages} SET enabled = 1 WHERE name = 'English'");
+  }
+  return $ret;
+}
+
+function lifedesk_alter_update_6219() {
+    $ret = array();
+    
+    //add admin language permissions because this appears not to have been applied in some instances for site owners
+    $add_permissions['administrator'] = array(
+      'administer languages',
+    );
+    $add_permissions['owner'] = array(
+      'administer languages',
+    );
+    foreach($add_permissions as $role => $perms) {
+      $rid = db_result(db_query("SELECT rid FROM {role} WHERE name = '%s'", $role));
+      $perm_string = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", $rid));
+      if (strlen($perm_string) > 0) {
+        $permissions = array();
+        foreach(explode(',', $perm_string) as $perm){
+          $permissions[] = trim($perm);
+        }
+        foreach($perms as $perm) {
+          if(!in_array($perm, $permissions)) {
+            $permissions[] = trim($perm);
+          }
+        }
+        // rebuild the permission string
+        $ret[] = update_sql("UPDATE {permission} SET perm='" . join(', ', $permissions) . "' WHERE rid=" . $rid);
+      }
+    }
+    return $ret;
+}
+
+function lifedesk_alter_update_6220() {
+    $ret = array();
+    
+    $result = db_result(db_query("SELECT redirect FROM path_redirect WHERE redirect='%s'",'admin/classification'));
+    if(!$result) {
+      $ret[] = update_sql("INSERT INTO path_redirect (source,redirect,type) VALUES ('admin/classification','admin/classification/biological',301)");    
+    }
+    
+    return $ret;
+}
+
+function lifedesk_alter_update_6221() {
+    $ret = array();
+    
+    //anonymous
+    $ret[] = update_sql("UPDATE variable SET name = 'lifedesk_front_page_welcome_anonymous' WHERE name = 'front_welcome_anonymous'");
+    
+    //authenticated
+    $ret[] = update_sql("UPDATE variable SET name = 'lifedesk_front_page_welcome_authenticated' WHERE name = 'front_welcome_authenticated'");
+    
+    //adjust the front module's variables
+    $warning = '// DO NOT MODIFY THIS UNLESS YOU KNOW EXACTLY WHAT YOU ARE DOING';
+
+      //anonymous page
+      $anonymous = '<?php' . "\n";
+      $anonymous .= $warning  . "\n";
+      $anonymous .= 'global $lifedesk_front_page;' . "\n";
+      $anonymous .= '$lifedesk_front_page = drupal_get_path(\'module\', \'lifedesk_front_page\') .\'/\';' . "\n";
+      $anonymous .= 'require_once($lifedesk_front_page . "includes/lifedesk_front_page.anonymous.inc");' . "\n";
+      $anonymous .= '_lifedesk_front_page_anonymous();' . "\n";
+      $anonymous .= '?>';
+      variable_set('front_1_php', 1);
+      variable_set('front_1_redirect','node');
+      variable_set('front_1_text',$anonymous);
+      variable_set('front_1_type', 'themed');
+
+      //authenticated page
+      $authenticated = '<?php' . "\n";
+      $authenticated .= $warning . "\n";
+      $authenticated .= 'global $lifedesk_front_page;' . "\n";
+      $authenticated .= '$lifedesk_front_page = drupal_get_path(\'module\', \'lifedesk_front_page\') .\'/\';' . "\n";
+      $authenticated .= 'require_once($lifedesk_front_page . "includes/lifedesk_front_page.authenticated.inc");' . "\n";
+      $authenticated .= '_lifedesk_front_page_authenticated();' . "\n";
+      $authenticated .= '?>';
+      variable_set('front_2_php', 1);
+      variable_set('front_2_redirect','node');
+      variable_set('front_2_text',$authenticated);
+      variable_set('front_2_type', 'themed');
+    
+    return $ret;
+}
+
+function lifedesk_alter_update_6222() {
+    $ret = array();
+    
+    //turn off db_rewrite_sql in i18n
+    variable_set('i18n_selection_mode', 'off');
+    
+    //change the Solr IP
+    variable_set('apachesolr_host', '10.19.19.19');
+    
+    //add necessary recaptch config
+    variable_set('recaptcha_private_key', '6Lf-OgYAAAAAAE6itXDNjFULu2m8sH2nK73vQJLL');
+    variable_set('recaptcha_public_key', '6Lf-OgYAAAAAABuvX1QVI1h1b1DsXRlkCw30UVdI');
+    variable_set('recaptcha_theme', 'clean');
+    variable_set('recaptcha_secure_connection', FALSE);
+    variable_set('recaptcha_tabindex','');
+    
+    $ret[] = update_sql("UPDATE {captcha_points} cp SET cp.module='recaptcha', cp.type='reCAPTCHA' WHERE cp.form_id = 'user_register'");
+    return $ret;
+}
+
+function lifedesk_alter_update_6223() {
+    $ret = array();
+    $add_permissions['anonymous user'] = array(
+        'view original simplemap',
+    );
+    $add_permissions['authenticated user'] = array(
+        'view original simplemap',
+    );
+    $add_permissions['contributor'] = array(
+       'create simplemap',
+       'edit own simplemap',
+       'delete own simplemap',
+       'view original simplemap',
+       'override simplemappr published option',
+    );
+    $add_permissions['editor'] = array(
+      'create simplemap',
+      'edit own simplemap',
+      'delete own simplemap',
+      'edit any simplemap',
+      'delete any simplemap',
+      'view original simplemap',
+      'override simplemappr published option',
+    ); 
+    $add_permissions['administrator'] = array(
+      'create simplemap',
+      'edit own simplemap',
+      'delete own simplemap',
+      'edit any simplemap',
+      'delete any simplemap',
+      'view original simplemap',
+      'override simplemappr published option',
+    );
+    $add_permissions['owner'] = array(
+      'create simplemap',
+      'edit own simplemap',
+      'delete own simplemap',
+      'edit any simplemap',
+      'delete any simplemap',
+      'view original simplemap',
+      'override simplemappr published option',
+    );
+    foreach($add_permissions as $role => $perms) {
+      $rid = db_result(db_query("SELECT rid FROM {role} WHERE name = '%s'", $role));
+      $perm_string = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", $rid));
+      if (strlen($perm_string) > 0) {
+        $permissions = array();
+        foreach(explode(',', $perm_string) as $perm){
+          $permissions[] = trim($perm);
+        }
+        foreach($perms as $perm) {
+          if(!in_array($perm, $permissions)) {
+            $permissions[] = trim($perm);
+          }
+        }
+        // rebuild the permission string
+        $ret[] = update_sql("UPDATE {permission} SET perm='" . join(', ', $permissions) . "' WHERE rid=" . $rid);
+      }
+    }
+
+    //add simplemappr to classification_settings variable & vocabulary_node_types table
+    $settings = db_result(db_query("SELECT value FROM variable WHERE name='classification_settings'"));
+    if($settings) {
+      $settings = unserialize($settings);
+    }
+    else {
+      $settings = array();
+    }
+    $voc = db_fetch_object(db_query("SELECT vid FROM {vocabulary} WHERE name = 'Taxa'"));
+    if($voc && $settings) {
+        $settings[$voc->vid]['settings']['simplemappr'] = array(
+            'active' => 1,
+            'req' => 0,
+            'wt' => -10,
+            'opt' => 'multiple'
+        );
+        variable_set('classification_settings', $settings);
+        $ret[] = update_sql("INSERT INTO {vocabulary_node_types} (vid,type) VALUES (".$voc->vid.",'simplemappr')");
+    }
+    
+    //set size variable
+    variable_set('simplemappr_sizes', array( 
+    '_original' => array('label' => 'Original', 'operation' => 'scale', 'width' => '', 'height' => '', 'link' => '2',), 
+    'thumbnail' => array('label' => 'Thumbnail', 'operation' => 'scale', 'width' => '300', 'height' => '150', 'link' => '1',), 
+    'preview' => array('label' => 'Preview', 'operation' => 'scale', 'width' => '600', 'height' => '300', 'link' => '1',), 
+    'svg' => array('label' => 'svg', 'operation' => '', 'width' => '600', 'height' => '300', 'link' => '2'),
+    ));
+    
+    //set language variables
+    variable_set('i18n_required_node_simplemappr',1);
+    variable_set('language_content_type_simplemappr',1);
+
+    //set comments variable
+    variable_set('comment_simplemappr','2');
+    variable_set('comment_default_mode_simplemappr','3');
+    variable_set('comment_default_order_simplemappr','1');
+    variable_set('comment_default_per_page_simplemappr','30');
+    variable_set('comment_controls_simplemappr','3');
+    variable_set('comment_anonymous_simplemappr',0);
+    variable_set('comment_subject_field_simplemappr','1');
+    variable_set('comment_preview_simplemappr','1');
+    variable_set('comment_form_location_simplemappr','1');
+
+    //creative commons
+    variable_set("creativecommons_lite_simplemappr", 1);
+    
+    return $ret;
+}
+
+function lifedesk_alter_update_6224() {
+    $ret = array();
+    $ret[] = update_sql("INSERT INTO {image_lifedesk} (nid, credit, rights, exemplar) SELECT nid, credit, '', exemplar FROM {image} WHERE image_size = '_original'");
+    return $ret;
+}
+
+function lifedesk_alter_update_6225() {
+  $ret = array();
+
+  //remove the taxon_gallery and its menu links and menu_router entries
+  $ret[] = update_sql("DELETE FROM {system} WHERE name = 'taxon_gallery'");
+  $ret[] = update_sql("DELETE FROM {menu_links} WHERE router_path = 'image_gallery' OR router_path = 'gallery/image_data' OR router_path = 'gallery/autocomplete_single' OR router_path = 'gallery/checkterm'");
+  $ret[] = update_sql("DELETE FROM {menu_router} WHERE path = 'image_gallery' OR path = 'gallery/image_data' OR path = 'gallery/autocomplete_single' OR path = 'gallery/checkterm'");
+  
+  //assumes the image_gallery module has already been installed & we unserialize like this because multisite updates cannot do a variable_get
+  $gallery_vid = @unserialize(db_result(db_query("SELECT value FROM {variable} WHERE name='image_gallery_nav_vocabulary'")));
+  if(!$gallery_vid) {
+    $gallery = array(
+      'name' => t('Image Galleries'),
+      'multiple' => 0,
+      'required' => 0,
+      'hierarchy' => 1,
+      'relations' => 0,
+      'module' => 'image_gallery',
+      'nodes' => array('image' => 1),
+    );
+    taxonomy_save_vocabulary($gallery);
+    $gallery_vid = $gallery['vid'];
+    variable_set('image_gallery_nav_vocabulary', $gallery_vid);
+  }
+  $classification_vid = unserialize(db_result(db_query("SELECT value FROM {variable} WHERE name='classification_primary'")));
+
+  //adjust term_display for primary classification and image gallery terms
+  $ret[] = update_sql("INSERT INTO {term_display} (vid, style, weight) VALUES (".$gallery_vid.", 'load', 0)");
+  $ret[] = update_sql("INSERT INTO {term_display} (vid, style, weight) VALUES (".$classification_vid.", 'load', 0)");
+    
+  //migrate all terms applied exclusively to images to the 'Image Galleries' vocabulary for select sites
+  $shortname = unserialize(db_result(db_query("SELECT value FROM {variable} WHERE name='shortname'")));
+  switch($shortname) {
+    case 'indianadunes':
+    case 'neotropicalfishes':
+      $vocabs = taxonomy_get_vocabularies();
+      foreach($vocabs as $vocab) {
+        if(count($vocab->nodes) == 1 && array_key_exists('image', $vocab->nodes) && $vocab->vid != $gallery_vid) {
+          $ret[] = update_sql("UPDATE {term_data} td SET vid = " . $gallery_vid . " WHERE vid = " . $vocab->vid);
+          $ret[] = update_sql("DELETE FROM {vocabulary} WHERE vid = " . $vocab->vid);
+        }
+      }
+    break;
+  }
+
+  //set variables for lifedesk_biblio & CrossRef
+  variable_set('lifedesk_biblio_parserurl', 'http://refman.eol.org/cgi-bin/refparser.cgi?');
+  variable_set('lifedesk_biblio_pid', 'lifedesk@eol.org');
+
+  return $ret;
+}
+
+function lifedesk_alter_update_6226() {
+   $ret = array();
+ 
+   //include crud.inc to execute install_menu_create_menu_items
+   include_once('includes/crud.inc');
+   //put in a redirect to handle old image_gallery URL to new image URL in event these are linked externally
+   $ret[] = update_sql("INSERT INTO path_redirect (source,redirect,type) VALUES ('image_gallery', 'image', 301)");
+ 
+   //install the new menu item for the image gallery
+   $items[] = array(
+     'link_title' => 'Image Gallery',
+     'link_path' => 'image',
+     'menu_name' => 'primary-links',
+     'module' => 'lifedesk_alter',
+     'weight' => -10,
+   );
+ 
+   install_menu_create_menu_items($items);
+ 
+   return $ret;
+}
+
+function lifedesk_alter_update_6227() {
+  $ret = array();
+  //trash some spam accounts across all sites
+  $ret[] = update_sql("DELETE FROM {users} WHERE mail LIKE '%@zensolutions.info' OR mail LIKE '%@megavigor.info' OR mail LIKE '%@thebytehouse.info' OR mail LIKE '%@mail.ru'");
+  $ret[] = update_sql("INSERT INTO {access} (mask, type) VALUES ('%zensolutions.info', 'mail'), ('%megavigor.info', 'mail'), ('%thebytehouse.info', 'mail'), ('%mail.ru', 'mail')");
+
+  //give administer nodes permission to administers and editors
+  $add_permissions['administrator'] = array(
+      'administer nodes',
+  );
+  $add_permissions['editor'] = array(
+      'administer nodes'
+  );
+  $add_permissions['owner'] = array(
+      'administer nodes'
+  );
+  foreach($add_permissions as $role => $perms) {
+      $rid = db_result(db_query("SELECT rid FROM {role} WHERE name = '%s'", $role));
+      $perm_string = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", $rid));
+      if (strlen($perm_string) > 0) {
+      $permissions = array();
+      foreach(explode(',', $perm_string) as $perm){
+        $permissions[] = trim($perm);
+      }
+      foreach($perms as $perm) {
+          if(!in_array($perm, $permissions)) {
+            $permissions[] = trim($perm);
+          }
+      }
+      // rebuild the permission string
+      $ret[] = update_sql("UPDATE {permission} SET perm='" . join(', ', $permissions) . "' WHERE rid=" . $rid);
+    }
+  }
+
+  //install the optional OAI2 module 
+  require_once './includes/install.inc';
+  drupal_install_modules(array('oai2'));
+
+  //set the inactive period check
+  variable_set("lifedesk_announcements_inactive_period", 2);
+  
+  return $ret;
+}
+
+function lifedesk_alter_update_6228() {
+	$ret = array();
+	variable_set('taxon_search_solr_host', '10.19.19.19');
+    variable_set('taxon_search_solr_port', '8080');
+    variable_set('taxon_search_solr_path', '/solr/lifedesks_taxa');
+    variable_set('taxon_search_solr_rows', '10');
+    return $ret;
+}
+
+function lifedesk_alter_update_6229() {
+  $ret = array();
+  $add_permissions['administrator'] = array(
+    'assign administrator role',
+    'delete users with role administrator',
+    'edit users with role administrator'
+  );
+  foreach($add_permissions as $role => $perms) {
+    $rid = db_result(db_query("SELECT rid FROM {role} WHERE name = '%s'", $role));
+    $perm_string = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", $rid));
+    if (strlen($perm_string) > 0) {
+      $permissions = array();
+      foreach(explode(',', $perm_string) as $perm){
+        $permissions[] = trim($perm);
+      }
+      foreach($perms as $perm) {
+        if(!in_array($perm, $permissions)) {
+          $permissions[] = trim($perm);
+        }
+      }
+      // rebuild the permission string
+      $ret[] = update_sql("UPDATE {permission} SET perm='" . join(', ', $permissions) . "' WHERE rid=" . $rid);
+    }
+  }
+  return $ret;
+}

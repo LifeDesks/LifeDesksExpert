@@ -1,0 +1,220 @@
+/* NODE PREVIEW */
+.node-preview {
+    padding:5px !important;
+}
+
+.node-by-viewer {
+    padding:10px;
+}
+
+.taxon_description_chapter_contributors {
+    margin-bottom:5px;
+}
+
+.taxon_description_chapter_contributors span, .taxon_description_chapter_rightsholders span {
+  display:block;
+  font-weight:bold;
+}
+
+#taxon_description_cc_license {
+    text-align:right;
+}
+
+.taxon_description_chapter_rightsholders {
+    text-align:right;
+    margin-bottom:5px;
+}
+
+div.fieldset-wrapper {
+    overflow:visible !important;
+}
+
+.taxon-description-header > :first-child {
+    font-size:1.7em;
+}
+
+.taxon-description-header label {
+    font-size:1.5em;
+    margin-bottom:10px;
+}
+
+#taxon-description-form-wrapper .chapter-metadata {
+  width:45%;
+}
+
+#taxon-description-form-wrapper .authors {
+  float:left;
+}
+
+#taxon-description-form-wrapper .rightsholders {
+  float:right;
+}
+
+input.taxon_description_buttons {
+  border: thin solid;
+  border-color: #cccccc #555555 #555555 #cccccc;
+  background-color: #f2f2f2;
+  background-repeat: no-repeat;
+  background-position:3px;
+  padding-left: 25px;
+  padding-bottom: 3px;
+  height: 28px;
+}
+
+input.add {
+  background-image: url(../images/add.gif);
+  width:120px;
+}
+
+input.delete {
+ background-image: url(../images/delete.gif);
+ width: 150px;
+}
+
+.taxon_description_delete {
+  width:95%;
+  text-align:right;
+}
+
+#taxon_description_wrapper {
+}
+
+div.hr {
+  background-color: #f2f2f2;
+}
+
+.taxon_child fieldset{
+    border:0px;
+}
+
+#taxon_description_chapters {
+  background-color: #f2f2f2;
+  padding:5px;
+  margin-bottom: 10px;
+}
+
+.taxon_description_chapter {
+  border:0px;
+  margin-bottom:0px;
+  padding-bottom:0px;
+}
+
+#taxon_description_settings {
+  margin-top: 20px;
+}
+
+.ahah-progress {
+  display:none;
+}
+
+input.taxon_description-buttons {
+  border: thin solid;
+  border-color: #cccccc #555555 #555555 #cccccc;
+  background-color: #f2f2f2;
+  background-repeat: no-repeat;
+  background-position:3px;
+  padding-left: 25px;
+  padding-bottom: 3px;
+  height: 28px;
+}
+
+input.save {
+  background-image: url(../images/document-save.gif);
+  margin:10px;
+}
+
+.warning {
+    color: #FF0000;
+    background-color:none;
+    border:none;
+}
+
+.tabledrag-changed {
+    display:none;
+}
+
+tr.drag-previous {
+    background-color:#FFFFDD;
+}
+
+#taxon-description-settings {
+    width:45%;
+  margin:0 0 10px 50px;
+}
+
+.taxon_chapter_delete a { 
+    background-image: url("../images/delete.gif");
+    background-position: 6px center;
+    background-repeat: no-repeat;
+    padding-left: 25px;
+    font-size:small;
+    text-decoration: none;
+}
+
+#taxon_description_save {
+    width:100px;
+    margin-left:150px;
+}
+
+#taxon_description_chapters_message {
+    margin-bottom:10px;
+}
+
+#taxon_description_messages {
+  width:300px;
+  text-align: center;
+  position:absolute;
+  left: 50%;
+  margin-left: -150px;
+  z-index:1000;
+  display:none;
+}
+
+#taxon_description_view ul {
+    display:inline;
+    padding:0px;
+    margin:0px;
+}
+
+#taxon_description_view ul li {
+    list-style:none;
+    background:none;
+    font-size:small;
+    display:inline;
+}
+
+#taxon_description_view ul li a {
+    background:none;
+    line-height: 20px;
+    height: 20px;
+    background-position: 6px center;
+    background-repeat: no-repeat;
+    outline: none;
+    padding: 1px 0px;
+    padding-left: 24px;
+}
+
+#taxon_description_view ul li.view a {
+    background-image: url(../images/bug.gif);
+}
+
+.alternate_content {
+    margin-top:20px;
+    font-weight:bold;
+}
+
+ul.primary {
+    white-space:normal;
+}
+
+.node h2 {
+    display:none;
+}
+
+#attachments tr.even {
+    background-color:#FFFFFF !important;
+}
+
+#attachments tr.odd {
+    background-color:#EEEEEE !important;
+}

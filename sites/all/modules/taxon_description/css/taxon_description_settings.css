@@ -1,0 +1,178 @@
+ul {
+	margin: 0;
+}
+
+#contentWrap {
+	width: 700px;
+	margin: 0px auto;
+	height: auto;
+	overflow: hidden;
+}
+
+#contentLeft {
+	width: 700px;
+	margin-top:20px;
+}
+
+#contentLeft ul.ui-sortable {
+	margin:0px;
+	padding:0px;
+	width:100%;
+}
+
+#contentLeft li {
+	list-style: none;
+	margin: 0 0 4px 0;
+	padding: 5px 5px;
+	border: green solid 1px;
+	color: black;
+	height: 20px;
+	width:700px;
+}
+
+.ui-state-highlight { height: 1.5em; line-height: 1.2em; background-color: gray;}
+.ui-state-default { cursor:move; }
+.ui-state-disabled { background-color: #BCE954; cursor:default !important;}
+.ui-state-stable { background-color: #BCE954; cursor:default !important;}
+.ui-state-hidden { display: none; }
+.ui-state-form { background-color:transparent !important;}
+
+div.column1 {
+  float: left;
+  width: 20px;
+}
+
+div.column2 {
+  float: left;
+  width: 560px;
+}
+
+div.column3 {
+  float: right;
+  width: 61px;
+}
+
+div.column4 {
+  float: right;
+  width: 65px;
+}
+
+div.column5 {
+  float: right;
+  width: 50px;
+}
+
+div.column3 a {
+	background-image: url("../images/add.gif");
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	padding-left: 25px;
+	font-size:small;
+	text-decoration: none;
+}
+
+div.column5 a.edit {
+	background-image: url("../images/pencil.gif");
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	padding-left: 25px;
+	font-size:small;
+	text-decoration: none;
+}
+
+div.column4 a.delete {
+	background-image: url("../images/delete.gif");
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	padding-left: 25px;
+	font-size:small;
+	text-decoration: none;
+}
+
+#taxon-description-chapter-editform {
+  z-index:1001;
+  position:relative;
+}
+
+#taxon-description-chapter-newform {
+  width:600px;
+  margin:0px auto !important;
+  background-color: white !important;
+  border: 1px solid #008800;
+  padding: .5em 1em;
+  position:relative;
+}
+
+#taxon-description-close {
+ position:absolute;
+ top:2px;
+ right:2px;
+}
+
+#taxon-description-close-editform {
+ position:absolute;
+ top:-15px;
+ right:2px;
+}
+
+.taxon-description-close a {
+	background-image: url("../images/cancel.gif");
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	padding-left: 25px;
+	font-size:small;
+	text-decoration: none;
+}
+
+#taxon-description-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	z-index: 1000;
+	width: 100%;
+	height: 500px;
+	display:none;
+}
+
+#taxon-description-messsage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1001;
+  width: 300px;
+  text-align:center;
+  display:none;
+}
+
+.taxon-description-warning {
+  width:300px;
+  margin:0px auto !important;
+}
+
+.messages-throbber {
+  background-repeat: no-repeat !important;
+  background-position: 10px 6px !important;
+  padding-left: 35px !important;
+  margin:0px auto;
+  background-image: url("../images/throbber.gif") !important;
+  padding: .5em 1em;
+  text-align:left;
+}
+
+#taxon_description_messages {
+	height:40px;
+}
+
+#chapter_message {
+	width:665px;
+}
+
+#taxon-description-addchapter-wrapper{
+	max-height:300px;
+	overflow:auto;
+}
+
+#taxon-description-editchapter-wrapper{
+	max-height:150px;
+	overflow:auto;
+}

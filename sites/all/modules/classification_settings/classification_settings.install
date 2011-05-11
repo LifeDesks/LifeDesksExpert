@@ -1,0 +1,119 @@
+<?php
+
+/**
+ * Implementation of hook_install
+ */
+function classification_settings_install() {
+  	$classification_settings = variable_get('classification_settings','');
+  	if(!$classification_settings) {
+  		$vid = _classification_settings_install_get_vid('Taxa');
+		$vid2 = _classification_settings_install_get_vid('Deleted Names');
+		$content_types = array('biblio', 'image', 'taxon_description', 'simplemappr');
+
+		foreach($content_types as $content_type) {
+			$settings[$vid2] = array();
+			db_query("INSERT INTO {vocabulary_node_types} (vid,type) VALUES (%d,'%s')",$vid,$content_type);
+			switch($content_type) {
+				case 'biblio':
+			  		$settings[$vid]['settings']['biblio'] = array(
+						'active' => 1,
+						'req' => 0,
+						'wt' => -10,
+						'opt' => 'tree'
+			  		);
+					break;
+
+				case 'image':
+				  	$settings[$vid]['settings']['image'] = array(
+						'active' => 1,
+						'req' => 0,
+						'wt' => -10,
+						'opt' => 'single'
+				  	);
+					break;
+
+				case 'taxon_description':
+				  	$settings[$vid]['settings']['taxon_description'] = array(
+						'active' => 1,
+						'req' => 1,
+						'wt' => -10,
+						'opt' => 'single'
+				  	);
+					break;
+				
+				case 'simplemappr':
+					$settings[$vid]['settings']['simplemappr'] = array(
+						'active' => 1,
+						'req' => 0,
+						'wt' => -10,
+						'opt' => 'multiple'
+			  		);
+					break;
+
+				default:
+				  	$settings[$vid]['settings'][$content_type] = array(
+						'active' => 1,
+						'req' => 0,
+						'wt' => -10,
+						'opt' => 'multiple'
+				  	);
+			  		break;
+			}	
+		}
+		
+		variable_set('classification_settings', $settings);	
+	}
+}
+
+function classification_settings_uninstall() {
+	$classification_settings = variable_get('classification_settings',array());
+	foreach($classification_settings as $vid => $value) {
+		taxonomy_del_vocabulary($vid);
+	}
+  	variable_del('classification_settings');
+    variable_del('classification_viewer_names');
+    variable_del('classification_viewer_canonicals');
+    variable_del('classification_elements_names');
+    variable_del('classification_elements_canonicals');
+}
+
+function _classification_settings_install_get_vid($name) {
+  	$voc = db_fetch_object(db_query("SELECT vid FROM {vocabulary} WHERE name = '%s'", $name));
+  	return $voc->vid;
+}
+
+function classification_settings_update_6100() {
+	$ret = array();
+	
+	//reset the classification_viewer_names because the logic has changed
+	$viewer_names = variable_get('classification_viewer_names',0);
+	if($viewer_names != 0) {
+	  variable_set('classification_viewer_names',1);
+	}
+
+	//reset the classification_viewer_names because the logic has changed
+	$elements_names = variable_get('classification_elements_names',0);
+	if($elements_names != 0) {
+	  variable_set('classification_elements_names',1);
+	}
+		
+	return $ret;
+}
+
+function classification_settings_update_6101() {
+	//remove ability to tag content with biological flag vocab
+	$ret = array();
+	
+	//cannot use variable_get in multisite update so use a raw SQL statement then unserialize it instead
+    $classification_flags = db_result(db_query("SELECT value FROM variable WHERE name='classification_flags'"));
+	$flags_arr = unserialize($classification_flags);
+
+    foreach($flags_arr as $key => $value) {
+	  //let's make sure nothing bad happens
+	  if($key !== 1) {
+	    $ret[] = update_sql("DELETE FROM vocabulary_node_types WHERE vid=".$key);	
+	  }
+    }
+
+    return $ret;
+}

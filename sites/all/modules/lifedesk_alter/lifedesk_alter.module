@@ -1,0 +1,704 @@
+<?php
+
+/**
+ * Implementation of hook_menu
+ */
+function lifedesk_alter_menu() {
+  $items['admin/user/invite'] = array(
+    'title' => 'Invite a friend',
+    'description' => t('Invite a colleague to join your site'),
+    'title callback' => 'invite_page_title',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('invite_form', 'page', array()),
+    'access arguments' => array('send invitations'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_menu_alter
+ */
+function lifedesk_alter_menu_alter(&$item) {
+
+    $item['node/add/biblio']['description'] = t('A <em>Biblio</em> item such as a scientific paper or book.');
+    $item['node/add/image']['description'] = t('An <em>Image</em> (with thumbnail). This is ideal for publishing photographs or artwork.');
+    $item['node/add/page']['description'] = t('A <em>Page</em> contains information that rarely changes and may be accessible from your site\'s public menu.');
+    $item['node/add/story']['description'] = t('A <em>Story</em> is ideal for press releases, site announcements, and inform blog-like entries.');
+    $item['node/add/poll']['description'] = t('A <em>Poll</em> provides a running count of the number of votes received for possible responses.');
+
+    $item['admin']['title'] = t('Administration');
+
+    $item['admin/build/menu']['title'] = t('Menu');
+    $item['admin/build/menu']['description'] = t('Control your site\'s primary links.');
+
+    $item['admin/build/modules']['title'] = t('Plug-ins');
+    $item['admin/build/modules']['description'] = t('Enable or disable optional functionality.');
+
+    $item['admin/build/modules/uninstall']['access arguments'] = array('administer site configuration');
+
+    $item['admin/build/themes']['title'] = t('Theme');
+    $item['admin/build/themes']['description'] = t('Configure your site\'s theme.');
+    $item['admin/build/themes/settings']['access callback'] = 'user_access'; //caches must also be flushed in form_alter to take effect
+    $item['admin/build/themes/settings']['access arguments'] = array('administer site configuration');
+
+    $item['admin/content/node']['access arguments'] = array('administer site configuration');
+
+    $item['admin/settings/biblio']['access arguments'] = array('administer site configuration');
+    $item['admin/settings/classification']['access arguments'] = array('administer site configuration');
+    $item['admin/settings/classification_notifications']['access arguments'] = array('administer site configuration');
+    $item['admin/settings/front']['access arguments'] = array('administer site configuration');
+    $item['admin/settings/ajax_logo_preview']['access arguments'] = array('administer site configuration');
+    $item['admin/settings/override_node_options']['access arguments'] = array('administer site configuration');
+    $item['admin/settings/creativecommons-lite']['access arguments'] = array('administer site configuration');
+
+    //languages permissions
+    $item['admin/settings/language/configure']['access arguments'] = array('administer site configuration');
+    $item['admin/settings/language/i18n']['access arguments'] = array('administer site configuration');
+    $item['admin/settings/language/edit/%']['access arguments'] = array('administer site configuration');
+    $item['admin/settings/language/delete/%']['access arguments'] = array('administer site configuration');
+
+    $item['admin/by-module']['access callback'] = 'user_access';
+    $item['admin/by-module']['access arguments'] = array('administer site configuration');
+
+    // Modify access callback for data monitoring menu items to allow LD Support user access.
+    $item['admin/reports']['access callback'] = '_lifedesk_alter_ldsupport_access';
+    $item['admin/reports/data-monitoring']['access callback'] = '_lifedesk_alter_ldsupport_access';
+    $item['admin/reports/data-monitoring/monitors']['access callback'] = '_lifedesk_alter_ldsupport_access';
+    $item['admin/reports/data-monitoring/monitor/%data_monitoring_monitor']['access callback'] = '_lifedesk_alter_ldsupport_access';
+    $item['admin/reports/data-monitoring/response/%data_monitoring_response']['access callback'] = '_lifedesk_alter_ldsupport_access';
+    $item['admin/reports/data-monitoring/settings']['access callback'] = '_lifedesk_alter_ldsupport_access';
+
+    $item['admin/content/taxonomy/add/vocabulary']['title'] = t('Add');
+
+    $item['admin/classification']['title'] = t('Biological Classifications');
+    $item['admin/classification/biological']['title'] = t('Manage Classification');
+    $item['admin/settings/classification_export']['access arguments'] = array('administer site configuration');
+
+    $item['admin/content/taxonomy']['title'] = t('Tags, Flags, Ranks & Classifications');
+    $item['admin/content/taxonomy']['description'] = t('Create and manage tags, biological classifications, biological flags, ranks, and adjust how these interact with data entry forms or are presented throughout your site.');
+
+    $item['admin/settings/site-information']['description'] = t('Change your site name and system email address.');
+
+    $item['admin/content']['position'] = 'left';
+    $item['admin/content']['weight'] = -10;
+
+    $item['admin/user']['position'] = 'left';
+    $item['admin/user']['weight'] = -9;
+
+    $item['admin/taxonpage']['position'] = 'left';
+    $item['admin/taxonpage']['weight'] = -8;
+
+    $item['admin/catalog']['position'] = 'left';
+    $item['admin/catalog']['weight'] = -7;
+
+    $item['admin/build']['position'] = 'right';
+    $item['admin/build']['weight'] = -10;
+
+    $item['admin/settings']['position'] = 'right';
+    $item['admin/settings']['weight'] = -9;
+
+    $item['admin/export/taxon_export']['position'] = 'right';
+    $item['admin/export/taxon_export']['weight'] = -8;
+
+    $item['admin/manage_site']['position'] = 'right';
+    $item['admin/manage_site']['weight'] = -7;
+
+    $item['node/add/oai2']['access callback'] = user_access('administer site configuration');
+
+    // Restrict access to global theme settings
+    if (isset($item['admin/build/themes/settings'])) $item['admin/build/themes/settings']['access callback'] = user_access('administer site configuration');
+}
+
+/**
+ * Implementation of hook_menu_link_alter
+ */
+function lifedesk_alter_menu_link_alter(&$item) {
+    switch($item['path']) {
+        case 'admin/classification':
+          $item['hidden'] = 1;
+        break;
+    }
+}
+/**
+ * Helper function to provide access for LifeDesk support user account
+ * @return Boolean
+ *     TRUE if access granted, FALSE if access denied.
+ */
+function _lifedesk_alter_ldsupport_access($permission) {
+
+  // If permission provided and user has access return TRUE (uid 1 will return TRUE here).
+  if (user_access($permission)) return TRUE;
+
+  // Otherwise check to see if logged in user is LD Support user, and if so grant access.
+  global $user;
+  if (variable_get('lifedesk_support', NULL) == $user->uid) return TRUE;
+
+  // Return FALSE for everyone else.
+  return FALSE;
+}
+
+/**
+* Implementation of hook_nodeapi to give equivalent of administer nodes perms to images on presave
+*/
+function lifedesk_alter_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL){
+  switch ($op) {
+    case 'presave':
+      if ($node->type == 'image' || $node->type == 'taxon_description' || $node->type == 'simplemappr') {
+        $node->comment = 2;
+      }
+      break;
+    //add the cc_lite image to the node
+    case 'view':
+      if(isset($node->cc_lite_license)) {
+        $cc_module = drupal_get_path('module', 'creativecommons_lite') .'/';
+        $node->cc_lite_license_img = base_path() . $cc_module . 'images/buttons_small/' . $node->cc_lite_license . '.png';
+      }
+      if(isset($node->term_display)) {
+           drupal_add_css(drupal_get_path('module', 'lifedesk_alter') .'/lifedesk_alter.css');
+           $term_display = "";
+           foreach($node->term_display as $vid => $data) {
+             if($vid == CLASSIFICATION_PRIMARY) {
+                  $term_display_class = "term-display-classification";
+             }
+             elseif ($vid == variable_get('image_gallery_nav_vocabulary', '')) {
+                  $term_display_class = "term-display-gallery";
+             }
+             else {
+                $term_display_class = "term-display-other";
+             }
+
+             $term_display .= '<div class="' . $term_display_class . '">';
+             $vocabulary = new stdClass();
+             $vocabulary->name = $data['vocabulary_name'];
+             $term_display .= theme('term_display_list', $vocabulary, $data['terms']);
+             $term_display .= '</div>';
+           }
+           $node->content['term_display'] = array(
+             '#value' => '<div id="term-display">' . $term_display . '</div>',
+           );
+      }
+      break;
+    case 'load':
+      if($node->type == 'image') {
+        if(user_access('view original images')) {
+          $node->images['paths'][IMAGE_ORIGINAL] = 'image/view/' . $node->nid . '/' . IMAGE_ORIGINAL;
+        }
+        $node->images['paths'][IMAGE_PREVIEW] = 'image/view/' . $node->nid . '/' . IMAGE_PREVIEW;
+        $node->images['paths'][IMAGE_THUMBNAIL] = 'image/view/' . $node->nid . '/' . IMAGE_THUMBNAIL;
+      }
+    break;
+  }
+}
+
+/**
+ * Implementation of hook_form_alter to remove Drupal options at the bottom of every form, among other configuration page settings
+ */
+function lifedesk_alter_form_alter(&$form, $form_state, $form_id) {
+  global $user, $hiddenModules, $hiddenThemes;
+
+  if($form['#id'] == 'user-register') {
+
+    if(!isset($_SESSION['register'])) $_SESSION['register'] = md5('myaddress' . rand(5,30));
+
+    $module_path = drupal_get_path('module', 'lifedesk_alter') .'/';
+    drupal_add_js($module_path . 'js/lifedesk_alter.js');
+    drupal_add_js(array('register_token' => $_SESSION['register']), 'setting');
+
+    $form['account'][$_SESSION['register']] = $form['account']['mail'];
+    $form['account'][$_SESSION['register']]['#default_value'] = $form_state['values'][$_SESSION['register']];
+    $form['account']['mail'] = array(
+        '#type' => 'hidden',
+        '#default_value' => $form_state['values'][$_SESSION['register']]
+    );
+    $form['#validate'][] = 'lifedesk_alter_register_validate';
+
+  }
+
+  //remove the teaser checkbox
+  if($form['#id'] == 'node-form') {
+
+    $form['author']['#access'] = user_access('administer site configuration');
+
+    if (isset($form['body_field']['teaser_include'])) $form['body_field']['teaser_include']['#access'] = user_access('administer site configuration');
+
+    //weight the menu selection options to bottom of page
+    $form['menu']['#weight'] = $form['options']['#weight']-1;
+    $form['menu']['#collapsed'] = false;
+    $form['attachments']['#weight'] = $form['menu']['#weight']-1;
+  }
+
+  if(!$form['#node']->nid && !$form_state['values']['status'] && ($form['type']['#value'] == 'image' || $form['type']['#value'] == 'taxon_description')) {
+     $form['options']['status']['#default_value'] = 0;
+     $form['options']['override_publishing_status']['#default_value'] = 0;
+  }
+
+  if($form['#id'] == 'user-profile-form') {
+    drupal_set_title($form['_account']['#value']->givenname . ' ' . $form['_account']['#value']->surname);
+  }
+
+  if($form['#id'] == 'node-form' && $form['creativecommons_lite']) {
+    $description = para(
+                sprintf(t('%s help you share your work while keeping your copyright. Other people can copy and distribute your work provided they give you credit&mdash;and only on the conditions you specify here.'), '<a href="http://creativecommons.org/learn/licenses/">' . t('Creative Commons licenses') . '</a>') .
+                ' ' . sprintf(t('Visit the Creative Commons website for an %s'), '<a href="http://creativecommons.org/about/licenses/meet-the-licenses">' . t('explanation of the different licenses') . '.</a>'),
+                sprintf(t('LifeDesks only support Creative Commons 3.0 licenses that permit others to build upon your work. Consequently, the No Derivatives license and its variants are not available in the menu below.')) .
+                ' ' . sprintf(t('Choose the %s if you want to offer your work with no conditions.'), '<a href="http://creativecommons.org/licenses/publicdomain/">' . t('Public Domain license') . '</a>')
+            );
+    $form['creativecommons_lite'][0]['#value'] = $description;
+  }
+
+  if($form_id !== 'cmf_admin_comments_form' && $form_id !== 'cmf_admin_both_form' && $form_id !== 'cmf_admin_nodes_form') {
+    unset($form['options']['promote'],$form['options']['sticky']);
+  }
+  unset($form['revision_information']);
+  unset($form['comment_settings']);
+
+  /* Fix the image upload options && unset the form if there are no names in the classification */
+  if ($form_id == 'image_node_form') {
+   //Find out if there is at least one name in the Taxa vocabulary
+   $term = db_fetch_object(db_query("SELECT tid FROM term_data WHERE vid = %d LIMIT 1", CLASSIFICATION_PRIMARY));
+
+   if(!$term->tid) {
+       $message = t('Before you upload an image, it is strongly recommended to !add at least one name to your classification.', array('!add' => l(t('add'),'admin/classification/biological/edit')));
+       drupal_set_message($message,'status');
+       unset($form['taxonomy']['tags'][CLASSIFICATION_PRIMARY]);
+   }
+
+   unset($form['attachments']);
+
+   $form['image']['rebuild_images']['#type'] = 'hidden';
+   $form['image']['#weight'] = -10;
+
+   $form['title']['#title'] = t('Caption');
+   $form['title']['#weight'] = -9;
+
+   $form['language']['#weight'] = -8;
+
+   $form['body_field']['body']['#rows'] = 5;
+   $form['body_field']['body']['#title'] = t('Image Description');
+   $form['body_field']['format'] = filter_form(FILTER_FORMAT_DEFAULT, NULL, array('body_field','format'));
+   $form['body_field']['#weight'] = -8;
+
+   $form['creativecommons_lite']['#collapsed'] = true;
+
+   //add a warning message
+   $form['buttons']['warning'] = array(
+    '#type' => 'markup',
+    '#prefix' => '<div class="messages warning">',
+    '#suffix' => '</div>',
+    '#weight' => 0,
+    '#value' => t('<strong>Did you...</strong><br>
+    1. Browse for the image you wanted from your computer<br>
+    2. Tag your image with a taxon from your classification<br>
+    3. Verify the Photographer field<br>
+    4. Choose an appropriate license<br>
+    5. Decide on a publish state'),
+   );
+
+   $form['#validate'][] = 'lifedesk_alter_image_validate';
+  }
+
+  if($form_id == 'poll_node_form') {
+     $form['comment_settings']['#type'] = 'hidden';
+     $form['comment_settings']['comment'] = array(
+       '#type' => 'hidden',
+       '#default_value' => 0
+     );
+     unset($form['menu']);
+  }
+
+  //unset the biblio form if there are no names in the classification
+  if ($form_id == 'biblio_node_form') {
+
+    unset($form['format'],$form['creativecommons_lite']);
+
+    //Find out if there is at least one name in the Taxa vocabulary
+    $term = db_fetch_object(db_query("SELECT COUNT(*) AS sum FROM term_data WHERE vid = %d", CLASSIFICATION_PRIMARY));
+
+    if($term->sum < 1) {
+      $message = t('Before you insert or import a biblio item, it is strongly recommended to !add at least one name to your classification.', array('!add' => l(t('add'),'admin/classification/biological/edit')));
+      drupal_set_message($message,'status');
+    } else {
+      if(!$form['taxonomy']) {
+        $form['biblio_type']['#description'] = t('Or, choose from the above publication types to manually create a bibliographic item.');
+      }
+    }
+  }
+
+  if($form_id == 'biblio_import_form') {
+    //Find out if there is at least one name in the Taxa vocabulary
+    $term = db_fetch_object(db_query("SELECT COUNT(*) AS sum FROM term_data WHERE vid = %d", CLASSIFICATION_PRIMARY));
+
+    if($term->sum < 1) {
+      $message = t('Before you import a biblio file, it is strongly recommended to !add at least one name to your classification.', array('!add' => l(t('add'),'admin/classification/biological/edit')));
+      drupal_set_message($message,'status');
+    }
+  }
+
+  if($form_id == 'taxon_description_node_form') {
+
+    //Find out if there is at least one name in the Taxa vocabulary
+    $term = db_fetch_object(db_query("SELECT COUNT(*) AS sum FROM term_data WHERE vid = %d", CLASSIFICATION_PRIMARY));
+    $form['language']['#weight'] = $form['taxon_description']['#weight']-1;
+
+    if($term->sum < 1) {
+      $message = t('Sorry, before you author a taxon page, you must !add at least one name to your classification.', array('!add' => l(t('add'),'admin/classification/biological/edit')));
+      drupal_set_message($message,'error');
+      unset($form['options']);
+      unset($form['taxonomy']);
+      unset($form['taxon_description']);
+      unset($form['attachments']);
+      unset($form['title']);
+      unset($form['settings']);
+      unset($form['buttons']);
+      unset($form['classification']);
+      unset($form['creativecommons_lite']);
+      unset($form['language']);
+      unset($form['next']);
+    }
+  }
+
+  if($form_id == 'simplemappr_node_form') {
+       //Find out if there is at least one name in the Taxa vocabulary
+       $term = db_fetch_object(db_query("SELECT tid FROM term_data WHERE vid = %d LIMIT 1", CLASSIFICATION_PRIMARY));
+
+       if(!$term->tid) {
+           $message = t('Before you create a map, it is strongly recommended to !add at least one name to your classification.', array('!add' => l(t('add'),'admin/classification/biological/edit')));
+           drupal_set_message($message,'status');
+           unset($form['taxonomy']['tags'][CLASSIFICATION_PRIMARY]);
+       }
+
+       $form['rebuild_simplemappr']['#type'] = 'hidden';
+
+       $form['thumbnail']['#weight'] = -10;
+       $form['title']['#title'] = t('Caption');
+       $form['title']['#weight'] = -9;
+       $form['language']['#weight'] = -8;
+
+       //unset form attachments and rename the body legend
+       unset($form['attachments']);
+
+       $form['creativecommons_lite']['#collapsed'] = true;
+
+       $form['body_field']['body']['#rows'] = 5;
+       $form['body_field']['body']['#title'] = t('Shaded Map Description');
+       $form['body_field']['format'] = filter_form(FILTER_FORMAT_DEFAULT, NULL, array('body_field','format'));
+       $form['body_field']['#weight'] = -8;
+  }
+
+  //unset the workflow stuff on the content type form
+  if($form_id == 'node_type_form') {
+    unset($form['workflow']['node_options']);
+    unset($form['workflow']['upload']);
+    unset($form['workflow']['creativecommons_lite']);
+  }
+
+  //unset menu navigation items so do not appear in /admin/build/menu-customize/navigation
+  if($form_id == 'menu_overview_form') {
+    $menu_paths = array(
+      'front_page',
+      'admin/content/taxonomy/list',
+      'admin/content/taxonomy/add/vocabulary'
+    );
+    $sql = "SELECT mlid FROM {menu_links} WHERE link_path = '%s'";
+    foreach($menu_paths as $menu_path) {
+      $result = db_fetch_object(db_query($sql,$menu_path));
+      unset($form['mlid:'.$result->mlid]);
+    }
+  }
+
+  //unset taxonomy settings for biblio
+  if($form_id == 'biblio_import_form') {
+    unset($form['import_taxonomy']);
+  }
+
+  //unset copy terms to biblio keywords
+  if($form_id == 'biblio_node_form') {
+    unset($form['taxonomy']['copy_to_biblio']);
+  }
+
+  //unset and change system site information form
+  if($form_id == 'system_site_information_settings') {
+    $form['site_name']['#title'] = t('LifeDesk Site Name');
+    $form['site_name']['#description'] = t('The name of your LifeDesk as it will appear in the banner');
+    $form['site_mail']['#title'] = t('System e-mail address');
+    $form['site_mail']['#description'] = t('The <i>From</i> address in automated e-mails sent during registration and new password requests, and other notifications.');
+    $form['anonymous'] = array('#type' => 'hidden', '#default_value' => 'Anonymous');
+    $form['site_frontpage'] = array('#type' => 'hidden', '#default_value' => 'front_page');
+
+    $form['site_mission']['#access'] = user_access('administer site configuration');
+    $form['site_footer']['#access'] = user_access('administer site configuration');
+    $form['site_slogan']['#access'] = user_access('administer site configuration');
+    $form['buttons']['reset']['#access'] = user_access('administer site configuration');
+  }
+
+  //jazz the search button
+  if($form_id == 'search_theme_form') {
+    $form['submit']['#attributes'] = array('class' => 'header-search-form-submit');
+  }
+
+
+  // Alter theme configuration forms
+  if($form_id == 'system_theme_settings') {
+    //flush caches to ensure access permissions are reset
+    drupal_flush_all_caches();
+
+    // Restrict access to form elements
+    if (isset($form['theme_settings']['toggle_logo'])) $form['theme_settings']['toggle_logo']['#access'] = user_access('administer site configuration');
+    if(isset($form['theme_settings']['toggle_favicon'])) $form['theme_settings']['toggle_favicon']['#access'] = user_access('administer site configuration');
+    if(isset($form['favicon'])) {
+      $form['favicon']['#access'] = user_access('administer site configuration');
+      $form['favicon']['default_favicon']['#default_value'] = 0;
+      $form['favicon']['favicon_path']['#default_value'] = 'sites/all/themes/expert/favicon.ico';
+    }
+    if (isset($form['logo']['logo_path'])) $form['logo']['logo_path']['#type'] = 'hidden'; //access permissions cannot be used here
+    if (isset($form['theme_specific'])) $form['theme_specific']['#access'] = user_access('administer site configuration');
+  }
+
+  if($form_id == 'user_profile_form' && variable_get('user_pictures', 0) && $form['account'] && !$form['picture']['current_picture']) {
+      $wt = $form['picture']['picture_upload']['#weight'];
+      $default_image = variable_get('user_picture_default', '');
+      if($default_image && file_exists($default_image)) {
+        $picture = theme('user_picture', $user->picture);
+        $form['picture']['current_picture'] = array('#value' => $picture, '#weight' => $wt-1);
+      }
+  }
+
+  //hide modules and themes that cannot be adjusted
+  if (!user_access('administer site configuration')) {
+    if ($form_id == 'system_modules' || $form_id == 'system_themes_form') {
+
+      require_once("./sites/admin." . $GLOBALS['conf']['_lifedesks_domain'] . "/modules/profile_master/profile_master.admin.inc");
+
+      if  ($form_id == 'system_modules') {
+         $disabled_modules = $form['status']['#disabled_modules'];
+         foreach($hiddenModules as $module => $status){
+           array_push($disabled_modules, $module);
+           $form['disabled_modules']['#value'][$module] = $status;
+         }
+
+         $form['status']['#disabled_modules'] = $disabled_modules;
+
+         foreach($disabled_modules as $module) {
+           unset($form['validation_modules']['#value'][$module], $form['status']['#options'][$module], $form['name'][$module], $form['version'][$module],$form['description'][$module]);
+         }
+
+         //reword the OAI2 module description
+         $form['description']['oai2']['#value'] = t('This module provides Open Archives 2 protocol access to the information stored by the Biblio module and permits initiatives like the Biodiversity Heritage Library to harvest your site\'s bibliographic metadata.');
+
+      }
+
+      if ($form_id == 'system_themes_form') {
+        // Restrict access to theme listing 'Reset to default' button
+        $form['buttons']['reset']['#access'] = user_access('administer site configuration');
+        // Restrict access to themes
+        foreach ($hiddenThemes as $theme) {
+          unset($form[$theme], $form['status']['#options'][$theme], $form['theme_default']['#options'][$theme]);
+        }
+      }
+    }
+  }
+
+  // Hide users from admin/user/user listing
+  // Will mess up pager, but User module doesn't offer db rewrite option
+  if ($form_id == 'user_admin_account' && $user->uid !=1) {
+    $hide_uids = array(1);
+    $elements = array('name', 'status', 'roles', 'member_for', 'last_access', 'operations');
+    foreach ($hide_uids as $uid) {
+      unset($form['accounts']['#options'][$uid]);
+      foreach ($elements as $el) {
+        unset($form[$el][$uid]);
+      }
+    }
+  }
+
+  if ($form_id == 'user_admin_settings') {
+    if(isset($form['registration']['user_registration_help'])) $form['registration']['user_registration_help']['#access'] = user_access('administer site configuration');
+    if(isset($form['pictures'])) $form['pictures']['#access'] = user_access('administer site configuration');
+  }
+
+  if ($form_id == 'profile_admin_overview') {
+    foreach($form as $key => $value) {
+      if(is_int($key) && $form[$key]['name']['#value'] == 'profile_background') {
+        $form[$key]['edit']['#access'] = user_access('administer site configuration');
+        $form[$key]['delete']['#access'] = user_access('administer site configuration');
+      }
+    }
+  }
+
+  //adjust the language forms
+  if($form_id == 'locale_languages_predefined_form') {
+    if(!user_access('administer site configuration')) {
+      $form['language list']['langcode']['#options'] = _lifedesk_alter_locale_prepare_predefined_list();
+      $form['language list']['langcode']['#description'] = t('Select the desired language and click the <em>Add language</em> button.');
+    }
+  }
+
+  if($form_id == 'locale_languages_custom_form') {
+    $form['custom language']['#access'] = user_access('administer site configuration');
+  }
+
+  if($form_id == 'taxonomy_form_term') {
+    $vocabs = taxonomy_get_vocabularies();
+    foreach($vocabs as $vocab) {
+      if(($vocab->vid == $form['vid']['#value']) && (($vocab->module == 'classification') || ($vocab->module == 'taxon_description'))) {
+        drupal_access_denied();
+      }
+    }
+  }
+
+  if($form_id == 'taxonomy_form_vocabulary') {
+    $form['term_display']['#access'] = user_access('administer site configuration');
+  }
+
+  // Modify form element access control to allow ldsupport to access data monitoring form elements.
+  if ($form_id == 'data_monitoring_form_monitors') {
+    $form['trigger_monitoring']['#access'] = _lifedesk_alter_ldsupport_access('administer monitoring');
+    $form['delete_logs']['#access'] = _lifedesk_alter_ldsupport_access('administer monitoring');
+    $form['logs']['#access'] = _lifedesk_alter_ldsupport_access('administer monitoring');
+  }
+  if ($form_id == 'data_monitoring_form_monitor') {
+    $form['observers']['#access'] = _lifedesk_alter_ldsupport_access('administer monitoring responses');
+  }
+
+}
+
+function lifedesk_alter_register_validate($form, &$form_state) {
+    if(!isset($_SESSION['register'])) {
+       form_set_error("", t("Form submission was not successful"));
+    }
+    if(!valid_email_address($form_state['values'][$_SESSION['register']])) {
+       form_set_error($_SESSION['register'], t("You must enter a valid email address"));
+    }
+}
+
+function _lifedesk_alter_locale_prepare_predefined_list() {
+  $languages = language_list();
+  $predefined = variable_get('lifedesk_languages',  array(
+        "en" => array("English"),
+        "es" => array("Spanish", "Español"),
+        "fr" => array("French", "Français"),
+        "pt-pt" => array("Portuguese, Portugal", "Português"),
+        "pt-br" => array("Portuguese, Brazil", "Português"),
+        "ro" => array("Romanian", "Română"),
+        "sw" => array("Swahili", "Kiswahili"),
+    ));
+  foreach ($predefined as $key => $value) {
+    if (isset($languages[$key])) {
+      unset($predefined[$key]);
+      continue;
+    }
+    // Include native name in output, if possible
+    if (count($value) > 1) {
+      $tname = t($value[0]);
+      $predefined[$key] = ($tname == $value[1]) ? $tname : "$tname ($value[1])";
+    }
+    else {
+      $predefined[$key] = t($value[0]);
+    }
+  }
+  asort($predefined);
+  array_unshift($predefined, t('-- Choose --'));
+  return $predefined;
+}
+
+/**
+ * Adjust the Apache Solr handling
+ */
+function lifedesk_alter_apachesolr_modify_query(&$query, &$params, $caller) {
+  $query->add_filter('hash', apachesolr_site_hash());
+}
+
+/**
+ * Helper function
+ */
+function _lifedesk_alter_array_search_recursive($needle, $haystack){
+    $path=array();
+    foreach($haystack as $id => $val) {
+         if($val === $needle)
+              $path[]=$id;
+         else if(is_array($val)){
+             $found=_lifedesk_alter_array_search_recursive($needle, $val);
+              if(count($found)>0){
+                  $path[$id]=$found;
+              }
+          }
+      }
+      return $path;
+}
+
+/**
+ * Validate image uploads
+ */
+function lifedesk_alter_image_validate($form, $form_state) {
+    if($form_state['values']['op'] != t('Delete') && !$form_state['values']['images']['_original']) {
+        $validators = array(
+            'file_validate_size' => array(variable_get('image_max_upload_size', 5) * 1024, 0),
+            'file_validate_is_image' => array(),
+        );
+        $file = file_save_upload('image', $validators, file_directory_path());
+
+        if (!$file) {
+             form_set_error('image', t('Image file is required.'));
+        }
+    }
+}
+
+/**
+ * Override the locale form
+ */
+function phptemplate_locale_languages_overview_form($form) {
+  $default = language_default();
+  $operationsTitle = user_access('administer site configuration') ? t('Operations') : '';
+  $operationsLinks = user_access('administer site configuration') ? l(t('edit'), 'admin/settings/language/edit/'. $key) . (($key != 'en' && $key != $default->language) ? ' '. l(t('delete'), 'admin/settings/language/delete/'. $key) : '') : '';
+
+  foreach ($form['name'] as $key => $element) {
+    // Do not take form control structures.
+    if (is_array($element) && element_child($key)) {
+      // Disable checkbox for the default language, because it cannot be disabled.
+      if ($key == $default->language) {
+        $form['enabled'][$key]['#attributes']['disabled'] = 'disabled';
+      }
+      $rows[] = array(
+        array('data' => drupal_render($form['enabled'][$key]), 'align' => 'center'),
+        check_plain($key),
+        '<strong>'. drupal_render($form['name'][$key]) .'</strong>',
+        drupal_render($form['native'][$key]),
+        drupal_render($form['direction'][$key]),
+        drupal_render($form['site_default'][$key]),
+        drupal_render($form['weight'][$key]),
+        $operationsLinks
+      );
+    }
+  }
+  $header = array(array('data' => t('Enabled')), array('data' => t('Code')), array('data' => t('English name')), array('data' => t('Native name')), array('data' => t('Direction')), array('data' => t('Default')), array('data' => t('Weight')), $operationsTitle);
+  $output = theme('table', $header, $rows);
+  $output .= drupal_render($form);
+
+  return $output;
+}
+
+/**
+ * Override node simplemappr theme
+ */
+function phptemplate_simplemappr_display($node, $label, $url, $attributes) {
+    $output  = theme('image', $url, $node->title, $node->title, $attributes, FALSE);
+    if($label == 'thumbnail' && !isset($node->new_file)) {
+      $output = l($output, 'node/' . $node->nid, array('html' => true));
+    }
+    if(!isset($node->new_file)) {
+        $output .= '<div class="simplemappr-node-attribution">';
+        $module_path = drupal_get_path('module', 'creativecommons_lite') .'/';
+        $output .= l('<img src="' . base_path() . $module_path . 'images/buttons_small/' . $node->cc_lite_license . '.png">', 'http://creativecommons.org/licenses/'.$node->cc_lite_license.'/3.0/', array('html' => true, 'attributes' => array('style' => 'width:80px;height:15px', 'title' => "Creative Commons: " . $node->cc_lite_license, 'alt' => "Creative Commons: " . $node->cc_lite_license, 'rel' => 'nofollow')));
+        $output .= '</div>';
+    }
+
+  return $output;
+}
+
+/**
+ * Override the image gallery count
+ */
+function phptemplate_image_gallery_count($count) {
+    return $count;
+}

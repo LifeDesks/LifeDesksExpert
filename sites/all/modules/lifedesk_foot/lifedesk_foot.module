@@ -1,0 +1,168 @@
+<?php
+
+// WARNING: requires mcrypt PHP extension
+/**
+ * lifedesk_foot.module
+ * Forces a site to include a footer that can only be changed by editing the source code
+ */
+
+/**
+ * Implementation of hook_block
+ */
+function lifedesk_foot_block($op = 'list', $delta = 0) {
+    global $theme_key;
+    if ($op == 'list') {
+      $default_placement = 'footer';
+      $regions = system_region_list($theme_key);
+      if (isset($regions) && array_key_exists($default_placement, $regions)) {
+        $blocks[0]['region'] = $default_placement;
+      } else {
+        $blocks[0]['region'] = BLOCK_REGION_NONE;
+      }
+      $blocks[0]['info'] = t('LifeDesk Footer');
+      return $blocks;
+    }
+    else {
+	  if ($op == 'view') {
+	    $block['subject'] = t('LifeDesk Footer');
+        $block['content'] = _lifedesk_foot_getfoot();
+	  }
+	  return $block;
+    }
+}
+ 
+/**
+ * Implementation of hook_footer()
+ */
+function lifedesk_foot_footer($main=0){
+  global $user, $conf;
+
+  $domain = $conf['_lifedesks_domain'];
+  
+  $string = '';
+  
+  if($user->uid) {
+    $account_key = 'biodiversityinformatics';
+    $account_host = $account_key.'.uservoice.com';
+    $api_key = 'cc1340651bf304d5d58bb703d20890d6';
+    $forum = 'general';
+    $encrypted_data = '';
+    $encrypted_data = _lifedesk_foot_generate_encrypted_sso($account_key, $api_key);
+    $string = '<script type="text/javascript">
+       var uservoiceJsHost = ("https:" == document.location.protocol) ? "https://uservoice.com" : "http://cdn.uservoice.com";
+       document.write(unescape("%3Cscript src=\'" + uservoiceJsHost + "/javascripts/widgets/tab.js\' type=\'text/javascript\'%3E%3C/script%3E"))
+     </script>
+     <script type="text/javascript">
+       UserVoice.Tab.show({ 
+       key: "'.$account_key.'",
+       host: "'.$account_host.'", 
+       forum: "'.$forum.'", 
+       alignment: "left",
+       background_color:"#f00", 
+       text_color: "white",
+       hover_color: "#06C",
+       lang: "en",
+       params: { sso: "'.$encrypted_data.'" }
+       })
+     </script>';
+  }
+  
+  if($user->uid != 1) {
+	  $string .= '<script type="text/javascript">
+	var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+	document.write(unescape("%3Cscript src=\'" + gaJsHost + "google-analytics.com/ga.js\' type=\'text/javascript\'%3E%3C/script%3E"));
+	</script>
+	<script type="text/javascript">
+	try {
+	var pageTracker = _gat._getTracker("UA-8484689-1");
+	pageTracker._setDomainName(".lifedesks.org");
+	pageTracker._trackPageview();
+	} catch(err) {}</script>';	
+  }
+           
+  return $string;
+}
+
+/**
+ * Generate encrypted data for single sign-on to UserVoice
+ * 
+ * Requires mcrypt extension for PHP
+ * @see http://php.net/mcrypt
+ * 
+ * @param $account_key
+ * String containing UserVoice account key (same as account name or subdomain)
+ * 
+ * @param $api_key
+ * String containing UserVoice api key.
+ */
+function _lifedesk_foot_generate_encrypted_sso($account_key, $api_key) {
+  global $user;
+  if($user->uid) {
+    $salted = $api_key . $account_key;
+    $hash = hash('sha1',$salted,true);
+    $saltedHash = substr($hash,0,16);
+    $iv = "OpenSSL for Ruby";
+    
+    $site_name = variable_get('site_name', '');
+    $user_guid = $site_name.$user->uid;
+    if($user->givenname) {
+      $user_name = $user->givenname." ".$user->surname;
+    } elseif($user->fullname) {
+      $user_name = $user->fullname;
+    } else {
+      $user_name = $user->name;
+    }
+    $expiration_timestamp = _lifedesk_foot_expiration_timestamp(30);
+    $user_data = array(
+     "expiration" => $expiration_timestamp,
+     "guid" => $user_guid,
+     "display_name" => $user_name,
+     "email" => $user->mail,
+     "url" => "http://".$_SERVER["SERVER_NAME"]."/user/".$user->uid
+    );
+    
+    $data = json_encode($user_data);
+    
+    // double XOR first block
+    for ($i = 0; $i < 16; $i++)
+    {
+     $data[$i] = $data[$i] ^ $iv[$i];
+    }
+    
+    $pad = 16 - (strlen($data) % 16);
+    $data = $data . str_repeat(chr($pad), $pad);
+      
+    $cipher = mcrypt_module_open(MCRYPT_RIJNDAEL_128,'','cbc','');
+    mcrypt_generic_init($cipher, $saltedHash, $iv);
+    $encrypted_data = mcrypt_generic($cipher,$data);
+    mcrypt_generic_deinit($cipher);
+    
+    $encrypted_data = urlencode(base64_encode($encrypted_data));
+    return $encrypted_data;
+  }
+}
+
+/**
+ * Generate expiration timestamp for UserVoice
+ * UserVoice requires expration timestamp in GMT of format Y-M-D H:i:s
+ * 
+ * @param $duration
+ * Time in minutes from now until expiration default 10 minutes
+ */
+function _lifedesk_foot_expiration_timestamp($duration=10) {
+  $format = "Y-m-d H:i:s";
+  $expiration_timestamp = time() + ($duration * 60);
+  $gmt_expiration = gmdate($format,$expiration_timestamp);
+  return $gmt_expiration;
+}
+
+function _lifedesk_foot_getfoot() {
+  global $conf, $base_url, $user;
+  $domain = $conf['_lifedesks_domain'];
+
+  drupal_add_css(drupal_get_path('module', 'lifedesk_foot') . '/css/lifedesk_foot.css');
+
+  $output = t('Member of the !lifedesk Community', array('!lifedesk' => l(t('LifeDesk'), 'http://www.' . $domain, array('absolute' => true))));
+
+  return $output;
+}

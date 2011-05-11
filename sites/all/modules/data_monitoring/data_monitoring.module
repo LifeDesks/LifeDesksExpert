@@ -1,0 +1,458 @@
+<?php
+// $Id$
+/**
+ * @file
+ * Module for monitoring, responding to and reporting on data.
+ *
+ * This is the module file for Data monitoring module.
+ */
+
+// FIXME: Language handling across data monitoring logs and emails needs fixing for logged in user preferred language versus email report/logging.
+
+// Define values for default settings.
+define('DATA_MONITORING_INTERVAL', 0); // 0 is every time, 86400 seconds for daily etc.
+define('DATA_MONITORING_MAIL', 0); // Boolean flag 0 = don't send mail, 1 = send mail
+define('DATA_MONITORING_LANGUAGE', 'English');
+define('DATA_MONITORING_AUTOMATED_DISALLOWED', 0);
+define('DATA_MONITORING_AUTOMATED_ALLOWED', 1);
+define('DATA_MONITORING_LOG_EXPIRE', 0); // Time in seconds after which logs should be deleted if 0 = never delete
+define('DATA_MONITORING_DIR', 'data-monitoring');
+define('DATA_MONITORING_MANUAL_RESPONSE_TRIGGER', 1);
+define('DATA_MONITORING_AUTOMATED_RESPONSE_TRIGGER', 2);
+
+define('DATA_MONITORING_STATE_PENDING', 1);
+define('DATA_MONITORING_STATE_PREVIEW', 2);
+define('DATA_MONITORING_STATE_MANUAL_IMPLEMENTATION', 3);
+define('DATA_MONITORING_STATE_AUTOMATED_IMPLEMENTATION', 4);
+define('DATA_MONITORING_STATE_COMPLETED', 5);
+define('DATA_MONITORING_STATE_OBSOLETE', 6);
+define('DATA_MONITORING_STATE_CANCELLED', 7);
+
+define('DATA_MONITORING_EVENT_ANALYSING', 1);
+define('DATA_MONITORING_EVENT_SAVING', 2);
+define('DATA_MONITORING_EVENT_SLEEPING', 3);
+define('DATA_MONITORING_EVENT_WAKING', 4);
+define('DATA_MONITORING_EVENT_LOADING', 5);
+define('DATA_MONITORING_EVENT_DELETING', 6);
+define('DATA_MONITORING_EVENT_CANCELLING', 7);
+
+
+/**
+ * Implementation of hook_help().
+ *
+ */
+function data_monitoring_help($path, $arg) {
+  global $conf;
+  if ($path == 'admin/help#data_monitoring') {
+    $txt = 'Provides framework to monitor, respond to and report on data. Other modules can use the data monitoring api to provide monitor queries and response actions.';
+    return '<p>' . t($txt) . '</p>';
+  }
+}
+/**
+ * Implementation of hook_perm().
+ */
+function data_monitoring_perm() {
+  return array('administer monitoring', 'administer monitoring responses', 'access monitoring logs');
+}
+/**
+ * Implementation of hook_menu().
+ */
+function data_monitoring_menu() {
+
+  $items['admin/reports/data-monitoring'] = array(
+    'title' => 'Data monitoring',
+    'description' => 'Access data monitoring logs and, if permitted, configure settings and run monitor and response routines.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('data_monitoring_form_monitors'),
+    'access arguments' => array('access monitoring logs'),
+    'file' => 'data_monitoring.monitors.inc',
+    'file path' => drupal_get_path('module', 'data_monitoring') .'/includes',
+  );
+  $items['admin/reports/data-monitoring/monitors'] = array(
+    'title' => 'Monitors',
+    'description' => 'View monitor logs, delete old monitor logs.',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'parent' => 'admin/reports/data-monitoring',
+    'weight' => -20,
+  );
+  $items['admin/reports/data-monitoring/monitor/%data_monitoring_monitor'] = array(
+    'title' => 'Monitor details',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('data_monitoring_form_monitor', 4),
+    'access arguments' => array('access monitoring logs'),
+    'type' => MENU_CALLBACK,
+    'parent' => 'admin/reports/data-monitoring',
+    'file' => 'data_monitoring.monitor.inc',
+    'file path' => drupal_get_path('module', 'data_monitoring') .'/includes',
+  );
+  $items['admin/reports/data-monitoring/response/%data_monitoring_response'] = array(
+    'title' => 'Response',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('data_monitoring_form_response', 4),
+    'access arguments' => array('administer monitoring responses'),
+    'type' => MENU_CALLBACK,
+    'parent' => 'admin/reports/data-monitoring',
+    'file' => 'data_monitoring.response.inc',
+    'file path' => drupal_get_path('module', 'data_monitoring') .'/includes',
+  );
+  $items['admin/reports/data-monitoring/settings'] = array(
+    'title' => 'Settings',
+    'description' => 'Configure settings for data integrity monitoring and response.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('data_monitoring_settings'),
+    'access arguments' => array('administer monitoring'),
+    'type' => MENU_LOCAL_TASK,
+    'parent' => 'admin/reports/data-monitoring',
+    'file' => 'data_monitoring.settings.inc',
+    'file path' => drupal_get_path('module', 'data_monitoring') .'/includes',
+    'weight' => -15,
+  );
+  return $items;
+}
+/**
+ * Implementation of hook_load().
+ * @param $dmid
+ *
+ */
+function data_monitoring_monitor_load($dmid) {
+  static $monitor;
+  if (is_object($monitor) && $monitor->getDmid() == $dmid) return $monitor;
+  $monitor = new DataMonitoringMonitor();
+  $monitor->loadMonitorByDmid($dmid);
+  return $monitor;
+}
+/**
+ * Implementation of hook_load().
+ * @param $dmrlid
+ */
+function data_monitoring_response_load($dmrlid) {
+  static $response;
+  if (is_object($response) && $response->getDmrlid() == $dmrlid) return $response;
+  $response = new DataMonitoringResponseHandler();
+  $response->loadResponseByDmrlid($dmrlid);
+  return $response;
+}
+/**
+ * Implementation of hook_theme();
+ */
+function data_monitoring_theme() {
+  $path = drupal_get_path('module', 'data_monitoring') . '/themes';
+
+  return array(
+    'data_monitoring_monitors' => array(
+      'arguments' => array('form' => NULL),
+      'file' => 'data_monitoring.theme.inc',
+      'path' => $path,
+    ),
+    'data_monitoring_monitor' => array(
+      'arguments' => array('form' => NULL),
+      'file' => 'data_monitoring.theme.inc',
+      'path' => $path,
+    ),
+    'data_monitoring_response' => array(
+      'arguments' => array('form' => NULL),
+      'file' => 'data_monitoring.theme.inc',
+      'path' => $path,
+    ),
+    'data_monitoring_monitor_summary_plain' => array(
+      'arguments' => array('monitor' => NULL, 'language' => NULL),
+      'file' => 'data_monitoring.theme.inc',
+      'path' => $path,
+    ),
+    'data_monitoring_monitor_details_plain' => array(
+      'arguments' => array('monitor' => NULL),
+      'file' => 'data_monitoring.theme.inc',
+      'path' => $path,
+    ),
+    'data_monitoring_response_summary_plain' => array(
+      'arguments' => array('monitor' => NULL),
+      'file' => 'data_monitoring.theme.inc',
+      'path' => $path,
+    ),
+    'data_monitoring_email_report_plain' => array(
+      'arguments' => array('monitors' => NULL, 'language' => NULL),
+      'file' => 'data_monitoring.theme.inc',
+      'path' => $path,
+    ),
+    'data_monitoring_email_report_html' => array(
+      'arguments' => array('monitors' => NULL, 'language' => NULL),
+      'file' => 'data_monitoring.theme.inc',
+      'path' => $path,
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_preprocess();
+ *
+ * @param Array $variables
+ * @param String $hook
+ */
+function data_monitoring_preprocess(&$vars, $hook) {
+
+  global $base_root;
+
+  switch ($hook) {
+
+    case 'data_monitoring_monitor':
+
+      $vars['monitor_id'] = drupal_render($vars['monitor']['m_id']);
+      $vars['monitor_module'] = drupal_render($vars['monitor']['m_module']);
+      $vars['monitor_name'] = drupal_render($vars['monitor']['m_name']);
+      $vars['monitor_description'] = drupal_render($vars['monitor']['m_description']);
+      $vars['monitor_processed'] = drupal_render($vars['monitor']['ml_processed']);
+      $vars['monitor_result_count'] = drupal_render($vars['monitor']['ml_result_count']);
+      $vars['monitor_log_file'] = url(drupal_render($vars['monitor']['ml_log_file']));
+      break;
+
+    default:
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_cron().
+ */
+function data_monitoring_cron() {
+  // data_monitoring_run();
+}
+/**
+ * Custom function to run data monitoring.
+ * Replaces use of default Drupal cron hook and can be triggered by bash scripts and drush
+ * @see scripts/data_monitoring_multisite.drush.*
+ *
+ */
+function data_monitoring_run() {
+  global $base_root;
+  // Load class files.
+  _data_monitoring_class_include();
+  // Get data monitoring include files from other modules.
+  _data_monitoring_module_include('data_monitoring.inc');
+
+  DataMonitoringLogHandler::expireLogs();
+
+  $manager = new DataMonitoringManager();
+  $results = $manager->autoRunMonitors();
+  $output = t("!time DATA MONITORING LOG site=!base_root;",
+              array('!time' => gmdate('D M d H:i:s T Y', time()), '!base_root' => $base_root));
+  if (is_null($results)) {
+    $output .= "output=null";
+  }
+  elseif (is_array($results)) {
+    if ($results['monitors_cancelled'] > 0) $output .= "ERROR:";
+    foreach ($results as $key => $value) {
+      $output .= "$key=$value;";
+    }
+  }
+  else {
+    $output .= $results;
+  }
+  $output = escapeshellarg($output);
+
+  system("echo $output"); // Send output to shell for logging.
+
+  return $results;
+
+}
+/**
+ * Autoload class definitions, required for retrieving objects from session when batch processing.
+ * @param unknown_type $class
+ */
+function __autoload($class) {
+  _data_monitoring_class_include($class);
+}
+/**
+ * Helper function to include data monitoring class file.
+ * @param $class
+ *     Name of class.
+ */
+function _data_monitoring_class_include($class = NULL) {
+  $classes = array(
+    'DataMonitoring' => array(
+        'DataMonitoring',
+        'DataMonitoringObservable',
+        'DataMonitoringObserver',
+        'DataMonitoringVisitee',
+        'DataMonitoringVisitor'
+    ),
+    'DataMonitoringFeedbackHandler' => array('DataMonitoringFeedbackHandler'),
+    'DataMonitoringLogHandler' => array('DataMonitoringLogHandler'),
+    'DataMonitoringManager' => array('DataMonitoringManager'),
+    'DataMonitoringMonitor' => array('DataMonitoringMonitor'),
+    'DataMonitoringResponseHandler' => array('DataMonitoringResponseHandler'),
+  );
+  foreach ($classes as $basename => $contains) {
+    if (is_null($class) || $class == $basename || in_array($class, $contains))
+        module_load_include('inc', 'data_monitoring', "/classes/$basename");
+  }
+}
+
+/**
+ * Scan all modules for monitors.
+ *
+ * @return An associative array of all known monitors.
+ */
+function _data_monitoring_discover_monitors() {
+
+  $monitors = array();
+
+  // Load class files.
+  _data_monitoring_class_include();
+  // Get data monitoring include files from other modules.
+  _data_monitoring_module_include('data_monitoring.inc');
+
+  foreach (module_implements('data_monitoring_monitors') as $module) {
+    $results = call_user_func($module . "_data_monitoring_monitors");
+    if (!empty($results) && is_array($results)) {
+      foreach ($results as $monitor) {
+        // Only monitors with query and id are allowed.
+        if (!$monitor->id && !$monitor->getQuery()) {
+          unset($monitor);
+        }
+        else {
+          $monitor->setModule($module);
+          $monitors[$module][$monitor->id] = $monitor;
+        }
+      }
+    }
+  }
+
+  // Allow modules to modify monitors before they are used.
+  drupal_alter('data_monitoring_monitors', $monitors);
+
+  return $monitors;
+}
+/**
+ * Load data monitoring files on behalf of modules.
+ */
+function _data_monitoring_module_include($file) {
+  foreach (_data_monitoring_get_module_apis() as $module => $info) {
+    if (file_exists("./$info[path]/$module.$file")) {
+      require_once "./$info[path]/$module.$file";
+    }
+  }
+}
+/**
+ * Get a list of modules that support the data monitoring API.
+ */
+function _data_monitoring_get_module_apis() {
+
+  static $cache = NULL;
+
+  if (!isset($cache)) {
+    $cache = array();
+    foreach (module_implements('data_monitoring_api') as $module) {
+      $function = $module . '_data_monitoring_api';
+      $info = $function();
+      if (!isset($info['path'])) {
+        $info['path'] = drupal_get_path('module', $module);
+      }
+      $cache[$module] = $info;
+    }
+  }
+
+  return $cache;
+}
+/**
+ * Implementation of hook_mail().
+ * @param $key
+ * @param $message
+ * @param $params
+ *
+ */
+function data_monitoring_mail($key, &$message, $params) {
+  global $base_root;
+  $msg_vars = array('!site' => variable_get('site_name', 'Drupal'), '!site_url' => $base_root);
+  switch ($key) {
+    case 'monitoring_report':
+
+
+      $boundary = md5(uniqid(time())); // Need hash to allow multi format email parts.
+      // Adjust headers.
+      $message['headers']['From'] = $message['headers']['Sender'] = $message['headers']['Return-Path'] = $message['headers']['Errors-To'] = $message['from'];
+      $message['headers']['Content-Type'] = "multipart/mixed; boundary=\"{$boundary}\"\r\n\r\n";
+      $message['headers']['Content-Transfer-Encoding'] = "8bit";
+      $message['headers']['Charset'] = "utf-8";
+
+      $message['subject'] = t('Data monitoring report from !site', $msg_vars, $message['language']->language);
+
+      $footer = t('Sent from !site (!site_url) site.', $msg_vars, $message['language']->language);
+      // Plain.
+      $message['body'][]  = "--{$boundary}\r\n"
+                          . "Content-Type: text/plain; charset=\"utf-8\"\r\n"
+                          . "Content-Transfer-Encoding: 7bit\r\n\r\n"
+                          . theme('data_monitoring_email_report_plain', $params['monitors'], $message['language']->language)
+                          . "\r\n"
+                          . $footer
+                          . "\r\n\r\n"
+      // HTML.
+                          . "--{$boundary}\r\n"
+                          . "Content-Type: text/html; charset=\"utf-8\"\r\n"
+                          . "Content-Transfer-Encoding: 7bit\r\n\r\n"
+                          . theme('data_monitoring_email_report_html', $params['monitors'], $message['language']->language)
+                          . "\r\n"
+                          . $footer
+                          . "\r\n\r\n";
+
+      // Attachments.
+      // FIXME: Attachments aren't working - zip file is corrupted.
+      if (!empty($params['attachments'])) {
+        foreach ($params['attachments'] as $attachment) {
+          $data = chunk_split(base64_encode(file_get_contents($attachment->getFilepath())));
+          if (!empty($data)) {
+            $message['body'][] = "--{$boundary}\r\n"
+                               . "Content-Type: {$attachment->getFilemime()}; name=\"{$attachment->getBasename()}\"\r\n"
+                               . "Content-Disposition: attachment; filename=\"{$attachment->getBasename()}\"\r\n"
+                               . "Content-Transfer-Encoding: base64\r\n\r\n"
+                               . $data;
+          }
+        }
+      }
+
+      $message['body'][] = "--{$boundary}--\n";
+    break;
+  }
+}
+/**
+ * Returns a user friendly representation of a state constant.
+ * @param $state
+ */
+function _data_monitoring_readable_state($state) {
+  switch ($state) {
+    case DATA_MONITORING_STATE_PENDING:
+      return t('Pending');
+    case DATA_MONITORING_STATE_PREVIEW:
+      return t('Preview');
+    case DATA_MONITORING_STATE_MANUAL_IMPLEMENTATION:
+      return t('Manual implementation');
+    case DATA_MONITORING_STATE_AUTOMATED_IMPLEMENTATION:
+      return t('Automated implementation');
+    case DATA_MONITORING_STATE_COMPLETED:
+      return t('Completed');
+  }
+  return t('Unknown');
+}
+/**
+ * Returns a user friendly representation of a trigger constant.
+ * @param $trigger
+ */
+function _data_monitoring_readable_response_trigger($trigger) {
+  switch ($trigger) {
+    case DATA_MONITORING_MANUAL_RESPONSE_TRIGGER:
+      return t('Manual');
+    case DATA_MONITORING_AUTOMATED_RESPONSE_TRIGGER:
+      return t('Automated');
+    case NULL:
+      return t('None');
+  }
+  return t('Unknown');
+}
+/**
+ * Helper function to remove control characters from string.
+ * Intended for strings that are to be included in a tab delimited plain text file.
+ * @param $string
+ */
+function _data_monitoring_remove_control_characters($string) {
+  // Replace control characters ^A (\001), ^G (\007), ^H (\008), ^P (\020) using octal values http://www.robelle.com/smugbook/ascii.html
+  return preg_replace('#[\r\n\t\x0B\001-\020]#', '', $string);
+}

@@ -1,0 +1,661 @@
+<?php
+
+/**
+ * Implementation of hook_install().
+ */
+function lifedesk_releases_install() {
+  drupal_load('module', 'content');
+  content_notify('install', 'lifedesk_releases');
+
+	module_load_install('content_copy');
+
+    $content['type']  = array (
+	  'name' => 'LifeDesk Releases',
+	  'type' => 'lifedesk_releases',
+	  'description' => 'Create a list of bug fixes and new features in parallel with a new release. Published releases appear at http://www.lifedesks.org/newfeatures.',
+	  'title_label' => 'Title',
+	  'body_label' => '',
+	  'min_word_count' => '0',
+	  'help' => '',
+	  'node_options' => 
+	  array (
+	    'status' => false,
+	    'promote' => false,
+	    'sticky' => false,
+	    'revision' => false,
+	  ),
+	  'old_type' => 'lifedesk_releases',
+	  'orig_type' => '',
+	  'module' => 'node',
+	  'custom' => '1',
+	  'modified' => '1',
+	  'locked' => '0',
+	  'comment' => '0',
+	  'comment_default_mode' => '4',
+	  'comment_default_order' => '1',
+	  'comment_default_per_page' => '50',
+	  'comment_controls' => '3',
+	  'comment_anonymous' => 0,
+	  'comment_subject_field' => '1',
+	  'comment_preview' => '1',
+	  'comment_form_location' => '0',
+	  'ant' => '1',
+	  'ant_pattern' => '<?php
+				  $token = \'[field_releaseversion-raw]\';
+				  if (empty($token)) {
+				    return \'[type]\';
+				  }
+				  else {
+				    return \'LifeDesk Release: \' . $token;
+				  } 
+				?>',
+	  'ant_php' => 1,
+	);
+	$content['fields']  = array (
+	  0 => 
+	  array (
+	    'label' => 'Release Date',
+	    'field_name' => 'field_releasedate',
+	    'type' => 'text',
+	    'widget_type' => 'text_textfield',
+	    'change' => 'Change basic information',
+	    'weight' => 0,
+	    'rows' => 5,
+	    'size' => '60',
+	    'description' => 'e.g. April 2, 2010',
+	    'default_value' => 
+	    array (
+	      0 => 
+	      array (
+	        'value' => '',
+	        '_error_element' => 'default_value_widget][field_releasedate][0][value',
+	      ),
+	    ),
+	    'default_value_php' => '',
+	    'default_value_widget' => NULL,
+	    'required' => 1,
+	    'multiple' => '0',
+	    'text_processing' => '0',
+	    'max_length' => '',
+	    'allowed_values' => '',
+	    'allowed_values_php' => '',
+	    'op' => 'Save field settings',
+	    'module' => 'text',
+	    'widget_module' => 'text',
+	    'columns' => 
+	    array (
+	      'value' => 
+	      array (
+	        'type' => 'text',
+	        'size' => 'big',
+	        'not null' => false,
+	        'sortable' => true,
+	        'views' => true,
+	      ),
+	    ),
+	    'display_settings' => 
+	    array (
+	      'weight' => 0,
+	      'parent' => '',
+	      4 => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'label' => 
+	      array (
+	        'format' => 'above',
+	        'exclude' => 0,
+	      ),
+	      'teaser' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'full' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'token' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	    ),
+	  ),
+	  1 => 
+	  array (
+	    'label' => 'Release Version',
+	    'field_name' => 'field_releaseversion',
+	    'type' => 'text',
+	    'widget_type' => 'text_textfield',
+	    'change' => 'Change basic information',
+	    'weight' => '1',
+	    'rows' => 5,
+	    'size' => '60',
+	    'description' => 'e.g. 2.50',
+	    'default_value' => 
+	    array (
+	      0 => 
+	      array (
+	        'value' => '',
+	        '_error_element' => 'default_value_widget][field_releaseversion][0][value',
+	      ),
+	    ),
+	    'default_value_php' => '',
+	    'default_value_widget' => 
+	    array (
+	      'field_releaseversion' => 
+	      array (
+	        0 => 
+	        array (
+	          'value' => '',
+	          '_error_element' => 'default_value_widget][field_releaseversion][0][value',
+	        ),
+	      ),
+	    ),
+	    'required' => 1,
+	    'multiple' => '0',
+	    'text_processing' => '0',
+	    'max_length' => '',
+	    'allowed_values' => '',
+	    'allowed_values_php' => '',
+	    'op' => 'Save field settings',
+	    'module' => 'text',
+	    'widget_module' => 'text',
+	    'columns' => 
+	    array (
+	      'value' => 
+	      array (
+	        'type' => 'text',
+	        'size' => 'big',
+	        'not null' => false,
+	        'sortable' => true,
+	        'views' => true,
+	      ),
+	    ),
+	    'display_settings' => 
+	    array (
+	      'weight' => '1',
+	      'parent' => '',
+	      4 => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'label' => 
+	      array (
+	        'format' => 'above',
+	        'exclude' => 0,
+	      ),
+	      'teaser' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'full' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'token' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	    ),
+	  ),
+	  2 => 
+	  array (
+	    'label' => 'Bug Fixes',
+	    'field_name' => 'field_bugfixes',
+	    'type' => 'text',
+	    'widget_type' => 'text_textfield',
+	    'change' => 'Change basic information',
+	    'weight' => '2',
+	    'rows' => 5,
+	    'size' => '60',
+	    'description' => '',
+	    'default_value' => 
+	    array (
+	      0 => 
+	      array (
+	        'value' => '',
+	        '_error_element' => 'default_value_widget][field_bugfixes][0][value',
+	      ),
+	    ),
+	    'default_value_php' => '',
+	    'default_value_widget' => 
+	    array (
+	      'field_bugfixes' => 
+	      array (
+	        0 => 
+	        array (
+	          'value' => '',
+	          '_error_element' => 'default_value_widget][field_bugfixes][0][value',
+	          'format' => 1,
+	        ),
+	      ),
+	    ),
+	    'required' => 0,
+	    'multiple' => '1',
+	    'text_processing' => '1',
+	    'max_length' => '',
+	    'allowed_values' => '',
+	    'allowed_values_php' => '',
+	    'op' => 'Save field settings',
+	    'module' => 'text',
+	    'widget_module' => 'text',
+	    'columns' => 
+	    array (
+	      'value' => 
+	      array (
+	        'type' => 'text',
+	        'size' => 'big',
+	        'not null' => false,
+	        'sortable' => true,
+	        'views' => true,
+	      ),
+	      'format' => 
+	      array (
+	        'type' => 'int',
+	        'unsigned' => true,
+	        'not null' => false,
+	        'views' => false,
+	      ),
+	    ),
+	    'display_settings' => 
+	    array (
+	      'weight' => '2',
+	      'parent' => '',
+	      4 => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'label' => 
+	      array (
+	        'format' => 'above',
+	        'exclude' => 0,
+	      ),
+	      'teaser' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'full' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'token' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	    ),
+	  ),
+	  3 => 
+	  array (
+	    'label' => 'New Features',
+	    'field_name' => 'field_newfeatures',
+	    'type' => 'text',
+	    'widget_type' => 'text_textfield',
+	    'change' => 'Change basic information',
+	    'weight' => '3',
+	    'rows' => 5,
+	    'size' => '60',
+	    'description' => '',
+	    'default_value' => 
+	    array (
+	      0 => 
+	      array (
+	        'value' => '',
+	        '_error_element' => 'default_value_widget][field_newfeatures][0][value',
+	      ),
+	    ),
+	    'default_value_php' => '',
+	    'default_value_widget' => 
+	    array (
+	      'field_newfeatures' => 
+	      array (
+	        0 => 
+	        array (
+	          'value' => '',
+	          '_error_element' => 'default_value_widget][field_newfeatures][0][value',
+	          'format' => 1,
+	        ),
+	      ),
+	    ),
+	    'required' => 0,
+	    'multiple' => '1',
+	    'text_processing' => '1',
+	    'max_length' => '',
+	    'allowed_values' => '',
+	    'allowed_values_php' => '',
+	    'op' => 'Save field settings',
+	    'module' => 'text',
+	    'widget_module' => 'text',
+	    'columns' => 
+	    array (
+	      'value' => 
+	      array (
+	        'type' => 'text',
+	        'size' => 'big',
+	        'not null' => false,
+	        'sortable' => true,
+	        'views' => true,
+	      ),
+	      'format' => 
+	      array (
+	        'type' => 'int',
+	        'unsigned' => true,
+	        'not null' => false,
+	        'views' => false,
+	      ),
+	    ),
+	    'display_settings' => 
+	    array (
+	      'weight' => '3',
+	      'parent' => '',
+	      4 => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'label' => 
+	      array (
+	        'format' => 'above',
+	        'exclude' => 0,
+	      ),
+	      'teaser' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'full' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	      'token' => 
+	      array (
+	        'format' => 'default',
+	        'exclude' => 0,
+	      ),
+	    ),
+	  ),
+	);
+	$content['extra']  = array (
+	  'title' => '-5',
+	  'revision_information' => '-2',
+	  'comment_settings' => '-1',
+	  'menu' => '-4',
+	);
+
+	$content_type = array(
+	  'values' => array(
+	    'type_name' => '<create>',
+	    'macro' => '$content = '. var_export($content, TRUE) .';',
+	  ),
+	);
+	
+	drupal_execute('content_copy_import_form', $content_type);
+
+	_lifedesk_releases_import_existing();
+}
+
+function lifedesk_releases_uninstall() {
+  drupal_load('module', 'content');
+  content_notify('uninstall', 'lifedesk_releases');
+
+  db_query("DELETE FROM {node_type} WHERE type='lifedesk_releases'");
+
+  $qry = db_query("SELECT nid FROM {node} WHERE type='lifedesk_releases'");
+
+  while($nodes = db_fetch_object($qry)) {
+    node_delete($nodes->nid);	
+  }
+
+  //remove all the fields
+  db_query("DROP TABLE {content_field_bugfixes}");
+  db_query("DROP TABLE {content_field_newfeatures}");
+  db_query("DROP TABLE {content_type_lifedesk_releases}");
+  db_query("DELETE FROM {content_node_field} WHERE field_name = 'field_newfeatures' OR field_name ='field_bugfixes' OR field_name = 'field_releaseversion' OR field_name = ''");
+  db_query("DELETE FROM {content_node_field_instance} WHERE type_name = 'lifedesk_releases'");
+
+}
+
+function lifedesk_releases_enable() {
+  drupal_load('module', 'content');
+  content_notify('enable', 'lifedesk_releases');
+}
+
+function lifedesk_releases_disable() {
+  drupal_load('module', 'content');
+  content_notify('disable', 'lifedesk_releases');
+}
+
+function _lifedesk_releases_import_existing() {
+  $versions[] = array(
+    'field_releaseversion' => '2.31',
+    'field_releasedate' => 'May 12, 2010',
+    'field_bugfixes' => array(
+	  'Generation of the EOL content partner document was fixed to first check for the existence of files in the filesystem prior to producing an XML element for an image.', 
+	  ''
+	),
+	'field_newfeatures' => array(
+	  'The <a href="/create/">Create a LifeDesk</a> form was adjusted to present a scrollable listing of existing sites while entering names in a new "Possible taxa" field',
+	  'The <a href="/newfeatures/">New Features</a> page now has an RSS feed'
+	),
+  );
+
+  $versions[] = array(
+    'field_releaseversion' => '2.30',
+    'field_releasedate' => 'April 28, 2010',
+    'field_bugfixes' => array(
+	  'Uploading a site logo will no longer break layout because it is now automatically resized', 
+	  'Images tagged with multiple taxa will be properly duplicated under taxon elements in the EOL content partner export'
+	),
+	'field_newfeatures' => array(
+	  'The LifeDesk theme was re-architected to have a public menu where custom pages such as "About Us" or "Our Lab" may be added. A private menu containing action items is visible when logged in (requested by Einar Timdal, coordinator of the <a href="http://psora.lifedesks.org/">Psora</a> LifeDesk)',
+	  'Real-time image preview was added to the profile editing form and to the logo upload form',
+	  'The <a href="/sites">Discover Sites</a> page now has an option to sort the thumbnail gallery of all LifeDesks',
+	  'A list of preliminary <a href="/apis/">APIs and RSS feeds</a> across all LifeDesks was created',
+	),
+  );
+
+$versions[] = array(
+  'field_releaseversion' => '2.29',
+  'field_releasedate' => 'April 14, 2010',
+  'field_bugfixes' => array(
+	  'The green bar at the top of every page was coded differently to ensure better search engine optimization',
+	),
+	'field_newfeatures' => array(
+	  'A <a href="/classifications">classifications tab</a> was added to these pages where citations for and downloads of published classifications across all LifeDesks sites will be automatically updated',
+	),
+);
+
+$versions[] = array(
+  'field_releaseversion' => '2.28',
+  'field_releasedate' => 'March 31, 2010',
+  'field_bugfixes' => array(
+	'Grid editor performance was improved by not re-rendering rows when a filter or search is conducted.',
+	'Blocked users are not shown in the members list unless logged in as administrator or owner'),
+  'field_newfeatures' => array(
+	'Site editors, administrators, and owners may now send bulk email invitations to solicit membership',
+	'<a href="http://www.opensearch.org">OpenSearch</a> added for LifeDesks-wide and within LifeDesk searches'),
+);
+
+$versions[] = array(
+  'field_releaseversion' => '2.27',
+  'field_releasedate' => 'March 17, 2010',
+  'field_bugfixes' => array(
+	'Occasional browser hanging was eliminated. LifeDesks are now much more responsive.', 
+	'Possibility of duplicate images on taxon pages was eliminated.'),
+  'field_newfeatures' => array(
+	'Our Subversion code repository is now accessible at <a href="http://svn.lifedesks.org">http://svn.lifedesks.org</a>', 
+	'Linked tags were enabled for content'),
+);
+
+$versions[] = array(
+  'field_releaseversion' => '2.26',
+  'field_releasedate' => 'March 8, 2010',
+  'field_bugfixes' => array(
+	'Orphaned content management tool was fixed (reported by Breda Zimkus, coordinator of the <a href="http://africanamphibians.lifedesks.org/">African Amphibians</a> LifeDesk)',
+	'Links to non-biological classifications in the image gallery were removed until a more effective presentation of these items may be designed and implemented',
+	'Logging of actions in the classification grid editor was fixed'),
+  'field_newfeatures' => array(
+	'Search results within a LifeDesk were reworked to clearly itemize the list of hits into data types'),
+);
+
+$versions[] = array(
+  'field_releaseversion' => '2.25',
+  'field_releasedate' => 'February 19, 2010',
+  'field_bugfixes' => array(
+	'For sites that have elected to be EOL content partners, the exchange document was fixed with respect to image captions',
+	'WYSIWYG editor was restored for pages'),
+  'field_newfeatures' => array(
+	'You can now search your own LifeDesk and optionally search across all LifeDesks. The search index is adjusted every night at 11:00 PM EST.',
+	'A simple grid editor was created to complement the classification tree editor. This may be used to more quickly add metadata to names whereas the tree editor should continue to be used to maintain relationships between names.'),
+);
+
+$versions[] = array(
+  'field_releaseversion' => '2.24',
+  'field_releasedate' => 'February 5, 2010',
+  'field_bugfixes' => array(
+	'Handling of empty cells in a full hierarchy upload was fixed (reported by Breda Zimkus, coordinator of the <a href="http://africanamphibians.lifedesks.org/">African Amphibians</a> LifeDesk)'),
+  'field_newfeatures' => array(
+	'Owners and administrators of LifeDesk sites may now publish a human- and machine-readable package of their classification. Work is underway for the Encyclopedia of Life to periodically harvest these classifications as alternate browsing structures.',
+	'Classification import from file was extended with a "VernacularsLanguage" column containing ISO language codes. Similarly, export also includes this new column.',
+	'Images and taxon page text are now submitted initially in a Draft state (optional)', 'The image upload form was reorganized',
+	'Images in the LifeDesk galleries and taxon pages now have a pop-up permalink field for simple copy/paste linking elsewhere',
+	'Dublin Core metadata was added to taxon pages for simple ingestion by browser plug-in bibliographic managers like <a href="http://www.zotero.org/">Zotero</a> and for better search engine optimization'),
+);
+
+$versions[] = array(
+  'field_releaseversion' => '2.23',
+  'field_releasedate' => 'January 22, 2010',
+  'field_bugfixes' => array(
+	'Recognition of "Identifier", "Synonyms" and "Vernaculars" columns in Excel 97-2004 and 2007 templates for classification uploads was fixed to properly express which of these three columns might be missing',
+	'Selection and retention of citation containing original taxon description was fixed in the classification editor',
+	'A dedicated SMTP server is now used, which means email messages from LifeDesks (e.g. requesting automated password resets) should not be caught as spam by institutional email systems'),
+  'field_newfeatures' => array(
+	'Excel 97-2004 and 2007 templates for taxon page text now exports existing content that you previously authored and, upon re-upload, will update your content (requested by Gail Ashton, coordinator of the <a href="http://caprellids.lifedesks.org/">Caprellids</a> LifeDesk)',
+	'Tables may now be inserted in WYSIWYG text editors (requested by Jeremy Miller, coordinator of the <a href="http://araneae.lifedesks.org/">Araneae</a> LifeDesk)',
+	'The biblio module was upgraded (see <a href="http://drupal.org/project/biblio">http://drupal.org/project/biblio</a> for description of fixes and enhancements)',
+	'Images in the EOL content partner document were reordered such that what is presented on EOL will show exemplars first (if marked as such) then all remaining images per taxon in ascending chronological order of submission'),
+);
+
+$versions[] = array(
+  'field_releaseversion' => '2.22',
+  'field_releasedate' => 'January 8, 2010',
+  'field_bugfixes' => array(
+	'Upload of native Excel 97-2004 and 2007 files for classifications in parent-child format was enhanced to prevent erroneous structures that may occur under unusual circumstances'),
+  'field_newfeatures' => array(
+	'Classification export functions were rewritten to be more flexible and, as a first cut, parent-child (tab-delimited text or native Excel), Taxon Concept Schema (xml), and Darwin Core (xml) may be produced',
+	'A new button and option in the right-click context menu in the classification editor now permits paste of flat lists under a chosen parent taxon name'),
+);
+
+$versions[] = array(
+  'field_releaseversion' => '2.21',
+  'field_releasedate' => 'December 23, 2009',
+  'field_bugfixes' => array('Creation and upload of native Excel 97-2004 templates for taxon page text was fixed
+	<ul>
+		<li>Accepted Creative Commons licenses are checked while uploading</li>
+		<li>Published states "Published" or "Draft" are checked while uploading</li>
+	</ul>'),
+'field_newfeatures' => array(
+	'Native Excel versions 97-2004 and 2007 may now be used to import names and classifications  		
+	<ul>
+		<li>A "Check File" routine was built into the new tool</li>
+		<li>Several example Excel downloads are provided that contain informative comments</li>
+	</ul>'),
+);
+
+$versions[] = array(
+  'field_releaseversion' => '2.20',
+  'field_releasedate' => 'December 14, 2009',
+  'field_bugfixes' => array(
+	'Handling of original species description citation in the classification editing interface was fixed to prevent insertion of empty data',
+	'Auto-expansion and auto-selection of all child branches in the tree selector used to tag content with taxonomic names was removed for better performance and prevention of browser crashing'),
+  'field_newfeatures' => array(
+	'A native Excel parser was introduced to help eliminate issues with bulk upload of textual descriptions of taxa. Tab-delimited text files, Excel 97-2004, and Excel 2007 templates may be produced and re-imported with content. (requested by Gail Ashton, coordinator of the <a href="http://caprellids.lifedesks.org/">Caprellids</a> LifeDesk)',
+	'Sorting of bibliographic items was improved by making use of existing code in the <a href="http://drupal.org/project/biblio">Bibliography Module</a>
+  <ul>
+	<li>An RSS feed was enabled on the biblio page in each LifeDesk</li>
+	<li>COinS mark-up is present on taxon pages. This exposes bibliographic citations to import into 3<sup>rd</sup> party bibliographic management tools like <a href="http://www.zotero.org/">Zotero</a></li>
+	<li>By default, bibliographic items are presented using the American Psychological Association (APA) style. Likewise, this is the format that will be sent to EOL in the content partner document along with the COinS mark-up.</li>
+  </ul>'),
+);
+
+$versions[] = array(
+  'field_releaseversion' => '2.19',
+  'field_releasedate' => 'December 4, 2009',
+  'field_bugfixes' => array(
+	'Option to choose published or draft state while creating new content was restored'),
+  'field_newfeatures' => array(
+	'Default image page now includes Creative Commons licensing icon and attribution'),
+);
+
+$versions[] = array(
+  'field_releaseversion' => '2.18',
+  'field_releasedate' => 'November 20, 2009',
+  'field_bugfixes' => array(
+	'All Biodiversity Informatics Group <a href="/modules">modules</a> in the LifeDesk codebase were cleaned to permit more effective translation into other languages'),
+  'field_newfeatures' => array(
+	'Handling of Excel template uploads received an upgrade:
+<ul>
+	<li>Preview of uploaded chapter text was reworked to be more visually pleasing and reflective of what will appear on taxon pages</li>
+	<li>Permitted HTML tags are retained upon import</li></ul>',
+ 'Taxon page layout was changed to make more effective use of space:
+  <ul>
+  	<li>Classification tree is tucked away as is done on every LifeDesk front page</li>
+    <li>Action links are placed where most appropriate (<em>e.g.</em> "Edit name" links added beside every taxonomic name on the page for direct entry into the name editing interface in the classification editor)</li>
+  </ul>'),
+);
+
+$versions[] = array(
+  'field_releaseversion' => '2.17',
+  'field_releasedate' => 'November 10, 2009',
+  'field_bugfixes' => array(
+	'EOL Content Partner export received some fixes: all references tagged with taxon names are now properly produced, user-created chapter titles are now included in the export along with the <a href="http://wiki.tdwg.org/twiki/bin/view/SPM/WebHome">Species Profile Model</a> chapter headings, and a bug that failed to produce all chapter content was fixed'),
+  'field_newfeatures' => array(
+	'Chapter configuration tool received an upgrade. It is now easier to manage taxon page chapter headings and descriptions',
+	'Rich text editing was enabled on front page text boxes, taxon page text, and the description text box for images',
+	'A system announcement box was added to the top, left side of every LifeDesk page. When we need to take sites offline for maintenance and upgrades, we will provide an informative warning message in this box in advance of the event',
+	'Biological flags on taxon names are now inserted into the EOL content partner export'),
+);
+
+$versions[] = array(
+  'field_releaseversion' => '2.16',
+  'field_releasedate' => 'October 29, 2009',
+  'field_bugfixes' => array(
+	'Automated production of EOL content partner document was fixed'),
+  'field_newfeatures' => array(
+	'PDFs of taxon pages can now be produced',
+	'Tabbed layout of the taxon description form was replaced with expandable fieldsets'),
+);
+
+  foreach($versions as $value) {
+	$node = new stdClass();
+	$node->type = 'lifedesk_releases';
+    $node->field_releaseversion[0]['value'] = $value['field_releaseversion'];
+    $node->field_releasedate[0]['value'] = $value['field_releasedate'];
+    foreach($value['field_bugfixes'] as $key => $bugfix) {
+	  $node->field_bugfixes[$key]['value'] = $bugfix;
+	  $node->field_bugfixes[$key]['format'] = 2;
+    }
+    foreach($value['field_newfeatures'] as $key => $newfeature) {
+	  $node->field_newfeatures[$key]['value'] = $newfeature;
+	  $node->field_newfeatures[$key]['format'] = 2;
+    }
+    $node->title = 'LifeDesk Release: ' . $value['field_releaseversion'];
+    $node->status = 1;
+    $node->op = t('Save');
+
+    node_save($node);
+  }
+
+}

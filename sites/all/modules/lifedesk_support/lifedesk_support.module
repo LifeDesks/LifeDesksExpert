@@ -1,0 +1,52 @@
+<?php
+
+/**
+ * Implementation of hook_init
+ */
+function lifedesk_support_init() {
+  global $user;
+
+  // Catch user/*/delete request
+  if (preg_match('#^user/([0-9]+)/delete#', $_GET['q'], $matches)) {
+    $uid = (int)$matches[1];
+    $ldsupport = variable_get('lifedesk_support', 0);
+    if ($uid == $ldsupport) {
+      drupal_set_message(t('Oops! User #@uid cannot be deleted!', array('@uid' => $uid)), 'error');
+      drupal_goto('<front>');
+    }
+  }
+
+  // Catch delete requests from user administration.
+  if (strpos($_GET['q'], 'admin/user/user') === 0) {
+    if (!empty($_POST['accounts']) && isset($_POST['operation']) && ($_POST['operation'] == 'delete')) {
+	  $ldsupport = variable_get('lifedesk_support', 0);
+      if (isset($_POST['accounts'][$ldsupport])) {
+        drupal_set_message(t('Oops! User #@uid cannot be deleted!', array('@uid' => $uid)), 'error');
+        drupal_goto('<front>');
+      }
+    }
+  }
+}
+
+/**
+ * Implementation of hook_form_alter()
+ */
+function lifedesk_support_form_alter(&$form, $form_state, $form_id) {
+  global $user;
+  // Hide LifeDesk support user from admin/user/user listing
+  // Will mess up pager, but User module doesn't offer db rewrite option
+  $support_uid = variable_get('lifedesk_support', NULL);
+  if (!is_null($support_uid) && $user->uid !=1 && $user->uid != $support_uid) {
+    switch ($form_id) {
+      case 'user_admin_account':
+      case 'members_list_form':
+        $elements = array('name', 'status', 'active', 'roles', 'role', 'member_for', 'last_access', 'operations');
+        if (isset($form['accounts']['#options'][$support_uid])) unset($form['accounts']['#options'][$support_uid]);
+        foreach ($elements as $el) {
+          if (isset($form[$el][$support_uid])) unset($form[$el][$support_uid]);
+        }
+        break;
+    }
+    
+  }
+}

@@ -1,0 +1,10 @@
+name = "Deleted Sites"
+description = "Creates table and user interface to keep track of deleted sites."
+package = "LifeDesk"
+project = "deleted_sites"
+
+dependencies[] = "multisite_manager"
+
+core = 6.x
+
+version = "6.x-1.0"

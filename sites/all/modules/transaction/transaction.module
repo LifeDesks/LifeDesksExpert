@@ -1,0 +1,215 @@
+<?php
+// $Id: transaction.module,v 1.2 2009/03/09 18:38:29 straussd Exp $
+/**
+ * @file Provides a database transaction system for use with InnoDB tables
+ * in MySQL.
+ */
+
+/**
+ * Provides a nestable transaction system for handling commits and rollbacks.
+ *
+ * Although transactions can be nested, a rollback or commit from a nested
+ * transaction will cause it to propagate upwards.
+ */
+class Transaction {
+  /** The number of transactions that have been nested within this one. */
+  private static $Layers = 0;
+  
+  /** Will the commit be allowed? */
+  private static $AllowCommit = TRUE;
+
+  /**
+   * Create a new transaction.
+   */
+  public function __construct()
+  {
+    if (self::$Layers == 0)
+      db_query('BEGIN');
+    self::$Layers++;
+  }
+
+  /**
+   * Complete the transaction by either performing a commit or a rollback
+   * depending on the state of the object's allow_commit property.
+   */
+  public function __destruct()
+  {
+    self::$Layers--;     
+    if (self::$Layers == 0) {
+      if (self::$AllowCommit) {
+        db_query('COMMIT');
+      } else {
+        db_query('ROLLBACK'); 
+      }
+
+      // Reset the ROLLBACK propagator
+      self::$AllowCommit = TRUE;
+    }
+  }
+  
+  /**
+   * If the given value is FALSE (value AND type), roll back the current
+   * transaction.
+   *
+   * @param boolean $var Roll back the current transaction iff TRUE.
+   */
+  public static function rollbackIfFalse($var)
+  {
+    if ($var === FALSE) {
+       self::rollback();
+    }
+  }
+  
+  /**
+   * Force this transaction to roll back when finished.
+   */
+  public static function rollback()
+  {
+    self::$AllowCommit = FALSE;
+  }
+  
+  /**
+   * Will this transaction roll back instead of committing?
+   *
+   * @return boolean TRUE if the transaction will roll back, FALSE if it
+   *         will commit.
+   */
+  public static function willRollback()
+  {
+    return !self::$AllowCommit;
+  }
+}
+
+/**
+ * Utility function that abstracts transactionalized updates or inserts
+ * on a single row.
+ *
+ * @param string $table (required) The un-prefixed table name without curly 
+ *        braces.
+ * @param mixed $key_field (required) The name(s) of the column(s) to use when
+ *        identifying the row to update. If only a single column is being used
+ *        to select the row, this may be a string. If more than one column
+ *        is being used, this must be an array of strings.
+ *        If this operation is an update, these columns must be present as keys
+ *        in $fields with their desired WHERE = values.
+ * @param array $fields An associative array mapping column names (keys) to
+ *        the values to be inserted/updated. For updates, only the columns
+ *        with updated values need to be in this array.
+ *
+ * @return mixed  
+ */
+function transaction_update($table, $key_field, $fields) {
+  $txn = new Transaction();
+
+  // Accept a string if the key field is one column
+  $return_simple_key_field = FALSE;
+  if (!is_array($key_field)) {
+    $return_simple_key_field = TRUE;
+    $key_field = array($key_field);
+  }
+  
+  // Convert a passed object to an array
+  $fields = (array) $fields;
+  
+  // Check if key columns are specified
+  $key_field_set = TRUE;
+  foreach ($key_field as $column) {
+    if (!array_key_exists($column, $fields)) {
+      $key_field_set = FALSE;
+    }
+  }
+  
+  // Update
+  if ($key_field_set) {
+    $sql     = 'UPDATE {' . db_escape_table($table) . '} t SET ';
+    $where   = '';
+    $updates = array();
+    foreach ($fields as $key => $value) {
+      if (!in_array($key, $key_field)) {
+        if ($value !== NULL) {
+          $updates[] = 't.' . $key . ' = "' . db_escape_string($value) . '"';
+        }
+        else {
+          $updates[] = 't.' . $key . ' = NULL';
+        }
+      }
+    }
+    $sql .= implode(',', $updates) . ' ';
+    $where .= ' WHERE 1 ';
+    
+    foreach ($key_field as $column) {
+      if ($fields[$column] !== NULL) {
+        $where .= 'AND ' . $column . ' = "' . $fields[$column] . '" ';
+      }
+      else {
+        $where .= 'AND ' . $column . ' IS NULL ';
+      }
+    }
+    
+    $sql .= $where;
+        
+    db_query($sql);
+    
+    // Return if we've actually updated something
+    if (db_affected_rows()) {
+      // If we were passed a simple key, return the same
+      if ($return_simple_key_field) {
+        return $fields[$key_field[0]];
+      }
+    
+      $return_fields = array();
+      foreach ($key_field as $column) {
+        $return_fields[$column] = $fields[$column];
+      }
+      return $return_fields;
+    }
+    
+    // Return if there was nothing to change, but the row actually exists
+    $sql = 'SELECT COUNT(*) FROM {' . db_escape_table($table) . '} ' . $where;
+    $exists = db_result(db_query($sql, 0, 1));    
+    if ($exists) {
+      $return_fields = array();
+      foreach ($key_field as $column) {
+        $return_fields[$column] = $fields[$column];
+      }
+      return $return_fields;
+    }
+  }
+  else {
+    // We can't autogenerate if the key is more than one column
+    if (count($key_field) > 1) {
+      return FALSE;
+    }
+  }
+  
+  // Insert
+  $sql = 'INSERT INTO {' . db_escape_table($table) . '} ';
+  $keys = array_keys($fields);
+  $values = array();
+  foreach ($fields as $key => $value) {
+    if ($value !== NULL) {
+      $values[] = '"' . db_escape_string($value) . '"';
+    }
+    else {
+      $values[] = 'NULL';
+    }
+  }
+  $sql .= '({' . db_escape_table($table) . '}.' . implode(',{' . db_escape_table($table) . '}.', $keys) . ') ';
+  $sql .= 'VALUES (' . implode(',', $values) . ')';
+  db_query($sql);
+  
+  if (!$key_field_set) {
+    $fields[$key_field[0]] = db_last_insert_id($table, $key_field[0]);
+  }
+
+  // If we were passed a scalar key, return the key of the new row as a scalar
+  if ($return_simple_key_field) {
+    return $fields[$key_field[0]];
+  }
+
+  $return_fields = array();
+  foreach ($key_field as $column) {
+    $return_fields[$column] = $fields[$column];
+  }
+  return $return_fields;
+}

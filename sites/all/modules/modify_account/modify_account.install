@@ -1,0 +1,490 @@
+<?php
+// $Id
+
+function modify_account_install() {
+  db_query("ALTER TABLE {users} ADD givenname VARCHAR(100) AFTER name;");
+  db_query("ALTER TABLE {users} ADD surname VARCHAR(100) AFTER givenname;");
+  variable_set('user_register', 2);
+  variable_set('user_signatures', 1);
+  variable_set('user_pictures',1);
+  variable_set('user_picture_path','pictures');
+  $image = drupal_get_path('module', 'modify_account') .'/images/defaultUser.gif';
+  variable_set('user_picture_default',$image);
+  variable_set('user_picture_dimensions', '200X200');
+  variable_set('user_picture_file_size', 200);
+  variable_set('upload_uploadsize_default', '5');  //default maximum file size per upload is set to 5MB
+  variable_set('upload_usersize_default', '10240');  //default total file size per user is det to 10GB
+
+  //add a new profile field and make it required in user registration
+  db_query("INSERT INTO {profile_fields} (title,name,category,type,weight,required,register,visibility,autocomplete) VALUES ('%s','%s','%s','%s',%d,%d,%d,%d,%d)",'Background','profile_background','Personal Information','textarea',0,1,1,2,0); 
+}
+
+function modify_account_uninstall() {
+  db_query("ALTER TABLE {users} DROP givenname;");
+  db_query("ALTER TABLE {users} DROP surname;");
+  db_query("DELETE FROM {profile_fields} WHERE name = 'profile_background'");
+  
+  variable_del('user_register');
+  variable_del('user_signatures');
+  variable_del('user_pictures');
+  variable_del('user_picture_path');
+  variable_del('user_picture_default');
+  variable_del('user_picture_dimensions');
+  variable_del('user_picture_file_size');
+}
+
+function modify_account_update_6100() {
+  $ret = array();
+
+  //new request account email message
+  $message_approval = t('Someone has requested a new account in your !site LifeDesk.') . "\n\n" . t('The account name provided is !username and its activation is pending your approval.') . "\n\n" . t('View proposed account: !edit_uri');
+  variable_set('user_mail_register_pending_approval_admin_subject', t('New account request in your LifeDesk'));
+  variable_set('user_mail_register_pending_approval_admin_body',$message_approval);
+
+  $ret[] = update_sql("INSERT INTO {profile_fields} (title,name,category,type,weight,required,register,visibility,autocomplete) VALUES ('Background','profile_background','Personal Information','textarea',0,TRUE,TRUE,2,FALSE)");
+  return $ret;	
+}
+
+function modify_account_update_6102() {
+  $ret = array();
+  
+  //file upload limits & user quota for file upload
+  variable_set('upload_uploadsize_default', '5');  //default maximum file size per upload is set to 5MB
+  variable_set('upload_usersize_default', '10240');  //default total file size per user is det to 10GB
+	
+  return $ret;	
+}
+
+function modify_account_update_6103() {
+  $ret = array();
+  
+  //jQuery update variables
+  variable_set('jquery_update_replace',false);
+  variable_set('jquery_update_compression_type', 'min');
+
+  //turn off error reporting
+  variable_set('error_level',0);
+  
+  // Create default variable 'image_node_types' for image upload if doesn't exists (prevents 403 errors) 
+  $image_node_types  = variable_get('image_node_types', array());
+  if (empty($image_node_types['image'])) {
+    $image_node_types['image'] = array(
+      'title' => 'Image',
+      'fieldname' => 'images',
+      'image_selection' => 'preview', // best choice I think; can be changed in admin menu
+      'imagecache_preset' => '',
+    );
+    variable_set('image_node_types', $image_node_types);
+  }
+
+  //allowed html tags
+  variable_set('filter_html_1','1');
+  variable_set('allowed_html_1','<a> <em> <strong> <cite> <code> <ul> <ol> <li> <dl> <dt> <dd> <p> <img>');
+	
+  return $ret;	
+}
+
+function modify_account_update_6104() {
+  $ret = array();
+
+  //sneak some variables in this update :)
+  $content_types = array('image','taxon_description');
+
+  foreach($content_types as $content_type) {
+	  variable_set('comment_'.$content_type,'2');
+	  variable_set('comment_default_mode_'.$content_type,'3');
+	  variable_set('comment_default_order_'.$content_type,'1');
+	  variable_set('comment_default_per_page_'.$content_type,'30');
+	  variable_set('comment_controls_'.$content_type,'3');
+	  variable_set('comment_anonymous_'.$content_type,0);
+	  variable_set('comment_subject_field_'.$content_type,'1');
+	  variable_set('comment_preview_'.$content_type,'1');
+	  variable_set('comment_form_location_'.$content_type,'1');
+  }
+
+  $ret[] = update_sql("UPDATE {node} SET comment=2");
+ 
+  //update new account requested email message to clarify that owner has to login prior to checking new account
+  //new request account email message
+  global $conf;
+  $message_approval =  t("A new user with username: !username, and email: !mailto requested an account on your LifeDesk !site. Activation of !username's account is pending your approval.") . "\n\n" . t("To view and activate the account, log in to your LifeDesk: !uri and edit !username's profile (!edit_uri), selecting 'active' under account status.") . "\n\n" . t("For further information on activating new user accounts in your LifeDesk, please visit http://help." . $conf['_lifedesks_domain'] . "/members/new.");
+  variable_set('user_mail_register_pending_approval_admin_subject', t('A new user (!username) has requested an account on your !site LifeDesk.'));
+  variable_set('user_mail_register_pending_approval_admin_body',$message_approval);
+  
+  //check to see if permissions_api modules installed, if not install it
+  $permissions_api_status = db_result(db_query("SELECT status FROM system WHERE type = 'module' AND name = 'permissions_api'"));
+  if($permissions_api_status < 1) {
+    module_rebuild_cache();
+    $mods = array('permissions_api');
+    drupal_install_modules($mods);
+  }
+  //remove all permissions regardless of role, and existing custom roles and associations with users 
+  $roles = db_query("SELECT rid, name FROM {role}");
+  while ($role = db_fetch_array($roles)) {
+    if($role['name'] <> 'anonymous user' && $role['name'] <> 'authenticated user') {
+      $ret[] = update_sql("DELETE FROM {role} WHERE rid = ". $role['rid']);
+      $ret[] = update_sql("DELETE FROM {users_roles} WHERE rid = ".$role['rid']);     
+    } else {
+      /* following removes perms but not records but grant permissions adds new record if perms empty so don't use following, just delete records anyway
+       * $role_permissions = permissions_get_permissions_for_role($role['name']);
+       * permissions_revoke_permissions($role['name'], $role_permissions);
+       */
+    }
+    $ret[] = update_sql("DELETE FROM {permission} WHERE rid = ".$role['rid']);
+  }
+  
+  //update perms and add new custom default roles
+  $permissions = array();
+  //anonymous user permissions
+  $permissions['anonymous user'] = array(
+    'access content',
+    'view revisions',
+    'view uploaded files',
+    'access user profiles',
+    'access biblio content',
+    'show export links',
+    'show download links',
+    'show filter tab',
+    'show sort links',
+    'view full text',
+    'view user content list',
+    'view original images',
+    'view taxon description',
+    'access comments',
+    'inspect all votes',
+    'vote on polls'
+  );
+  $permissions['authenticated user'] = array(
+    'post comments',
+    'post comments without approval',
+    'cancel own vote',
+    'change own username'
+  );
+  $permissions['contributor'] = array(
+    'create page content',
+    'create story content',
+    'delete own page content',
+    'delete own story content',
+    'edit own page content',
+    'edit own story content',
+    'revert revisions',
+    'upload files',
+    'create biblio',
+    'edit own biblio entries',
+    'import from file',
+    'show own download links',
+    'access classification pages',
+    'create images',
+    'edit own images',
+    'mass upload images',
+    'edit captions',
+    'filter and manage orphaned content',
+    'override image published option',
+    'override taxon_description published option',
+    'create taxon description',
+    'edit own taxon description',
+    'delete own taxon description',
+    'export template',
+    'import content',
+    'create poll content',
+    'delete own poll content',
+    'edit own poll content'
+  );
+  $permissions['editor'] = array(
+    'delete revisions',
+    'edit any page content',
+    'edit any story content',
+    'access administration pages',
+    'administer taxonomy',
+    'edit all biblio entries',
+    'edit biblio authors',
+    'create classification',
+    'import classification',
+    'edit classification',
+    'delete classification',
+    'export classification',
+    'filter and manage site content',
+    'edit images',
+    'edit any taxon description',
+    'edit any poll content'
+  );
+  $permissions['administrator'] = array(
+    'administer menu',
+    'delete any page content',
+    'delete any story content',
+    'administer biblio',
+    'settings for catalog',
+    'settings for classification',
+    'administer modules',
+    'administer site information',
+    'administer themes',
+    'administer users',
+    'administer user profile fields',
+    'create users',
+    'delete users with role contributor',
+    'delete users with role editor',
+    'edit users with role contributor',
+    'edit users with role editor',
+    'display site building menu',
+    'administer frontpage',
+    'manage site',
+    'perform backup',
+    'perform export',
+    'assign contributor role',
+    'assign editor role',
+    'delete any taxon description',
+    'administer taxon description',
+    'administer taxon pages',
+    'export taxon content',
+    'delete any poll content'
+  );
+  $permissions['owner'] = array(
+    'delete users with role administrator',
+    'edit users with role administrator',
+    'edit users with role owner',
+    'delete site',
+    'assign administrator role',
+  );
+  foreach($permissions as $role => $perms) {
+    if($role != 'anonymous user' && $role != 'authenticated user') {
+      $ret[] = update_sql("INSERT INTO {role} (name) VALUES ('".$role."')");
+    }
+    permissions_grant_permissions($role, $perms);
+  }
+  //authenticated user inherits all anonymous user role perms
+  permissions_role_inherit('authenticated user', 'anonymous user');
+  //contributor inherits authenticated user perms
+  permissions_role_inherit('contributor', 'authenticated user');
+  //editor inherits all contributor perms
+  permissions_role_inherit('editor', 'contributor');
+  //administrator inherits all editor perms
+  permissions_role_inherit('administrator', 'editor');
+  //owner inherits all administrator perms
+  permissions_role_inherit('owner', 'administrator');
+  
+  // Changing super admin
+  // Copy site owner name first
+  $owner = db_result(db_query("SELECT name FROM users WHERE uid = 1"));
+  // Duplicate the site owner's record but save the name as 'temp' because it should be unique in database
+  $ret[] = update_sql("INSERT INTO {users} (name, givenname, surname, pass, mail, mode, sort, threshold, theme, signature, created, access, login, status, timezone, language, picture, init, data) SELECT 'temporarysiteownerid', givenname, surname, pass, mail, mode, sort, threshold, theme, signature, created, access, login, status, timezone, language, picture, init, data FROM users WHERE uid = 1");
+  // Update data for uid = 1 to become a Super admin.
+  $ret[] = update_sql("UPDATE {users} SET name = 'ldsuperadmin', givenname = 'LifeDesks', surname = 'Team', pass = 'eada8aedf7610b140f3847b3b7b69681', mail = 'lifedesks@eol.org', signature = '', picture = '', init = '', data = '' WHERE uid = 1");
+  // Get the site owner's new uid.
+  $newuid = db_result(db_query("SELECT uid FROM {users} WHERE name = 'temporarysiteownerid'"));
+  // Rename the the site owner's temporary name to the correct one. 
+  $ret[] = update_sql("UPDATE {users} SET name = '" . $owner . "' WHERE uid = " . $newuid);
+  // SET variable 'site_owner_uid' to fetch information about the site owner
+  variable_set("site_owner_uid", $newuid);
+  
+  $update_tables = array('sessions', 'profile_values', 'poll_votes', 'node_revisions', 'node_comment_statistics', 'node', 'history', 'files', 'comments', 'classification_log', 'captcha_sessions', 'biblio_contributor_data', 'authmap');
+  foreach($update_tables as $table) {
+    if (db_table_exists($table)) {
+      switch($table) {
+        case 'biblio_contributor_data':
+          $ret[] = update_sql("UPDATE {".$table."} SET drupal_uid = ".$newuid." WHERE drupal_uid = 1");
+          break;
+        case 'node_comment_statistics':
+          $ret[] = update_sql("UPDATE {".$table."} SET last_comment_uid = ".$newuid." WHERE last_comment_uid = 1");
+          break;
+        default: 
+          $ret[] = update_sql("UPDATE {".$table."} SET uid = ".$newuid." WHERE uid = 1");
+          break;
+      }
+    }
+  }
+  
+  //Setting user roles
+  //get role ids
+  $contributor_rid = db_result(db_query("SELECT rid FROM role WHERE name = 'contributor'"));
+  $administrator_rid = db_result(db_query("SELECT rid FROM role WHERE name = 'administrator'"));
+  $owner_rid = db_result(db_query("SELECT rid FROM role WHERE name = 'owner'"));
+  //set all users as contributor
+  $users = db_query("SELECT uid FROM users WHERE uid > 1");
+  while($uid = db_result($users)) {
+    $ret[] =  update_sql("INSERT INTO users_roles (rid,uid) VALUES (".$contributor_rid.",".$uid.")");
+  }
+  //update site owner to have owner role
+  //$ret[] =  update_sql("UPDATE users_roles SET rid = ".$administrator_rid." WHERE uid = ".$newuid);
+  $ret[] =  update_sql("UPDATE users_roles SET rid = ".$owner_rid." WHERE uid = ".$newuid);
+  
+  //check to see if path_redirect installed otherwise install it
+  $path_redirect_status = db_result(db_query("SELECT status FROM system WHERE type = 'module' AND name = 'path_redirect'"));
+  if($path_redirect_status < 1) {
+    module_rebuild_cache();
+    $mods = array('path_redirect');
+    drupal_install_modules($mods);
+  }
+  //set default variables
+  variable_set('path_redirect_redirect_warning',0);
+  variable_set('path_redirect_allow_bypass',0);
+  variable_set('path_redirect_auto_redirect',1);
+  variable_set('path_redirect_purge_inactive',0);
+  variable_set('path_redirect_default_status',301);
+  //add redirect
+  $ret[] =  update_sql("INSERT INTO path_redirect (path,redirect) VALUES ('user/1', 'user/".$newuid."')");
+  return $ret;	
+}
+
+function modify_account_update_6105() {
+  $ret = array();
+  $ret[] = update_sql('DELETE FROM {sessions}');
+  return $ret;
+}
+
+function modify_account_update_6106() {
+	
+	//load permissions_api.module as include because invoking 'permissions_grant_permissions' function doesn't work with multisite update
+	module_load_include('module','permissions_api');
+	
+	$ret = array();
+	
+	$permissions['contributor'] = array(
+      'override image published option',
+      'override taxon_description published option',
+      'override page published option',
+      'override story published option',
+    );
+    $permissions['editor'] = array(
+      'override image published option',
+      'override taxon_description published option',
+      'override page published option',
+      'override story published option',
+    );
+    $permissions['administrator'] = array(
+      'override image published option',
+      'override taxon_description published option',
+      'override page published option',
+      'override story published option',
+    );
+    $permissions['owner'] = array(
+      'override image published option',
+      'override taxon_description published option',
+      'override page published option',
+      'override story published option',
+    );
+
+    foreach($permissions as $role => $perms) {
+	  permissions_grant_permissions($role, $perms);
+    }
+
+	return $ret;
+}
+
+function modify_account_update_6107() {
+	//load permissions_api.module as include because invoking 'permissions_grant_permissions' function doesn't work with multisite update
+	module_load_include('module','permissions_api');
+	
+	$ret = array();
+
+    $permissions['administrator'] = array(
+      'share classification',
+    );
+
+    $permissions['owner'] = array(
+      'share classification',
+    );
+
+    foreach($permissions as $role => $perms) {
+	  permissions_grant_permissions($role, $perms);
+    }
+
+	return $ret;
+}
+
+function modify_account_update_6108() {
+	
+  $ret = array();
+
+  //update perms
+  module_load_include('module','permissions_api');
+  $permissions = array();
+
+  //anonymous user permissions
+  $permissions['anonymous user'] = array(
+    'search content',
+  );
+  $permissions['authenticated user'] = array(
+    'search content',
+  );
+  $permissions['contributor'] = array(
+    'search content',
+  );
+  $permissions['editor'] = array(
+    'search content',
+  );
+  $permissions['administrator'] = array(
+    'search content',
+  );
+  $permissions['owner'] = array(
+    'search content',
+  );
+
+  foreach($permissions as $role => $perms) {
+    permissions_grant_permissions($role, $perms);
+  }
+
+  return $ret;
+}
+
+function modify_account_update_6109() {
+  $ret = array();
+
+  //update perms
+  module_load_include('module','permissions_api');
+  $revoke_permissions = array();
+
+  $revoke_permissions['contributor'] = array(
+    'delete own story content',
+    'edit own story content',
+    'override story published option'
+  );
+  $revoke_permissions['editor'] = array(
+    'edit own story content',
+    'edit any story content',
+    'delete own story content',
+    'override story published option'
+  );
+  $revoke_permissions['administrator'] = array(
+    'edit own story content',
+    'edit any story content',
+    'delete own story content',
+    'delete any story content',
+    'override story published option'
+  );
+  $revoke_permissions['owner'] = array(
+    'delete any story content',
+    'delete own story content',
+    'edit own story content',
+    'edit any story content',
+    'override story published option'
+  );
+
+  foreach($revoke_permissions as $role => $perms) {
+    permissions_revoke_permissions($role, $perms);
+  }
+
+  $add_permissions['editor'] = array(
+      'send invitations',
+	  'send mass invitations',
+	  'track invitations',
+	  'withdraw accepted invitations'
+  );
+  $add_permissions['administrator'] = array(
+	  'send invitations',
+	  'send mass invitations',
+	  'track invitations',
+	  'withdraw accepted invitations'
+  );
+  $add_permissions['owner'] = array(
+	  'send invitations',
+	  'send mass invitations',
+	  'track invitations',
+	  'withdraw accepted invitations'
+  );
+
+  foreach($add_permissions as $role => $perms) {
+    permissions_grant_permissions($role, $perms);	
+  }
+
+  return $ret;	
+}

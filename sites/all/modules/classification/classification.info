@@ -1,0 +1,13 @@
+name = Classification
+description = "Makes it possible to import, edit, and export biological classifications."
+package = "LifeDesk"
+project = "classification"
+
+dependencies[] = taxonomy
+dependencies[] = jquery_update
+dependencies[] = jstree
+dependencies[] = transaction
+
+core = 6.x
+
+version = "6.x-6108"

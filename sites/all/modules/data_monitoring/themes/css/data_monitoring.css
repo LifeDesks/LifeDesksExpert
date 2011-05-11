@@ -1,0 +1,198 @@
+/**
+ * form#data-monitoring-form-monitors
+ * form#data-monitoring-form-monitor
+ * form#data-monitoring-form-response
+ *
+ * table#data-monitoring-monitors,
+ * table#data-monitoring-responses,
+ * table#data-monitoring-monitor-logs,
+ * table#data-monitoring-response-result
+ */
+form.data-monitoring ul.pager {
+  float: right;
+}
+form.data-monitoring fieldset {
+  border: 1px solid #ccc;
+}
+form.data-monitoring fieldset.collapsed {
+  border: none;
+  margin-left: 0;
+  padding-left: 0;
+}
+form.data-monitoring fieldset .fieldset-wrapper {
+  margin: 0 1em 1em;
+}
+table.data-monitoring {
+  border-collapse: collapse;
+  border-top: 1px solid #ccc;
+}
+table.data-monitoring tr:hover {
+  background-color: #cce5ff;
+}
+table.data-monitoring th,
+table.data-monitoring td {
+  padding: 5px 6px 1px;
+}
+table.data-monitoring th a {
+  text-decoration: none;
+}
+table.data-monitoring td {
+  vertical-align: top;
+}
+table#data-monitoring-monitors th.monitor {
+  width: 40%;
+}
+table#data-monitoring-monitors th.processed {
+  min-width: 10%;
+}
+table#data-monitoring-monitors td img {
+  vertical-align: top;
+  margin: 0 3px;
+}
+table#data-monitoring-monitors .monitor-name {
+  font-weight: bold;
+}
+table#data-monitoring-monitors .monitor-description {
+  margin: 0.5em 1em 0.5em 0;
+}
+table#data-monitoring-monitors td.processed,
+table#data-monitoring-monitors td.log-file {
+  font-size: 0.9em;
+}
+table#data-monitoring-monitors .hidden {
+  display: none;
+}
+table#data-monitoring-monitors .hovering {
+  cursor: pointer;
+}
+form#data-monitoring-form-monitors #edit-age-wrapper label {
+  float: left;
+  margin-right: 0.5em;
+}
+#content #data-monitoring-form-monitors ul.pager {
+  text-align: right;
+}
+
+/**
+form#data-monitoring-form-monitors fieldset#monitor-filter {
+  border: 1px solid #ccc;
+}
+form#data-monitoring-form-monitors fieldset#monitor-filter.collapsed {
+  border-width: 1px 0 0 0;
+}
+form#data-monitoring-form-monitors fieldset#monitor-filter
+form#data-monitoring-form-monitors fieldset#monitor-filter select,
+form#data-monitoring-form-monitors fieldset#monitor-filter input,
+form#data-monitoring-form-monitors fieldset#monitor-filter div {
+  float: left;
+  margin: 0 0 0 5px;
+}*/
+
+div#data-monitoring-monitors-filters {
+  margin-right: 30px;
+  float: right;
+  text-align: right;
+}
+div#data-monitoring-monitors-filters input.form-submit {
+  margin-bottom: 0;
+  background-color: transparent;
+  border-bottom: 1px solid #fff;
+  margin-bottom: -1px;
+}
+div#data-monitoring-monitors-filters input.form-submit.off {
+  border-bottom: 1px solid #ccc;
+  background-color: #ccc;
+}
+
+/** Monitor **/
+table.data-monitoring tr.response-logs {
+  border-top: none;
+  padding-top: 0;
+  position: relative;
+}
+table.data-monitoring table {
+  margin-top: 0;
+  margin-bottom: 30px;
+  width: 95%;
+  float: right;
+  color: #717171;
+  border-top-width: 2px;
+}
+table#data-monitoring-monitor-logs thead th {
+  border-bottom: 3px solid #99bbcc;
+}
+table#data-monitoring-monitor-logs tbody {
+
+}
+table#data-monitoring-monitor-logs .odd,
+table#data-monitoring-monitor-logs .even {
+  background-color: #cce5ff;
+  border-bottom: 2px solid #fff;
+}
+table#data-monitoring-monitor-logs tr:hover {
+  background-color: #fff;
+}
+table#data-monitoring-monitor-logs tr.has-responses {
+  border-bottom: 1px solid #cce5ff;
+}
+table#data-monitoring-monitor-logs tr.has-responses,
+table#data-monitoring-monitor-logs tr.response-logs {
+  background-color: #eee;
+}
+table#data-monitoring-monitor-logs tr.response-logs {
+  border-bottom: 2px solid #cce5ff;
+}
+table#data-monitoring-response-logs {
+  border: none;
+}
+table#data-monitoring-response-logs thead th {
+  font-weight: normal;
+  border-bottom-width: 1px;
+}
+table#data-monitoring-response-logs .odd,
+table#data-monitoring-response-logs .even {
+  background-color: #eee;
+}
+
+/** Responses **/
+form#data-monitoring-form-responses div#monitor {
+  border: 1px solid #ccc;
+  background-color: #eee;
+  margin-top: 20px;
+}
+form#data-monitoring-form-responses div#monitor h2,
+form#data-monitoring-form-responses div#monitor p {
+  margin-left: 20px;
+  margin-right: 20px;
+}
+form#data-monitoring-form-responses div#monitor h2 {
+  margin-top: 20px;
+}
+form#data-monitoring-form-responses fieldset {
+  margin-top: 30px;
+  margin-bottom: 20px;
+  border: 1px solid #ccc;
+}
+form#data-monitoring-form-responses fieldset.collapsed {
+  margin-left: 0;
+  padding-left: 0;
+  border: none;
+}
+table#data-monitoring-responses {
+
+}
+table#data-monitoring-responses tr.description {
+  border-bottom: 1px dotted #ccc;
+}
+table#data-monitoring-responses tr.result {
+  border-bottom: 2px solid #666;
+}
+table#data-monitoring-responses tr.state-2,
+table#data-monitoring-responses tr.state-2 a {
+  color: red;
+}
+
+/** Emails **/
+.email .monitor {
+  border-bottom: 1px solid #ccc;
+}

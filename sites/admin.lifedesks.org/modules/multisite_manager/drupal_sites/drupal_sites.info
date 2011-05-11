@@ -1,0 +1,11 @@
+name = "Drupal Sites Admin"
+description = "Creates tables for public, frontend sign-up form and a one-click table listing to pre-fill the node form to create a Drupal site."
+package = "LifeDesk"
+project = "drupal_sites"
+
+dependencies[] = "multisite_manager"
+dependencies[] = "db_switch"
+
+core = 6.x
+
+version = "6.x-1.0"

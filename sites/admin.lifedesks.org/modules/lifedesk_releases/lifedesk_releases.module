@@ -1,0 +1,54 @@
+<?php
+
+function lifedesk_releases_menu() {
+  $items['lifedesk-releases'] = array(
+    'page callback' => 'lifedesk_releases_list',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+function lifedesk_releases_form_alter(&$form, $form_state, $form_id) {
+	if($form['form_id']['#value'] == 'lifedesk_releases_node_form') {
+	  unset($form['menu'], $form['revision_information'], $form['comment_settings']);
+	
+	  $form['lifedesk_releases_instructions'] = array(
+	    '#type' => 'markup',
+	    '#value' => '<div class="messages status">' . t('Published releases automatically appear on !link', array('!link' => l('http://www.lifedesks.org/newreleases', 'http://www.lifedesks.org/newreleases', array('attributes' => array('target' => '_blank'))))) . '</div>',
+	    '#weight' => -20
+	  );
+	
+	  return $form;
+	}
+}
+
+function lifedesk_releases_list() {
+	
+	$releases = array();
+	
+	$qry = db_query("SELECT nid FROM {node} WHERE type='lifedesk_releases'");
+	
+	while($node = db_fetch_object($qry)) {
+	  $data = node_load(array('nid' => $node->nid, 'status' => 1));
+	  if($data) {
+		  $releases[$data->field_releaseversion[0]['value']] = array(
+		    'version' => $data->field_releaseversion[0]['value'],
+		    'release_date' => $data->field_releasedate[0]['value'],
+		    'published_date' => $data->created,
+		    'bug_fixes' => $data->field_bugfixes,
+		    'new_features' => $data->field_newfeatures,
+		  );	
+	  }
+	}
+	
+	arsort($releases);
+	
+	$releases = array_values($releases);
+	
+	$return['releases'] = $releases;
+	
+	$return = json_encode($return);
+
+    echo $return;
+}

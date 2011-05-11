@@ -1,0 +1,107 @@
+<?php
+
+/**
+ * Implementation of hook_user
+ */
+function classification_notifications_user($type, &$edit, &$user, $category = NULL) {
+ 	if ($type == 'form' && $category == 'account' ) {
+		if (user_access('edit classification')) {
+			$form['notifications_fieldset'] = array(
+			  '#type' => 'fieldset',
+			  '#title' => t('Notifications'),
+			  '#weight' => 6,
+		      '#collapsible' => TRUE,
+		      '#collapsed' => TRUE,
+			);
+		    $form['notifications_fieldset']['classification_delete_notification'] = array(
+			  '#type' => 'checkbox',
+			  '#title' => t('Receive email notification when content you submitted becomes orphaned because its associated taxonomic name is deleted'),
+			  '#default_value' => isset($user->classification_delete_notification) ? $user->classification_delete_notification : 1,
+			);
+			return $form;	
+		}
+	  }
+}
+
+/**
+* Implementation of hook_menu
+*/
+function classification_notifications_menu() {
+	$items['admin/settings/classification_notifications'] = array(
+      'title' => t('Classification Notifications settings'),
+      'description' => 'Configure notifications about classifications sent to affected uses.',
+      'type' => MENU_NORMAL_ITEM,
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('classification_notifications_settings'),
+      'access arguments' => array('settings for classification'),
+      'file' => 'classification_notifications.admin.inc',
+    );
+
+	return $items;
+}
+
+/**
+* Implementation of hook_cron
+*/
+function classification_notifications_cron() {
+
+	$lastrun = variable_get('classification_notifications_cron_lastrun', 0);
+	$interval = variable_get('classification_notifications_cron_interval', 7);
+	$nextrun = $lastrun + (24 * 60 * 60 * $interval); // days
+	
+	if (time() > $nextrun) {
+		variable_set('classification_notifications_cron_lastrun', time());
+		global $base_url;
+
+		$classification_deletions = variable_get("classification_deletions", 0);
+		$from = variable_get('site_mail', 'lifedesk@eol.org');
+		$site_name = variable_get("site_name", "Drupal Site");
+	
+		$qry = db_query("SELECT DISTINCT
+	          n.uid, td.name
+	        FROM 
+	         {term_data} td 
+	        INNER JOIN 
+	         {term_node} tn ON (td.tid = tn.tid) 
+	        INNER JOIN 
+	         {node} n ON (tn.nid = n.nid)
+	        WHERE td.vid = %d", $classification_deletions);
+		$taxa = array();
+		while($result = db_fetch_array($qry)) {
+			$taxa[$result['uid']][] = $result['name'];
+		}
+
+		foreach($taxa as $uid => $value) {
+			$user = user_load($uid);
+			if(!isset($user->classification_delete_notification) || (isset($user->classification_delete_notification) && $user->classification_delete_notification == 1)) {
+				$variables = array(
+					'!user' => $user->givenname . ' ' . $user->surname,
+					'!site_url' => $base_url,
+					'!site_name' => $site_name,
+					'!taxa' => implode("\n", $value),
+					'!classification_editor' => url('admin/classification/biological/edit/' . $classification_deletions, array('absolute' => true)),
+					'!classification_logs' => url('admin/classification/biological/logs', array('absolute' => true)),
+					'!ocmf' => url('user/' . $uid . '/ocmf', array('absolute' => true)),
+					'!user_url' => url('user/' . $uid . '/edit', array('absolute' => true)),
+					'!help_url' => url('http://help.lifedesks.org/contact', array('absolute' => true)),
+				);
+				$default = t("Dear !user,\n\nIn a regular, automated check of your LifeDesk !site_name at !site_url, we have detected at least one deleted taxonomic name that has associated content. This may or may not be a problem.\n\nYou have several options to resolve this conflict:\n\n1. If the name was deleted in error and you have permission to access the classification editor located at !classification_editor, you can restore the name by dragging/dropping from the Alternative \"Deleted Names\" classification on the right to the main classification on the left. You can also visit your site's classification logs at !classification_logs\n\n2. You can move (re-associate) the content with a taxonomic name that has not been deleted. Use your account interface's \"Orphaned Content\" tool at !ocmf\n\n3. If you no longer need the content, you can use this same \"Orphaned Content\" tool to delete it.\n\nYou will periodically receive this notice as long as there are deleted taxonomic names in your Deleted Names classification for which you have associated content. To disable this notification, visit your account at !user_url and deselect \"Receive email notification when content you submitted becomes orphaned when its associated taxonomic name is deleted\" checkbox under \"Notifications\".\n\nTo ask a question about this notification, please visit !help_url.\n\nThe deleted taxonomic names are as follows:\n\n!taxa\n\n- The LifeDesks Team");
+				$params['subject'] = t("LifeDesks: Deleted Taxonomic Names");
+				$params['body'] = t(variable_get("classifications_notifications_mail", $default), $variables);
+				drupal_mail('classification_notifications', 'direct', $user->mail, user_preferred_language($user), $params, $from);
+			}
+		}
+	}
+}
+
+/**
+ * Implementation of hook_mail
+ */
+function classification_notifications_mail($key, &$message, $params) {
+  switch($key) {
+    case 'direct':
+      $message['subject'] = $params['subject'];
+      $message['body'][] = $params['body'];
+    break;
+  }
+}

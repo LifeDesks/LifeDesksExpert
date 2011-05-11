@@ -1,0 +1,609 @@
+<?php
+// $Id$
+/**
+ * @file
+ * Install and uninstall scripts for Data monitoring module.
+ */
+/**
+ * Implementation of hook_install().
+ */
+function data_monitoring_install() {
+  drupal_install_schema('data_monitoring');
+}
+/**
+ * Implementation of hook_schema().
+ */
+function data_monitoring_schema() {
+  $schema['data_monitoring_monitors'] = array(
+    'description' => 'Stores the general data for a monitor.',
+    'fields' => array(
+      'dmid' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'The monitor ID, defined by the database.',
+      ),
+      'id' => array(
+        'type' => 'varchar',
+        'length' => '100',
+        'not null' => TRUE,
+        'description' => 'A unique identifier for the monitor. This is the primary field monitors are loaded from, and is used so that monitors may be internal and not necessarily in the database. May only be alphanumeric characters plus underscores.',
+      ),
+      'module' => array(
+        'type' => 'varchar',
+        'length' => '50',
+        'not null' => TRUE,
+        'description' => 'The name of the module that generated this monitor.',
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => '200',
+        'default' => '',
+        'not null' => TRUE,
+        'description' => 'The user friendly descriptive name of the monitor.',
+      ),
+      'description' => array(
+        'type' => 'text',
+        'size' => 'medium',
+        'default' => '',
+        'description' => 'A user friendly description of the monitor.',
+      ),
+      'query' => array(
+        'type' => 'text',
+        'size' => 'medium',
+        'not null' => TRUE,
+        'serialize' => TRUE,
+        'description' => 'Select query statement that will be used to return monitor result.',
+      ),
+    ),
+    'primary key' => array(
+      'dmid',
+    ),
+    'unique keys' => array(
+      'id_module' => array('id', 'module'),
+    ),
+  );
+
+  $schema['data_monitoring_log'] = array(
+    'description' => 'Stores monitoring results and execution times.',
+    'fields' => array(
+      'dmlid' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'A unique ID for a monitor log.',
+      ),
+      'dmid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The monitor to which these results apply.',
+      ),
+      'processed' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'UNIX timestamp for when the monitor was processed.',
+      ),
+      'result_count' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Count of records returned by monitor query.',
+      ),
+      'log_file' => array(
+        'description' => 'Path to the file containing detailed results, relative to Drupal root.',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => ''
+      ),
+      'responses_pending' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Count of responses waiting to be implemented for this log.',
+      ),
+      'responses_implemented' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Count of responses implemented for this log.',
+      ),
+    ),
+    'primary key' => array(
+      'dmlid',
+    ),
+  );
+
+  $schema['data_monitoring_response_log'] = array(
+    'description' => 'Stores monitor response information and results.',
+    'fields' => array(
+      'dmrlid' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'A unique ID for a response log.',
+      ),
+      'dmlid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Monitor log result that triggered this response.',
+      ),
+      'id' => array(
+        'type' => 'varchar',
+        'length' => '100',
+        'not null' => TRUE,
+        'description' => 'A unique identifier for the response. This is the primary field responses are loaded from, and is used so that monitors may be internal and not necessarily in the database. May only be alphanumeric characters plus underscores.',
+      ),
+      'module' => array(
+        'type' => 'varchar',
+        'length' => '50',
+        'not null' => TRUE,
+        'description' => 'The name of the module that generated this monitor.',
+      ),
+      'description' => array(
+        'type' => 'text',
+        'size' => 'medium',
+        'default' => '',
+        'description' => 'Description of the expected response procedure behaviour.',
+      ),
+      'trigger_when' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'serialize' => TRUE,
+        'description' => 'An associative array containing the field, operator, and value that, if found in results, determines that a monitor has failed.',
+      ),
+      'trigger_mode' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Integer indicating whether response was automated (2) or manual (1) or not configured (NULL).',
+      ),
+      'response_state' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Integer indicating response state at time it was processed.',
+      ),
+      'processed' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'UNIX timestamp for when the response was processed.',
+      ),
+      'created_result_count' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Count of records created by response.',
+      ),
+      'updated_result_count' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Count of records update by response.',
+      ),
+      'deleted_result_count' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Count of records deleted by response.',
+      ),
+      'remaining_result_count' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Count of records upon which the response did not take action.',
+      ),
+      'log_file' => array(
+        'description' => 'Path to the file containing detailed results, relative to Drupal root.',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => ''
+      ),
+    ),
+    'primary key' => array(
+      'dmrlid',
+    ),
+    'unique_keys' => array(
+      'dmrlid_dmlid' => array('dmrlid', 'dmlid'),
+    ),
+  );
+
+  return $schema;
+}
+/**
+ * Implementation of hook_requirements().
+ *
+ * Test and report on Data monitoring requirements
+ *
+ * @param $phase
+ *   The current system installation phase.
+ * @return
+ *   An array of system requirements.
+ */
+function data_monitoring_requirements($phase) {
+  $requirements = array();
+  // Ensure translations don't break at install time
+  $t = get_t();
+  if ($phase == 'runtime' || $phase == 'install') {
+    // Check default file directory is working.
+    if (file_check_directory(file_directory_path())) {
+      $path = variable_get('data_monitoring_directory', '');
+      if (empty($path)) {
+        $path = file_create_path('data-monitoring');
+        variable_set('data_monitoring_directory', $path);
+      }
+      if (!file_check_directory($path, FILE_CREATE_DIRECTORY)) {
+        $requirements['data_monitoring_directory'] = array(
+          'title' => $t('Data monitoring'),
+          'value' => $t('Missing directory'),
+          'severity' => REQUIREMENT_ERROR,
+          'description' => $t("The %data_monitoring_directory_path is missing. Check permissions on your file directory then refresh this page. If problem persists contact module developer.", array('%data_monitoring_directory_path' => $path)),
+        );
+        // Change severity on install to prevent aborting, but allow error to show at runtime
+        if ($phase == 'install') $requirements['data_monitoring_directory']['severity'] = REQUIREMENT_WARNING;
+      }
+    }
+  }
+  return $requirements;
+}
+/**
+ * Implementation of hook_uninstall().
+ */
+function data_monitoring_uninstall() {
+  // TODO: Delete files?
+  drupal_uninstall_schema('data_monitoring');
+  variable_del('data_monitoring_directory');
+  variable_del('data_monitoring_log_expire');
+  variable_del('data_monitoring_language');
+  variable_del('data_monitoring_respond');
+  variable_del('data_monitoring_last_monitoring_run');
+  variable_del('data_monitoring_monitoring_interval');
+  variable_del('data_monitoring_last_reporting_run');
+  variable_del('data_monitoring_reporting_interval');
+  variable_del('data_monitoring_mail');
+  variable_del('data_monitoring_mail_to');
+  variable_del('data_monitoring_mail_reply_to');
+}
+/**
+ * Implementation of hook_disable().
+ */
+function data_monitoring_disable() {
+
+}
+/**
+ * Implementation of hook_enable().
+ */
+function data_monitoring_enable() {
+
+}
+/**
+ * Implementation of hook_update_N().
+ *
+ * @return unknown_type
+ */
+function data_monitoring_update_6000() {
+  // Rename variable.
+  variable_del('data_monitoring_cleanse');
+  variable_set('data_monitoring_respond', 1);
+
+}
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function data_monitoring_update_6001() {
+
+  $schema['data_monitoring_monitors'] = array(
+    'description' => 'Stores the general data for a monitor.',
+    'fields' => array(
+      'dmid' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'The monitor ID, defined by the database.',
+      ),
+      'id' => array(
+        'type' => 'varchar',
+        'length' => '50',
+        'not null' => TRUE,
+        'description' => 'The unique id of the monitor. This is the primary field monitors are loaded from, and is used so that monitors may be internal and not necessarily in the database. May only be alphanumeric characters plus underscores.',
+      ),
+      'module' => array(
+        'type' => 'varchar',
+        'length' => '50',
+        'not null' => TRUE,
+        'description' => 'The name of the module that generated this monitor.',
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => '100',
+        'default' => '',
+        'not null' => TRUE,
+        'description' => 'The descriptive display name of the monitor.',
+      ),
+      'description' => array(
+        'type' => 'text',
+        'size' => 'medium',
+        'default' => '',
+        'description' => 'A description of the monitor for the administrator interface.',
+      ),
+      'response_trigger' => array(
+        'type' => 'varchar',
+        'length' => '20',
+        'default' => 'none',
+        'not null' => TRUE,
+        'description' => 'The type of trigger, value should be one of none, manual, automatic.',
+      ),
+      'describe_failed' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'serialize' => TRUE,
+        'description' => 'An associative array containing the field, operator, and value that, if found in results, determines that a monitor has failed.',
+      ),
+      'query' => array(
+        'type' => 'text',
+        'size' => 'medium',
+        'not null' => TRUE,
+        'serialize' => TRUE,
+        'description' => 'Field operator and value that if found in results determines that a monitor has failed.',
+      ),
+    ),
+    'primary key' => array(
+      'dmid',
+    ),
+    'unique keys' => array(
+      'id_module' => array('id', 'module'),
+    ),
+  );
+
+  $schema['data_monitoring_log'] = array(
+    'description' => 'Stores monitoring results and execution times.',
+    'fields' => array(
+      'dmlid' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'A unique ID for the log of a monitoring run and/or response process.',
+      ),
+      'dmid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The monitor to which these results apply.',
+      ),
+      'executed' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'UNIX timestamp for when the monitor was executed.',
+      ),
+      'failed' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Boolean indicating whether monitor failed (1) or passed (0) or did not execute (NULL).',
+      ),
+      'affected_records' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Count of records returned by monitor query.',
+      ),
+      'response_executed' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'UNIX timestamp for when the response was executed.',
+      ),
+      'archive' => array(
+        'description' => 'Path to the file containing detailed results, relative to Drupal root.',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => ''
+      ),
+    ),
+    'primary key' => array(
+      'dmlid',
+    ),
+    'unique_keys' => array(
+      'dmid_executed' => array('dmid', 'executed'),
+    ),
+  );
+
+  $ret = array();
+  db_create_table($ret, 'data_monitoring_monitors', $schema['data_monitoring_monitors']);
+  db_create_table($ret, 'data_monitoring_log', $schema['data_monitoring_log']);
+  return $ret;
+}
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function data_monitoring_update_6002() {
+
+  $ret[] = update_sql("TRUNCATE TABLE {cache}");
+
+  $schema['data_monitoring_response_log'] = array(
+    'description' => 'Stores monitor response information and results.',
+    'fields' => array(
+      'dmrlid' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'A unique ID for a response log.',
+      ),
+      'dmlid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Monitor log result that triggered this response.',
+      ),
+      'id' => array(
+        'type' => 'varchar',
+        'length' => '100',
+        'not null' => TRUE,
+        'description' => 'A unique identifier for the response. This is the primary field responses are loaded from, and is used so that monitors may be internal and not necessarily in the database. May only be alphanumeric characters plus underscores.',
+      ),
+      'module' => array(
+        'type' => 'varchar',
+        'length' => '50',
+        'not null' => TRUE,
+        'description' => 'The name of the module that generated this monitor.',
+      ),
+      'description' => array(
+        'type' => 'text',
+        'size' => 'medium',
+        'default' => '',
+        'description' => 'Description of the expected response procedure behaviour.',
+      ),
+      'trigger_when' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'serialize' => TRUE,
+        'description' => 'An associative array containing the field, operator, and value that, if found in results, determines that a monitor has failed.',
+      ),
+      'trigger_mode' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Integer indicating whether response was automated (2) or manual (1) or not configured (NULL).',
+      ),
+      'response_state' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Integer indicating response state at time it was processed.',
+      ),
+      'processed' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'UNIX timestamp for when the response was processed.',
+      ),
+      'created_result_count' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Count of records created by response.',
+      ),
+      'updated_result_count' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Count of records update by response.',
+      ),
+      'deleted_result_count' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Count of records deleted by response.',
+      ),
+      'remaining_result_count' => array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Count of records upon which the response did not take action.',
+      ),
+      'log_file' => array(
+        'description' => 'Path to the file containing detailed results, relative to Drupal root.',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => ''
+      ),
+    ),
+    'primary key' => array(
+      'dmrlid',
+    ),
+    'unique_keys' => array(
+      'dmrlid_dmlid' => array('dmrlid', 'dmlid'),
+    ),
+  );
+
+  $ret = array();
+  db_drop_field($ret, 'data_monitoring_monitors', 'response_trigger');
+  db_drop_field($ret, 'data_monitoring_monitors', 'describe_failed');
+  db_change_field($ret, 'data_monitoring_monitors', 'id', 'id', array(
+        'type' => 'varchar',
+        'length' => '100',
+        'not null' => TRUE,
+        'description' => 'A unique identifier for the monitor. This is the primary field monitors are loaded from, and is used so that monitors may be internal and not necessarily in the database. May only be alphanumeric characters plus underscores.',
+      ));
+  db_change_field($ret, 'data_monitoring_monitors', 'name', 'name', array(
+        'type' => 'varchar',
+        'length' => '200',
+        'default' => '',
+        'not null' => TRUE,
+        'description' => 'The user friendly descriptive name of the monitor.',
+      ));
+  db_drop_field($ret, 'data_monitoring_log', 'failed');
+  db_drop_field($ret, 'data_monitoring_log', 'response_executed');
+
+  db_change_field($ret, 'data_monitoring_log', 'executed', 'processed', array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'UNIX timestamp for when the monitor was processed.',
+      ));
+  db_change_field($ret, 'data_monitoring_log', 'affected_records', 'result_count', array(
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'default' => NULL,
+        'description' => 'Count of records returned by monitor query.',
+      ));
+  db_change_field($ret, 'data_monitoring_log', 'archive', 'log_file', array(
+        'description' => 'Path to the file containing detailed results, relative to Drupal root.',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => ''
+      ));
+  db_add_field($ret, 'data_monitoring_log', 'responses_pending', array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Count of responses waiting to be implemented for this log.',
+      ));
+  db_add_field($ret, 'data_monitoring_log', 'responses_implemented', array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'default' => 0,
+        'description' => 'Count of responses implemented for this log.',
+      ));
+  db_create_table($ret, 'data_monitoring_response_log', $schema['data_monitoring_response_log']);
+  return $ret;
+}

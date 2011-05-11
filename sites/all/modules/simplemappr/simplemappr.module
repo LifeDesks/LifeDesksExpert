@@ -1,0 +1,1104 @@
+<?php
+
+define('SIMPLEMAPPR_ORIGINAL', '_original');
+define('SIMPLEMAPPR_PREVIEW', 'preview');
+define('SIMPLEMAPPR_THUMBNAIL', 'thumbnail');
+define('SIMPLEMAPPR_SVG', 'svg');
+
+define('SIMPLEMAPPR_LINK_HIDDEN', 0);
+define('SIMPLEMAPPR_LINK_SHOWN', 1);
+define('SIMPLEMAPPR_LINK_NEW', 2);
+
+/**
+ * Implementation of hook_node_info
+ */
+function simplemappr_node_info() {
+  return array(
+    'simplemappr' => array(
+      'name' => t('Shaded Map'),
+      'module' => 'simplemappr',
+      'description' => t('Create a simple map with shaded political regions such as Countries, States or Provinces.'),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_perm
+ */
+function simplemappr_perm() {
+  return array( 
+    'create simplemap', 
+    'edit own simplemap', 
+    'edit any simplemap', 
+    'delete own simplemap', 
+    'delete any simplemap',
+    'view original simplemap'
+  );
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function simplemappr_theme() {
+  return array(
+    'simplemappr_settings_sizes_form' => array(
+      'arguments' => array('form' => NULL),
+    ),
+    'simplemappr_teaser' => array(
+      'arguments' => array('node' => NULL, 'size' => SIMPLEMAPPR_THUMBNAIL),
+    ),
+    'simplemappr_body' => array(
+      'arguments' => array('node' => NULL, 'size' => SIMPLEMAPPR_PREVIEW),
+    ),
+    'simplemappr_display' => array(
+      'arguments' => array(
+        'node' => NULL,
+        'label' => NULL,
+        'url' => NULL,
+        'attributes' => NULL,
+      ),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_access().
+ */
+function simplemappr_access($op, $node, $account) {
+  switch ($op) {
+    case 'create':
+      if (user_access('create simplemap', $account)) {
+        return TRUE;
+      }
+      break;
+
+    case 'update':
+      if (user_access('edit any simplemap', $account) || ($account->uid == $node->uid && user_access('edit own simplemap', $account))) {
+        return TRUE;
+      }
+      break;
+
+    case 'delete':
+      if (user_access('delete any simplemap', $account) || ($account->uid == $node->uid && user_access('delete own simplemap', $account))) {
+        return TRUE;
+      }
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_menu
+ */
+function simplemappr_menu() {
+  $items = array();
+  
+  $items['simplemappr/view'] = array(
+    'title' => 'map',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+    'page callback' => 'simplemappr_fetch',
+  );
+  $items['admin/settings/simplemappr'] = array(
+    'title' => 'SimpleMappr',
+    'description' => 'Configure the location of map files and map sizes.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('simplemappr_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'simplemappr.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_cron. (deletes old temp maps)
+ */
+function simplemappr_cron() {
+  $path = file_directory_path() . '/' . variable_get('simplemappr_default_path', 'simplemappr') . '/temp';
+  $files = file_scan_directory(file_create_path($path), '.*');
+  foreach ($files as $file => $info) {
+    if (time() - filemtime($file) > 60 * 60 * 6) {
+      file_delete($file);
+    }
+  }
+}
+
+/**
+ * Implementation of hook_file_download().
+ */
+function simplemappr_file_download($filename) {
+  $filepath = file_create_path($filename);
+  $result = db_query("SELECT sm.nid, f.filemime, f.filesize FROM {simplemappr} sm INNER JOIN {files} f ON sm.fid = f.fid WHERE f.filepath = '%s'", $filepath);
+  if ($file = db_fetch_object($result)) {
+    $node = node_load(array('type' => 'simplemappr', 'nid' => $file->nid));
+    if (node_access('view', $node)) {
+      // The user either needs to have 'view original images' permission or
+      // the path must be listed for something other than the node's original
+      // size. This will be the case when the orignal is smaller than a
+      // derivative size.
+      $simplemappr = (array) $node->simplemappr;
+      unset($simplemappr[SIMPLEMAPPR_ORIGINAL]);
+      if (user_access('view original simplemap') || in_array($filepath, $simplemappr)) {
+        return array(
+          'Content-Type: ' . mime_header_encode($file->filemime),
+          'Content-Length: ' . (int) $file->filesize,
+        );
+      }
+    }
+    return -1;
+  }
+}
+
+/**
+ * Implementation of hook_link.
+ */
+function simplemappr_link($type, $node, $main = 0) {
+  $links = array();
+
+  if ($type == 'node' && $node->type == 'simplemappr' && !$main) {
+    $request = isset($_GET['size']) ? $_GET['size'] : SIMPLEMAPPR_PREVIEW;
+    foreach (simplemappr_get_sizes() as $key => $size) {
+      if ($size['link']) {
+        if (isset($node->simplemappr[$key]) && $node->simplemappr[$key] != $node->simplemappr[$request]) {
+          if ($size['link'] == SIMPLEMAPPR_LINK_NEW) {
+            $links['simplemappr_size_' . $key] = array(
+              'title' => t($size['label']),
+              'href' => "simplemappr/view/{$node->nid}/$key",
+              'attributes' => array('target' => '_blank'),
+            );
+          }
+          else {
+            $links['simplemappr_size_' . $key] = array(
+              'title' => t($size['label']),
+              'href' => 'node/' . $node->nid,
+              'query' => 'size=' . urlencode($key),
+            );
+          }
+        }
+      }
+    }
+    if(variable_get("simplemappr_svg", false)) {
+        $links['simplemappr_size_svg'] = array(
+          'title' => t('svg'),
+          'href' => "simplemappr/view/{$node->nid}/svg",
+          'attributes' => array('target' => '_blank'),
+        );
+    }
+    if (!user_access('view original simplemap')) {
+      unset($links['simplemappr_size_' . SIMPLEMAPPR_ORIGINAL]);
+    }
+  }
+
+  return $links;
+}
+
+function simplemappr_form_add_thumbnail($form, &$form_state) {
+  if ($form_state['values']['simplemappr'][SIMPLEMAPPR_THUMBNAIL]) {
+    $node = (object)($form_state['values']);
+    $form['#title'] = t('Thumbnail');
+    $form['#value'] = simplemappr_display($node, SIMPLEMAPPR_THUMBNAIL);
+  }
+  return $form;
+}
+
+/**
+ * Implementation of hook_form().
+ */
+function simplemappr_form(&$node, $form_state) {
+
+  _simplemappr_check_settings();
+
+  if (!$_POST && !empty($_SESSION['simplemappr_upload'])) {
+    unset($_SESSION['simplemappr_upload']);
+  }
+
+  $module_path = drupal_get_path('module', 'simplemappr') .'/';
+
+  //get the dimensions of the helper image
+  $extent_file = image_get_info($module_path . '/images/simplemappr-extent.png');
+
+  drupal_add_js($module_path . 'js/simplemappr.js');
+  drupal_add_js($module_path . 'js/colorpicker.js');
+  drupal_add_js($module_path . 'js/jquery.Jcrop.min.js');
+  drupal_add_js(array('simplemappr_extent' => array('x' => $extent_file['width'], 'y' => $extent_file['height'])), 'setting');
+
+  drupal_add_css($module_path . 'css/simplemappr.css');
+  drupal_add_css($module_path . 'css/colorpicker.css');
+  drupal_add_css($module_path . 'css/jquery.Jcrop.css');
+
+  $type = node_get_types('type', $node);
+
+  $form['#validate'][] = 'simplemappr_form_validate';
+  $form['#submit'][] = 'simplemappr_form_submit';
+
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => check_plain($type->title_label),
+    '#size' => 60,
+    '#maxlength' => 128,
+    '#required' => TRUE,
+    '#default_value' => $node->title,
+  );
+
+  $form['simplemappr-logo'] = array(
+    '#type' => 'markup',
+    '#value' => '<div id="simplemappr-attribution">' . t('Powered by:') . '<br />' . l('<img src="' . base_path() . $module_path . 'images/simplemappr-logo.png" />' , 'http://www.simplemappr.net', array('absolute' => TRUE, 'html' => TRUE)) . '</div>',
+    
+  );
+
+  $form['simplemappr']['#tree'] = TRUE;
+  foreach (simplemappr_get_sizes() as $key => $size) {
+    $form['simplemappr'][$key] = array(
+      '#type' => 'value',
+      '#value' => isset($node->simplemappr[$key]) ? $node->simplemappr[$key] : '',
+    );
+  }
+
+  $form['new_file'] = array(
+    '#type' => 'value',
+    '#default_value' => isset($node->new_file) ? $node->new_file : FALSE,
+  );
+
+  $form['shaded'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Shaded political regions'),
+  );
+
+  $form['shaded']['places'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Political regions to shade'),
+    '#description' => t('Type political regions and select a color to shade e.g. North Carolina, Alberta, Ontario, South Dakota AND/OR bracket pipe- or space-separated State/Province codes prefixed by 3-letter ISO country code such as USA[NC|SD], CAN[AB ON]'),
+    '#default_value' => ($node->simplemappr['user_data']['places']) ? $node->simplemappr['user_data']['places'] : '',
+    '#parents' => array('simplemappr', 'user_data', 'places'),
+  );
+
+  $form['shaded']['color'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Shade color'),
+    '#description' => t('RGB color code, e.g. 100 100 100 is light gray whereas 10 10 10 is dark gray'),
+    '#size' => 10,
+    '#maxlength' => 11,
+    '#default_value' => ($node->simplemappr['user_data']['color']) ? $node->simplemappr['user_data']['color']: '100 100 100',
+    '#attributes' => array('class' => 'colorPicker'),
+    '#parents' => array('simplemappr', 'user_data', 'color'),
+  );
+
+  $form['bbox'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Map Extent'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#attributes'  => array('class' => 'simplemappr-bbox')
+  );
+
+  $form['bbox']['image'] = array(
+    '#type' => 'markup',
+    '#value' => '<div id="simplemappr-extent" style="width:'.$extent_file['width'].'px"><img src="' . base_path() . $module_path . 'images/simplemappr-extent.png" /><div id="simplemappr-cropper"><a href="#">' . t('Draw Extent') . '</a></div></div>',
+  );
+
+  $form['bbox']['maxy'] = array(
+    '#type' => 'textfield',
+    '#title' => t('North'),
+    '#description' => t('Northernmost extent in decimal degrees. Maximum 90.'),
+    '#size' => 10,
+    '#maxlength' => 10,
+    '#default_value' => ($node->simplemappr['user_data']['maxy']) ? $node->simplemappr['user_data']['maxy'] : 90,
+    '#required' => TRUE,
+    '#attributes' => array('class' => 'simplemappr-bbox-coord'),
+    '#parents' => array('simplemappr', 'user_data', 'maxy'),
+  );
+
+  $form['bbox']['miny'] = array(
+    '#type' => 'textfield',
+    '#title' => t('South'),
+    '#size' => 10,
+    '#maxlength' => 10,
+    '#description' => t('Southernmost extent in decimal degrees Minimum -90.'),
+    '#default_value' => ($node->simplemappr['user_data']['miny']) ? $node->simplemappr['user_data']['miny'] : -90,
+    '#required' => TRUE,
+    '#attributes' => array('class' => 'simplemappr-bbox-coord'),
+    '#parents' => array('simplemappr', 'user_data', 'miny'),
+  );
+
+  $form['bbox']['maxx'] = array(
+    '#type' => 'textfield',
+    '#title' => t('East'),
+    '#size' => 10,
+    '#maxlength' => 10,
+    '#description' => t('Easternmost extent in decimal degrees. Maximum 180.'),
+    '#default_value' => ($node->simplemappr['user_data']['maxx']) ? $node->simplemappr['user_data']['maxx'] : 180,
+    '#required' => TRUE,
+    '#attributes' => array('class' => 'simplemappr-bbox-coord'),
+    '#parents' => array('simplemappr', 'user_data', 'maxx'),
+  );
+
+  $form['bbox']['minx'] = array(
+    '#type' => 'textfield',
+    '#title' => t('West'),
+    '#size' => 10,
+    '#maxlength' => 10,
+    '#description' => t('Westernmost extent in decimal degrees. Minimum -180.'),
+    '#default_value' => ($node->simplemappr['user_data']['minx']) ? $node->simplemappr['user_data']['minx'] : -180,
+    '#required' => TRUE,
+    '#attributes' => array('class' => 'simplemappr-bbox-coord'),
+    '#parents' => array('simplemappr', 'user_data', 'minx'),
+  );
+
+  $form['layers'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Layers'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE
+  );
+
+  $layers = array(
+    'lakes' => t('Lakes'),
+    'rivers' => t('Rivers'),
+    'stateprovinces' => t('State/Province borders'),
+  );
+
+  $form['layers']['layers'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Layers'),
+    '#options' => $layers,
+    '#default_value' => ($node->simplemappr['user_data']['layers']) ? $node->simplemappr['user_data']['layers']: "",
+    '#parents' => array('simplemappr', 'user_data', 'layers'),
+  );
+
+  $form['projection'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Projection'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+
+  $projections = array(
+    'esri:4326' => t('Geographic'),
+    'esri:102009' => t('North America Lambert'),
+    'esri:102014' => t('Europe Lambert'),
+    'esri:102015' => t('South America Lambert'),
+    'esri:102024' => t('Africa Lambert'),
+    'epsg:3112' => t('Australia Lambert'), 
+  );
+
+  $form['projection']['projection'] = array(
+    '#type' => 'radios',
+    '#title' =>  t('Projection'),
+    '#default_value' => ($node->simplemappr['user_data']['projection']) ? $node->simplemappr['user_data']['projection'] : 'esri:4326',
+    '#options' => $projections,
+    '#parents' => array('simplemappr', 'user_data', 'projection'),
+  );
+
+  $form['rebuild_simplemappr'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Rebuild derivative maps'),
+    '#default_value' => FALSE,
+    '#description' => t('Check this to rebuild the derivative maps for this node.'),
+    '#access' => (!isset($node->nid) ? FALSE : TRUE),
+  );
+
+  $form['thumbnail'] = array(
+    '#type' => 'item',
+    '#after_build' => array('simplemappr_form_add_thumbnail'),
+  );
+
+  if ($type->has_body) {
+    $form['body_field'] = node_body_field($node, $type->body_label, $type->min_word_count);
+  }
+
+  return $form; 
+}
+
+function simplemappr_form_validate($form, &$form_state) {
+    
+    if ($form_state['values']['op'] == t('Delete')) {
+        return;
+    }
+    
+    $module_path = drupal_get_path('module', 'simplemappr') .'/';
+
+    drupal_add_js($module_path . 'js/simplemappr.js');
+    drupal_add_js($module_path . 'js/colorpicker.js');
+    drupal_add_js($module_path . 'js/jquery.Jcrop.min.js');
+
+    drupal_add_css($module_path . 'css/simplemappr.css');
+    drupal_add_css($module_path . 'css/colorpicker.css');
+    drupal_add_css($module_path . 'css/jquery.Jcrop.css');
+
+    if(!is_numeric($form_state['values']['simplemappr']['user_data']['minx']) ||  $form_state['values']['simplemappr']['user_data']['minx'] < -180 ||  $form_state['values']['simplemappr']['user_data']['minx'] > 180) {
+        form_set_error('simplemappr][user_data][minx', t('Westernmost extent must be greater than or equal to -180 and less than or equal to 180'));
+        return;
+    }
+    
+    if(!is_numeric($form_state['values']['simplemappr']['user_data']['maxx']) ||  $form_state['values']['simplemappr']['user_data']['maxx'] > 180 ||  $form_state['values']['simplemappr']['user_data']['maxx'] < -180) {
+        form_set_error('simplemappr][user_data][maxx', t('Easternmost extent must be less than or equal to 180 and greater than or equal to -180'));
+        return;
+    }
+    
+    if(!is_numeric($form_state['values']['simplemappr']['user_data']['maxy']) ||  $form_state['values']['simplemappr']['user_data']['maxy'] > 90 ||  $form_state['values']['simplemappr']['user_data']['maxy'] < -90) {
+        form_set_error('simplemappr][user_data][maxy', t('Northernmost extent must be less than or equal to 90 and greater than or equal to -90'));
+        return;
+    }
+    
+    if(!is_numeric($form_state['values']['simplemappr']['user_data']['miny']) ||  $form_state['values']['simplemappr']['user_data']['miny'] < -90 ||  $form_state['values']['simplemappr']['user_data']['miny'] > 90) {
+        form_set_error('simplemappr][user_data][miny', t('Southernmost extent must be greater than or equal to -90 and less than or equal to 90'));
+        return;
+    }
+    
+    if($form_state['values']['simplemappr']['user_data']['minx'] >= $form_state['values']['simplemappr']['user_data']['maxx']) {
+        form_set_error('simplemappr][user_data][minx', t('Easternmost extent must be greater than Westernmost extent'));
+        return;
+    }
+    
+    if($form_state['values']['simplemappr']['user_data']['maxy'] <= $form_state['values']['simplemappr']['user_data']['miny']) {
+        form_set_error('simplemappr][user_data][maxy', t('Northernmost extent must be greater than Southernmost extent'));
+        return;
+    }
+    
+    //grab map from web service again
+    $temporary_file_path = file_create_path(file_directory_path() . '/' . variable_get('simplemappr_default_path', 'simplemappr') . '/temp');
+    
+    $url = _simplemappr_build_url((object)$form_state['values'], simplemappr_get_sizes(SIMPLEMAPPR_ORIGINAL));
+    
+    //put map from $url into $temporary_file_path
+    $tmp_file = $temporary_file_path . '/' . md5(time());
+    $file = imagecreatefrompng($url);
+    imagepng($file, $tmp_file . '.png');
+    imagedestroy($file);
+
+    if(variable_get("simplemappr_svg", false)) {
+        $svg_url = _simplemappr_build_url((object)$form_state['values'], simplemappr_get_sizes(SIMPLEMAPPR_SVG), 'svg');
+        //put map from $svg_url into $temporary_file_path
+        copy($svg_url, $tmp_file . '.svg.svg');
+    }
+    
+    // We're good to go.
+    $form_state['values']['simplemappr'][SIMPLEMAPPR_ORIGINAL] = $tmp_file . '.png';
+    $form_state['values']['rebuild_simplemappr'] = FALSE;
+    $form_state['values']['new_file'] = TRUE;
+
+    // Call hook to allow other modules to modify the original map.
+    module_invoke_all('simplemappr_alter', $form_state['values'], $form_state['values']['simplemappr'][SIMPLEMAPPR_ORIGINAL], SIMPLEMAPPR_ORIGINAL);
+    $user_data = $form_state['values']['simplemappr']['user_data'];
+    $form_state['values']['simplemappr'] = _simplemappr_build_derivatives((object) $form_state['values'], TRUE);
+    if(variable_get("simplemappr_svg", false)) $form_state['values']['simplemappr'][SIMPLEMAPPR_SVG] = $tmp_file . '.svg.svg';
+    $form_state['values']['simplemappr']['user_data'] = $user_data;
+
+    // Store the new file into the session.
+    $_SESSION['simplemappr_upload'] = $form_state['values']['simplemappr'];
+}
+
+function simplemappr_form_submit($form, &$form_state) {
+    if (!empty($_SESSION['simplemappr_upload'])) {
+        $user_data = $form_state['values']['simplemappr']['user_data'];
+        $form_state['values']['simplemappr'] = $_SESSION['simplemappr_upload'];
+        $form_state['values']['simplemappr']['user_data'] = $user_data;
+        $form_state['values']['new_file'] = TRUE;
+        unset($_SESSION['simplemappr_upload']);
+      }
+}
+
+/**
+ * Implementation of form_alter to ping the SimpleMappr service
+ */
+function simplemappr_form_alter(&$form, $form_state, $form_id) {
+  if($form_id == 'simplemappr_node_form') {
+    $url = variable_get('simplemappr_url', 'http://www.simplemappr.net/api/');
+
+    $ping = @json_decode(implode("",@file($url . '?ping=true')));
+    
+    if(!isset($ping->status) || $ping->status !== "ok") {
+      drupal_set_message("We're sorry, the mapping service is currently offline. Please try again later.", "error");
+      foreach($form as $key => $value) {
+        unset($form[$key]);
+      }
+    }
+
+  }
+}
+
+/**
+ * Implementation of hook_view
+ */
+function simplemappr_view($node, $teaser = 0, $page = 0) {
+  $sizes = simplemappr_get_sizes();
+  $size = SIMPLEMAPPR_PREVIEW;
+  if (isset($_GET['size'])) {
+    // Invalid size specified.
+    if (!isset($sizes[$_GET['size']])) {
+      drupal_goto("node/$node->nid");
+    }
+    $size = $_GET['size'];
+    // Not allowed to view the original.
+    if ($size == SIMPLEMAPPR_ORIGINAL && !user_access('view original simplemap')) {
+      drupal_goto("node/$node->nid");
+    }
+  }
+  $node = node_prepare($node, $teaser);
+  $node->content['simplemappr'] = array(
+    '#value' => theme($teaser ? 'simplemappr_teaser' : 'simplemappr_body', $node, $size),
+    '#weight' => 0,
+  );
+  return $node;
+}
+
+/**
+ * Implementation of hook_load().
+ */
+function simplemappr_load(&$node) {
+  $result = db_query("SELECT sm.map_size, f.filepath FROM {simplemappr} sm INNER JOIN {files} f ON sm.fid = f.fid WHERE sm.nid = %d", $node->nid);
+  $node->simplemappr = array();
+  while ($file = db_fetch_object($result)) {
+    $node->simplemappr[$file->map_size] = file_create_path($file->filepath);
+  }
+
+  $original_path = (isset($node->simplemappr[SIMPLEMAPPR_ORIGINAL]) ? $node->simplemappr[SIMPLEMAPPR_ORIGINAL] : NULL);
+  if (empty($original_path)) {
+    return;
+  }
+  
+  $user_data = array();
+  $result = db_result(db_query("SELECT smd.value FROM {simplemappr_data} smd WHERE smd.nid = %d", $node->nid));
+  if($result) $user_data = unserialize($result);
+  if($user_data) {
+    $node->simplemappr['user_data'] = $user_data; 
+  }
+
+  if ((arg(0) != 'batch') && (strpos($_GET['q'], 'admin/content/node') === FALSE)) {
+    _simplemappr_build_derivatives_if_needed($node);
+  }
+}
+
+/**
+ * Rebuild derivatives if needed. Helper function for image_load().
+ */
+function _simplemappr_build_derivatives_if_needed(&$node) {
+  $node->rebuild_simplemappr = FALSE;
+
+  // Figure out which sizes should have been generated.
+  $all_sizes = simplemappr_get_sizes();
+  unset($all_sizes[SIMPLEMAPPR_ORIGINAL]);
+  unset($all_sizes[SIMPLEMAPPR_SVG]);
+  $needed_sizes = array_keys(simplemappr_get_derivative_sizes($node->simplemappr[SIMPLEMAPPR_ORIGINAL]));
+  $unneeded_sizes = array_diff(array_keys($all_sizes), $needed_sizes);
+
+  // Derivative sizes that are larger than the original get set to the
+  // original.
+  foreach ($unneeded_sizes as $key) {
+    if (empty($node->simplemappr[$key])) {
+      $node->simplemappr[$key] = $node->simplemappr[SIMPLEMAPPR_ORIGINAL];
+    }
+    else {
+      // Need to remove an extra derivative map in the database.
+      $node->rebuild_simplemappr = TRUE;
+    }
+  }
+
+  // Check that the derivative images are present and current.
+  foreach ($needed_sizes as $key) {
+    // If the file is missing or created after the last change to the sizes,
+    // rebuild the derivatives.
+    if (empty($node->simplemappr[$key]) || !file_exists($node->simplemappr[$key])) {
+      $node->rebuild_simplemappr = TRUE;
+    }
+    // Derivative map had a timestamp that predates last changes to map
+    // size settings, so it needs to be rebuilt.
+    elseif (filemtime($node->simplemappr[$key]) < variable_get('simplemappr_updated', 0)) {
+      $node->rebuild_simplemappr = TRUE;
+    }
+  }
+
+  // Correct any problems with the derivative images.
+  if ($node->rebuild_simplemappr) {
+    simplemappr_update($node);
+    watchdog('simplemappr', 'Derivative simplemapps were regenerated for %title.', array('%title' => $node->title), WATCHDOG_INFO, l(t('view'), 'node/' . $node->nid));
+  }
+}
+
+/**
+ * Implementation of hook_insert().
+ */
+function simplemappr_insert($node) {
+    // Derivative maps that aren't needed are set to the original file. Make
+      // note of the current path before calling _simplemappr_insert() because if it's
+      // in the temp directory it'll be moved. We'll need it later to determine
+      // which derivative maps need to be saved with _simplemappr_insert().
+      $original_path = $node->simplemappr[SIMPLEMAPPR_ORIGINAL];
+      $svg_path = $node->simplemappr[SIMPLEMAPPR_SVG];
+
+      // Save the original first so that it if it's moved the derivatives are
+      // placed in the correct directory.
+      _simplemappr_insert($node, SIMPLEMAPPR_ORIGINAL, $original_path);
+      if(variable_get("simplemappr_svg", false)) _simplemappr_insert($node, SIMPLEMAPPR_SVG, $svg_path);
+
+      $sizes = simplemappr_get_derivative_sizes($node->simplemappr[SIMPLEMAPPR_ORIGINAL]);
+      foreach ($sizes as $key => $size_info) {
+        if (!empty($node->simplemappr[$key]) && $node->simplemappr[$key] != $original_path) {
+          _simplemappr_insert($node, $key, $node->simplemappr[$key]);
+        }
+      }
+}
+
+/**
+ * Implementation of hook_update().
+ */
+function simplemappr_update(&$node) {
+  if (!empty($node->new_file) || !empty($node->rebuild_simplemappr)) {
+    // Derivative maps that aren't needed are set to the original file. Make
+    // note of the current path before calling _simplemappr_insert() because if it's
+    // in the temp directory it'll be moved. We'll need it later to determine
+    // which derivative maps need to be saved with _simplemappr_insert().
+    $original_path = $node->simplemappr[SIMPLEMAPPR_ORIGINAL];
+    $svg_path = $node->simplemappr[SIMPLEMAPPR_SVG];
+
+    if (!empty($node->new_file)) {
+
+      // Remove all the existing maps.
+      $result = db_query("SELECT f.fid, f.filepath FROM {simplemappr} sm INNER JOIN {files} f ON sm.fid = f.fid WHERE sm.nid = %d", $node->nid);
+      while ($file = db_fetch_object($result)) {
+        db_query("DELETE FROM {simplemappr} WHERE nid = %d AND fid = %d", $node->nid, $file->fid);
+        db_query("DELETE FROM {simplemappr_data} WHERE nid=%d", $node->nid);
+        _simplemappr_file_remove($file);
+      }
+
+      // Save the original and the svg first so that it they are moved, the derivatives are
+      // placed in the correct directory.
+      _simplemappr_insert($node, SIMPLEMAPPR_ORIGINAL, $original_path);
+      if(variable_get("simplemappr_svg", false)) _simplemappr_insert($node, SIMPLEMAPPR_SVG, $svg_path);
+
+    }
+    else if (!empty($node->rebuild_simplemappr)) {
+      // Find the original map and the svg map
+      $qry = db_query("SELECT sm.fid, f.filepath FROM {simplemappr} sm INNER JOIN {files} f ON sm.fid = f.fid WHERE sm.nid = %d AND (sm.map_size = '%s' OR sm.map_size = '%s')", $node->nid, SIMPLEMAPPR_ORIGINAL, SIMPLEMAPPR_SVG);
+      $original_svg_files = array();
+      while($files = db_fetch_object($qry)) {
+           $original_svg_files[$files->fid] = $files->filepath;
+      }
+      // Delete all but the original and svg maps.
+      $result = db_query("SELECT sm.fid, f.filepath FROM {simplemappr} sm INNER JOIN {files} f ON sm.fid = f.fid WHERE sm.nid = %d AND f.fid NOT IN ('%s')", $node->nid, implode(',', array_keys($original_svg_files)));
+      while ($file = db_fetch_object($result)) {
+        db_query("DELETE FROM {simplemappr} WHERE nid = %d AND fid = %d", $node->nid, $file->fid);
+        // Beware of derivative maps that have the same path as the original.
+        if (!in_array($file->filepath, $original_svg_files)) {
+          _simplemappr_file_remove($file);
+        }
+      }
+
+      $node->simplemappr = _simplemappr_build_derivatives($node, FALSE);
+
+      // Prevent multiple rebuilds.
+      $node->rebuild_simplemappr = FALSE;
+    }
+
+    $sizes = simplemappr_get_derivative_sizes($node->simplemappr[SIMPLEMAPPR_ORIGINAL]);
+    foreach ($sizes as $key => $size_info) {
+      if (!empty($node->simplemappr[$key]) && $node->simplemappr[$key] != $original_path && $node->simplemappr[$key] != $svg_path) {
+        _simplemappr_insert($node, $key, $node->simplemappr[$key]);
+      }
+    }
+  }
+}
+
+/**
+ * Implementation of hook_delete().
+ */
+function simplemappr_delete($node) {
+    $result = db_query('SELECT sm.fid, f.filepath FROM {simplemappr} sm INNER JOIN {files} f ON sm.fid = f.fid WHERE sm.nid = %d', $node->nid);
+      if($result) {
+        db_query("DELETE FROM {simplemappr_data} WHERE nid = %d", $node->nid);
+      }
+      while ($file = db_fetch_object($result)) {
+        db_query("DELETE FROM {simplemappr} WHERE nid = %d AND fid = %d", $node->nid, $file->fid);
+        _simplemappr_file_remove($file);
+      }
+}
+
+/**
+ * Determine which sizes of derivative maps need to be built for this map.
+ *
+ * @param $simplemappr_path
+ *   String file path to the map.
+ *
+ * @return
+ *   Returns a subset of simplemappr_get_sizes()'s results depending on what
+ *   derivative maps are needed.
+ */
+function simplemappr_get_derivative_sizes($simplemappr_path) {
+  $sizes = array();
+
+  // Can't do much if we can't read the map.
+  if (!$simplemappr_info = image_get_info($simplemappr_path)) {
+    return $sizes;
+  }
+
+  $all_sizes = simplemappr_get_sizes(NULL, $simplemappr_info['height'] / $simplemappr_info['width']);
+  foreach ($all_sizes as $key => $size) {
+    // We don't want to include the original or the svg.
+    if ($key == SIMPLEMAPPR_ORIGINAL || $key == SIMPLEMAPPR_SVG) {
+      continue;
+    }
+
+    // If the original isn't bigger than the requested size then there's no
+    // need to resize it.
+    if ($simplemappr_info['width'] > $size['width'] || $simplemappr_info['height'] > $size['height']) {
+      $sizes[$key] = $size;
+    }
+  }
+
+  return $sizes;
+}
+
+/**
+ * Generate map derivatives.
+ *
+ * @param $node
+ *   The node.
+ * @param $temp
+ *   Boolean indicating if the derivatives should be saved to the temp
+ *   directory.
+ *
+ * @return
+ *   New array of map images for the node.
+ */
+function _simplemappr_build_derivatives($node, $temp = FALSE) {
+  $original_path = file_create_path($node->simplemappr[SIMPLEMAPPR_ORIGINAL]);
+  $svg_path = file_create_path($node->simplemappr[SIMPLEMAPPR_SVG]);
+
+  // Figure out which sizes we need to generate.
+  $all_sizes      = simplemappr_get_sizes();
+  $needed_sizes   = simplemappr_get_derivative_sizes($original_path);
+  $unneeded_sizes = array_diff(array_keys($all_sizes), array_keys($needed_sizes));
+
+  // Maps that don't need a derivative map get set to the original.
+  $simplemappr[SIMPLEMAPPR_ORIGINAL] = $original_path;
+  foreach ($unneeded_sizes as $key) {
+    $simplemappr[$key] = $original_path;
+  }
+  $simplemappr[SIMPLEMAPPR_SVG] = $svg_path;
+
+  // Resize for the necessary sizes.
+  $simplemappr_info = image_get_info($original_path);
+  foreach ($needed_sizes as $key => $size) {
+    $destination = _simplemappr_filename($original_path, $key, $temp);
+
+    $status = FALSE;
+    switch ($size['operation']) {
+      // Depending on the operation, the map will be scaled or resized & cropped
+      case 'scale':
+        $status = image_scale($original_path, $destination, $size['width'], $size['height']);
+        break;
+
+      case 'scale_crop':
+        $status = image_scale_and_crop($original_path, $destination, $size['width'], $size['height']);
+        break;
+    }
+
+    if (!$status) {
+      drupal_set_message(t('Unable to create scaled %label map.', array('%label' => $size['label'])), 'error');
+      return FALSE;
+    }
+    // Set standard file permissions for webserver-generated files
+    @chmod($destination, 0664);
+
+    $simplemappr[$key] = $destination;
+    module_invoke_all('simplemappr_alter', $node, $destination, $key);
+  }
+
+  return $simplemappr;
+}
+
+/**
+ * Create an <img> tag for a map.
+ */
+function simplemappr_display(&$node, $label = SIMPLEMAPPR_PREVIEW, $attributes = array()) {
+  if (empty($node->simplemappr[$label])) {
+    return;
+  }
+
+  $size = simplemappr_get_sizes($label);
+
+  if($node->op == 'Preview') {
+    $url = _simplemappr_build_url($node, $size);
+  }
+  elseif ($label == SIMPLEMAPPR_SVG) {
+    $attributes = array();
+    $url = file_create_url($node->simplemappr[$label]);  
+  }
+  else {
+    $simplemappr_info = image_get_info(file_create_path($node->simplemappr[$label]));
+    $attributes['class'] = "simplemappr simplemappr-$label " . (isset($attributes['class']) ? $attributes['class'] : "");
+    // Only output width/height attributes if image_get_info() was able to detect
+    // the image dimensions, since certain browsers interpret an empty attribute
+    // value as zero.
+    if (!empty($simplemappr_info['width'])) {
+      $attributes['width'] = $simplemappr_info['width'];
+    }
+    if (!empty($simplemappr_info['height'])) {
+      $attributes['height'] = $simplemappr_info['height'];
+    }
+    $url = file_create_url($node->simplemappr[$label]);
+  }
+
+  return theme('simplemappr_display', $node, $label, $url, $attributes);
+
+}
+
+/**
+ * Fetches a map file, allows "shorthand" image urls such of the form:
+ * simplemappr/view/$nid/$label
+ * (e.g. simplemappr/view/25/thumbnail or simplemappr/view/14)
+ */
+function simplemappr_fetch($nid = 0, $size = SIMPLEMAPPR_PREVIEW) {
+  if ($size == SIMPLEMAPPR_ORIGINAL && !user_access('view original simplemap')) {
+    return drupal_access_denied();
+  }
+  if (isset($nid)) {
+    $node = node_load(array('type' => 'simplemappr', 'nid' => $nid));
+    if ($node) {
+      if (!node_access('view', $node)) {
+        return drupal_access_denied();
+      }
+
+      if (isset($node->simplemappr[$size])) {
+        $file = $node->simplemappr[$size];
+        $headers = module_invoke_all('file_download', $file);
+        if ($headers == -1) {
+          return drupal_access_denied();
+        }
+        file_transfer($file, $headers);
+      }
+    }
+  }
+  return drupal_not_found();
+}
+
+/**
+ * Theme a teaser
+ */
+function theme_simplemappr_teaser($node, $size) {
+  return l(simplemappr_display($node, SIMPLEMAPPR_THUMBNAIL), 'node/' . $node->nid, array('html' => TRUE));
+}
+
+/**
+ * Theme a body
+ */
+function theme_simplemappr_body($node, $size) {
+  $output  = simplemappr_display($node, $size);
+  $output .= '<p>' . check_markup($node->simplemappr['user_data']['places'], FILTER_FORMAT_DEFAULT) . '</p>';
+  return $output; 
+}
+
+/**
+ * Theme an img tag for displaying the map.
+ */
+function theme_simplemappr_display($node, $label, $url, $attributes) {
+  $title = isset($attributes['title']) ? $attributes['title'] : $node->title;
+  $alt = isset($attributes['alt']) ? $attributes['alt'] : $node->title;
+
+  unset($attributes['title']);
+  unset($attributes['alt']);
+
+  return theme('image', $url, $alt, $title, $attributes, FALSE);
+}
+
+/**
+ * Helper function to return the defined sizes (or proper defaults).
+ *
+ * @param $size
+ *   An optional string to return only the map size with the specified key.
+ * @param $aspect_ratio
+ *   Float value with the ratio of image height / width. If a size has only one
+ *   dimension provided this will be used to compute the other.
+ *
+ * @return
+ *   An associative array with width, height, and label fields for the size.
+ *   If a $size parameter was specified and it cannot be found FALSE will be
+ *   returned.
+ */
+function simplemappr_get_sizes($size = NULL, $aspect_ratio = NULL) {
+  $defaults = array(
+    SIMPLEMAPPR_ORIGINAL => array('width' => '', 'height' => '', 'label' => t('Original'), 'operation' => 'scale', 'link' => SIMPLEMAPPR_LINK_SHOWN),
+    SIMPLEMAPPR_THUMBNAIL => array('width' => 300, 'height' => 150, 'label' => t('Thumbnail'), 'operation' => 'scale', 'link' => SIMPLEMAPPR_LINK_SHOWN),
+    SIMPLEMAPPR_PREVIEW => array('width' => 600, 'height' => 300, 'label' => t('Preview'), 'operation' => 'scale', 'link' => SIMPLEMAPPR_LINK_SHOWN),
+    SIMPLEMAPPR_SVG => array('width' => 300, 'height' => 150, 'label' => t('svg'), 'operation' => '', 'link' => SIMPLEMAPPR_LINK_SHOWN)
+  );
+
+  $sizes = array();
+  foreach (variable_get('simplemappr_sizes', $defaults) as $key => $val) {
+    // Only return sizes with a label.
+    if (!empty($val['label'])) {
+      // For a size with only one dimension specified, compute the other
+      // dimension based on an aspect ratio.
+      if ($aspect_ratio && (empty($val['width']) || empty($val['height']))) {
+        if (empty($val['height']) && !empty($val['width'])) {
+          $val['height'] = (int)round($val['width'] * $aspect_ratio);
+        }
+        elseif (empty($val['width']) && !empty($val['height'])) {
+          $val['width'] = (int)round($val['height'] / $aspect_ratio);
+        }
+      }
+      $sizes[$key] = $val;
+    }
+  }
+
+  // If they requested a specific size return only that.
+  if (isset($size)) {
+    // Only return an array if it's available.
+    return isset($sizes[$size]) ? $sizes[$size] : FALSE;
+  }
+
+  return $sizes;
+}
+
+function _simplemappr_build_url($node, $size, $output = 'pnga') {
+    $params = array(
+        'width' => $size['width'],
+        'height' => $size['height'],
+        'projection' => $node->simplemappr['user_data']['projection'],
+        'layers' => ($node->simplemappr['user_data']['layers']) ? implode(',',$node->simplemappr['user_data']['layers']) : "",
+        'shade[places]' => $node->simplemappr['user_data']['places'],
+        'shade[color]' => $node->simplemappr['user_data']['color'],
+        'bbox' => $node->simplemappr['user_data']['minx'].',
+                '.$node->simplemappr['user_data']['miny'].',
+                '.$node->simplemappr['user_data']['maxx'].',
+                '.$node->simplemappr['user_data']['maxy'],
+        'output' => $output,
+    );
+    
+    $url = variable_get('simplemappr_url', 'http://www.simplemappr.net/api/') . '?' . http_build_query($params, '', '&');
+
+    return $url;
+}
+
+/**
+ * Is a given size a built-in, required size?
+ *
+ * @param $size
+ *   One of the keys in the array returned by simplemappr_get_sizes().
+ *
+ * @return boolean
+ */
+function _simplemappr_is_required_size($size) {
+  return in_array($size, array(SIMPLEMAPPR_THUMBNAIL, SIMPLEMAPPR_PREVIEW, SIMPLEMAPPR_ORIGINAL, SIMPLEMAPPR_SVG));
+}
+
+/**
+ * Moves temporary (working) maps to the final directory and stores
+ * relevant information in the files table
+ */
+function _simplemappr_insert(&$node, $size, $simplemappr_path) {
+  $original_path = $node->simplemappr[SIMPLEMAPPR_ORIGINAL];
+  if (file_move($simplemappr_path, _simplemappr_filename($original_path, $size))) {
+    // Update the node to reflect the actual filename, it may have been changed
+    // if a file of the same name already existed.
+    $node->simplemappr[$size] = $simplemappr_path;
+
+    if($size !== SIMPLEMAPPR_SVG) {
+      $simplemappr_info = image_get_info($simplemappr_path);
+    }
+    else {
+      $simplemappr_info['mime_type'] = 'image/svg+xml';
+      $simplemappr_info['file_size'] = filesize($simplemappr_path);
+    }
+    $file = array(
+      'uid' => $node->uid,
+      'filename' => $size,
+      'filepath' => $simplemappr_path,
+      'filemime' => $simplemappr_info['mime_type'],
+      'filesize' => $simplemappr_info['file_size'],
+      'status' => FILE_STATUS_PERMANENT,
+      'timestamp' => time(),
+    );
+    drupal_write_record('files', $file);
+    $simplemappr = array(
+      'fid' => $file['fid'],
+      'nid' => $node->nid,
+      'map_size' => $size,
+    );
+    drupal_write_record('simplemappr', $simplemappr);
+    $simplemappr_data = array(
+      'nid' => $node->nid,
+      'value' => serialize($node->simplemappr['user_data']),
+    );
+    drupal_write_record('simplemappr_data', $simplemappr_data);
+  }
+}
+
+/**
+ * Creates a map filename.
+ *
+ * @param $filepath
+ *   The full path and filename of the original map file,relative to Drupal
+ *   root, eg 'sites/default/files/simplemappr/mymap.png'.
+ *
+ * @return
+ *   A full path and filename with derivative map label inserted if required.
+ */
+function _simplemappr_filename($filepath, $label = SIMPLEMAPPR_ORIGINAL, $temp = FALSE) {
+  // Get default path for a new file.
+  $path = file_directory_path() . '/' . variable_get('simplemappr_default_path', 'simplemappr');
+  if ($temp) {
+    $path .= '/temp';
+  }
+
+  $original_path = dirname($filepath);
+  $filename = basename($filepath);
+
+  if ($label && ($label != SIMPLEMAPPR_ORIGINAL)) {
+    // Keep resized maps in the same path, where original is (does not
+    // apply to temporary files, these still use the default path).
+    if (!$temp && $original_path != '.') {
+      $path = $original_path;
+    }
+    // Insert the resized name in non-original map.
+    $pos = strrpos($filename, '.');
+    if ($pos === FALSE) {
+      $simplemappr_info = ($label !== SIMPLEMAPPR_SVG) ? image_get_info(file_create_path($path . '/' . $filename)) : array('exentsion' => 'svg');
+      $filename = $filename . '.' . $label . '.' . $simplemappr_info['extension'];
+    }
+    else {
+      $ext = ($label == SIMPLEMAPPR_SVG) ? '.svg' : substr($filename, $pos);
+      $filename = substr($filename, 0, $pos) . '.' . $label . $ext;
+    }
+  }
+
+  return file_create_path($path . '/' . $filename);
+}
+
+/**
+ * Remove map file if no other node references it.
+ *
+ * @param $file
+ *   An object representing a table row from {files}.
+ */
+function _simplemappr_file_remove($file) {
+  if (!db_result(db_query("SELECT COUNT(*) FROM {simplemappr} WHERE fid = %d", $file->fid))) {
+    file_delete(file_create_path($file->filepath));
+    db_query('DELETE FROM {files} WHERE fid = %d', $file->fid);
+  }
+}
+
+/**
+ * Verify the simplemappr module and toolkit settings.
+ */
+function _simplemappr_check_settings() {
+  // File paths
+  $simplemappr_path = file_create_path(file_directory_path() . '/' . variable_get('simplemappr_default_path', 'simplemappr'));
+  $temp_path = $simplemappr_path . '/temp';
+
+  if (!file_check_directory($simplemappr_path, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS, 'simplemappr_default_path')) {
+    return FALSE;
+  }
+  if (!file_check_directory($temp_path, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS, 'simplemappr_default_path')) {
+    return FALSE;
+  }
+
+  // Sanity check : make sure we've got a working toolkit
+  if (!image_get_toolkit()) {
+    drupal_set_message(t('No image toolkit is currently enabled. Without one the SimpleMappr module will not be able to resize your map. You can select one from the <a href="@link">image toolkit settings page</a>.', array('@link' => url('admin/settings/image-toolkit'))), 'error');
+    return FALSE;
+  }
+  return TRUE;
+}
+

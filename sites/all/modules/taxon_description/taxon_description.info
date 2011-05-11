@@ -1,0 +1,17 @@
+name = Taxon Description
+description = "Allows creation of text as chapters on a taxon page."
+package = "LifeDesk"
+project = "taxon_description"
+
+dependencies[] = locale
+dependencies[] = taxonomy
+dependencies[] = classification
+dependencies[] = creativecommons_lite
+dependencies[] = excel_reader
+dependencies[] = jquery_update
+dependencies[] = jquery_ui
+dependencies[] = jstree
+
+core = 6.x
+
+version = "6.x-6102"

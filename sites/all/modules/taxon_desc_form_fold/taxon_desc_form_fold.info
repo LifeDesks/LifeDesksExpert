@@ -1,0 +1,10 @@
+; $Id$
+name = Taxon Description Form Folder
+description = Folding description form for easier chapter looking-up.
+package = "LifeDesk"
+project = "taxon_desc_form_fold"
+
+version = "6.x-0.9"
+core = 6.x
+
+dependencies[] = taxon_description

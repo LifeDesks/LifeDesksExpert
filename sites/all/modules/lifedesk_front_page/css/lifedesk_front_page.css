@@ -1,0 +1,283 @@
+#lifedesk_front_page_wrapper {
+}
+
+#lifedesk_front_page_welcome {
+	margin-top:15px;
+	font-size:medium;
+	padding:10px;
+	line-height:1.25em;
+}
+
+#lifedesk_front_page_welcome ul.welcome {
+   width:60px !important;	
+}
+
+#lifedesk_front_page_tree {
+	width:220px;
+	position:relative;
+	display:block;
+	padding:4px;
+	min-height:300px;
+	height:300px;
+}
+
+#lifedesk_front_page_tree_wrapper {
+	position:absolute;
+	right:2px;
+	top:20px;
+	z-index:1002;
+	display:none;
+	background-color:#FFF;
+	border:2px solid #CCC;
+}
+
+#welcome_block {
+	width:335px;
+	margin:20px;	
+}
+
+#lifedesk_front_page_panels {
+	margin-top: 10px;
+}
+#lifedesk_front_page_panels ul.lifedesk_front_page_panel_ul, #lifedesk_front_page_panels li.lifedesk_front_page_panel_li {
+	display:inline;
+	margin:0px;
+	padding:0px;
+}
+
+#lifedesk_front_page_panels li.lifedesk_front_page_panel_li {
+	float:left;
+	width:30%;
+	margin-left:5px;
+	border:2px solid #CCC;
+	padding:5px;
+	min-height:130px;
+	text-align:center;
+	margin-top:10px;
+}
+
+#lifedesk_front_page_panels li.lifedesk_front_page_panel_li ul {
+	list-style:none;
+	margin:0px;
+	padding:0px;
+}
+
+#lifedesk_front_page_biblio {
+	margin-top:20px;
+}
+
+.classification_tree_div {
+	width:210px;
+	right:0px;
+	background:#FFF none repeat scroll 0 0;
+}
+
+#classification_tree_viewer {
+   min-height:260px;
+   height:260px;
+}
+
+.tree_wrapper_viewer {
+	border:0 none;
+	float:left;
+	height:98%;
+	margin:25px 5px 0 0;
+	overflow:hidden;
+	width:100%;
+}
+
+.tree_wrapper_viewer div {
+  margin:5px 0 0 0;
+  padding:0;
+  width:100%;
+  overflow-x:auto;
+  overflow-y:auto;
+}
+
+img.expand_tree {
+	float:left;
+	z-index:1001;
+}
+
+.inner {
+	background:#FFF none repeat scroll 0 0;
+	padding:10px;
+	text-align:center;
+	height:190px;
+}
+
+.tree_inner {
+	background:#FFF none repeat scroll 0 0;
+	text-align:center;
+}
+
+.inner ul {
+	text-align:left;
+}
+
+.h {
+	padding:0px;
+	margin:0 0 5px;
+	font-size:16px;
+	color:#666;
+	text-transform:uppercase;
+	text-align:center;
+}
+
+.lifedesk_front_page_links {
+	padding:0px;
+	margin:0px auto;
+	width:150px;
+	text-align:left;
+}
+
+.block-user .item-list ul {
+	text-align:left;
+}
+
+#lifedesk_front_page_classification {
+  position:relative;
+  height:20px;
+  z-index:1000;
+}
+
+#classification_tree_block img.temporary-image {
+	margin-left:25px;
+}
+
+.classification_toggle {
+	position:absolute;
+	right:2px;
+}
+
+.classification_hidden {
+	display:none;
+}
+
+.lifedesk_front_page_links li {
+	list-style:none;
+	background:none;
+	font-size:small;
+}
+
+.lifedesk_front_page_links li a {
+	background:none;
+	display: block;
+	line-height: 20px;
+	height: 20px;
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	outline: none;
+	padding: 1px 5px;
+	padding-left: 24px;
+}
+
+.lifedesk_front_page_links li.user a {
+		background-image: url(../images/user.gif);
+}
+
+.lifedesk_front_page_links li.logout a {
+		background-image: url(../images/key.gif);
+}
+
+.lifedesk_front_page_links li.edit a {
+		background-image: url(../images/page_edit.gif);
+}
+
+.lifedesk_front_page_links li.image a {
+		background-image: url(../images/picture_add.gif);
+}
+
+.lifedesk_front_page_links li.slideshow a {
+		background-image: url(../images/pictures.gif);
+}
+
+.lifedesk_front_page_links li.classification a {
+		background-image: url(../images/chart_organisation.gif);
+}
+
+.lifedesk_front_page_links li.classification_toggle a {
+		background-image: url(../images/chart_organisation.gif);
+}
+
+.lifedesk_front_page_links li.editclassification a {
+		background-image: url(../images/chart_organisation_add.gif);
+}
+
+.lifedesk_front_page_links li.content a {
+		background-image: url(../images/node.gif);
+}
+
+#frontpage-support {
+  margin-top:20px;
+  font-style:italic;
+}
+
+.lifedesk_front_page_links_expand {
+	padding:0px;
+	margin:0px;
+	text-align:left;
+	position:absolute;
+	left:-3px;
+	top:0px;
+}
+
+.lifedesk_front_page_links_expand li {
+	display:inline;
+}
+
+.lifedesk_front_page_links_expand li.expand {
+  list-style-type:none;
+  background:none;
+  font-size:small;
+  display:none;
+}
+
+.lifedesk_front_page_links_expand li.contract {
+  list-style-type:none;
+  background:none;
+  font-size:small;
+  display:none;
+}
+
+.lifedesk_front_page_links_expand li a {
+	background:none;
+	display: inline;
+	line-height: 20px;
+	height: 20px;
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	outline: none;
+	padding: 1px 5px;
+	padding-left: 24px;
+	text-decoration:none;
+}
+
+.lifedesk_front_page_links_expand li.expand a {
+	 background-image: url(../images/application_side_contract.gif);
+}
+
+.lifedesk_front_page_links_expand li.contract a {
+	 background-image: url(../images/application_side_expand.gif);
+}
+
+.item-list ul li {
+	list-style:none;
+}
+
+/* Poll if present */
+.poll .bar .foreground {
+  background-color:#99CC00;
+  float:left;
+  height:1em;
+}
+
+#lifedesk_front_page_polls div.links {
+	width:80%;
+	margin:0px auto;
+}
+
+#lifedesk_front_page_polls ul.links {
+	margin:0px auto;
+	text-align:center;
+}

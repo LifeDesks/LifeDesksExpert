@@ -1,0 +1,93 @@
+body.page-admin div.admin {
+	padding:0px;
+}
+
+div.admin div.compact-link {
+	display:none;
+}
+
+#node-type-list {
+
+}
+
+div.admin-lifedesk-panel ul {
+}
+
+div.admin-lifedesk-panel ul li {
+  display:inline;
+  float:left;
+  margin-right: 1em;
+  margin-top:0;
+  width:47%;
+}
+
+div.admin-lifedesk-item {
+	border: 2px solid #CCC !important;
+	margin:0px 0px 20px !important;
+	padding:0px !important;
+}
+
+div.admin-lifedesk-panel div.admin-lifedesk-item {
+	height:115px; 
+	position:relative
+}
+
+div.admin-lifedesk-item h3 {
+	margin:0px;
+	height:30px;
+	line-height:30px;
+	background-repeat: no-repeat;
+	background-color: #CCC;
+	background-position: 3px 50%;
+	padding-left:32px;
+}
+
+/************** ADMIN PAGE ******************/
+div.admin-lifedesk-item h3.admin-panel-default { background-image: url(../images/admin/admin.gif); }
+div.admin-lifedesk-item h3.admin-catalog { background-image: url(../images/admin/classification-tree.png); }
+div.admin-lifedesk-item h3.admin-content { background-image: url(../images/admin/admin-content.png); }
+div.admin-lifedesk-item h3.admin-build { background-image: url(../images/admin/admin-build.png); }
+div.admin-lifedesk-item h3.admin-export-taxon_export { background-image: url(../images/admin/eol.png); }
+div.admin-lifedesk-item h3.admin-user { background-image: url(../images/admin/admin-user.png); }
+div.admin-lifedesk-item h3.admin-reports { background-image: url(../images/admin/admin-reports.png); }
+div.admin-lifedesk-item h3.admin-settings { background-image: url(../images/admin/admin-settings.png); }
+div.admin-lifedesk-item h3.admin-manage_site { background-image: url(../images/admin/admin.png); }
+div.admin-lifedesk-item h3.admin-taxonpage { background-image: url(../images/admin/admin-settings-error_reporting.png); }
+
+/**************** NODE ADD PAGE **************/
+div.admin-lifedesk-item h3.node-add-biblio { background-image: url(../images/admin/node-add-book.png); }
+div.admin-lifedesk-item h3.node-add-image { background-image: url(../images/admin/node-add-image.png); }
+div.admin-lifedesk-item h3.node-add-page { background-image: url(../images/admin/node-add.png); }
+div.admin-lifedesk-item h3.node-add-simplemappr { background-image: url(../images/admin/node-add-simplemappr.png); }
+div.admin-lifedesk-item h3.node-add-poll { background-image: url(../images/admin/node-add-poll.png); }
+div.admin-lifedesk-item h3.node-add-story { background-image: url(../images/admin/node-add-story.png); }
+div.admin-lifedesk-item h3.node-add-taxon-description { background-image: url(../images/admin/node-add-taxon-description.png); }
+div.admin-lifedesk-item h3.node-add-taxon-template { background-image: url(../images/admin/node-add-taxon-description.png); }
+
+/***************** CLASSIFICATION PAGE ***************/
+div.admin-lifedesk-item h3.add-classification { background-image:url('../images/admin/classification-tree-add.png'); }
+div.admin-lifedesk-item h3.admin-classification-biological-import { background-image:url('../images/admin/node-add.png');}
+div.admin-lifedesk-item h3.admin-classification-biological-grid { background-image:url('../images/admin/admin-build-menu.png');}
+div.admin-lifedesk-item h3.admin-classification-biological-edit { background-image:url('../images/admin/classification-tree.png');}
+div.admin-lifedesk-item h3.admin-classification-biological-export { background-image:url('../images/admin/admin-content-taxonomy.png');}
+div.admin-lifedesk-item h3.admin-classification-biological-logs { background-image:url('../images/admin/admin-reports.png');}
+
+
+div.admin-lifedesk-item p.description {
+	color:#898989;
+	line-height:150%;
+	margin:10px 0 0.75em;
+	padding:0 4px 2px 8px;
+}
+
+div.admin-lifedesk-item p.create {
+position:absolute;
+width:100%;
+bottom:15px;
+left:10px;
+padding:0;
+margin:0px auto;
+text-decoration:none !important;
+font-size:1.5em;
+text-align:left;
+}

@@ -1,0 +1,83 @@
+<?php
+// $Id: deleted_sites.install,v 1.0 2009/05/04 12:50 vkudal Exp $
+
+function deleted_sites_schema() {
+$schema['deleted_sites'] = array(
+	'fields' => array(
+	  'id' => array(
+		'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+	  ),
+	  'title' => array(
+		'type' => 'varchar',
+		'not null' => TRUE,
+		'length' => 255,
+	  ),
+	  'name' => array(
+		'type' => 'varchar',
+		'not null' => TRUE,
+		'length' => 255,
+	  ),
+      'email' => array(
+        'type'=>'varchar',
+        'not null' => TRUE,
+        'length' => 255,
+     ),
+     'message' => array(
+	   'description' => t('User submitted feedback.'),
+	   'type' => 'text',
+	   'size' => 'normal',
+	   'default' => '',
+	 ),
+	 'shortname' => array(
+       'type'=>'varchar',
+       'not null' => TRUE,
+       'length' => 125,
+     ),
+     'deleted' => array(
+       'description' => t('The Unix timestamp when site was deleted.'),
+       'type' => 'int',
+       'not null' => TRUE,
+       'default' => 0
+    ),
+   ),
+   'primary key' => array('id'),
+);
+return $schema;
+}
+
+function deleted_sites_install() {
+	drupal_install_schema('deleted_sites');
+}
+
+function deleted_sites_uninstall() {
+	drupal_uninstall_schema('deleted_sites');
+}
+
+function deleted_sites_update_6101() {
+  $ret = array();
+
+  if (!db_column_exists('deleted_sites', 'profile')) {
+    $schema = array(
+       'type'=>'varchar',
+       'not null' => TRUE,
+       'length' => 125,
+     );
+    db_add_field($ret, 'deleted_sites', 'profile', $schema);
+
+    $ret[] = update_sql("UPDATE {deleted_sites} SET profile='expert';");
+  }
+
+  return $ret;
+}
+
+function deleted_sites_update_6102() {
+  $ret = array();
+
+  if (db_column_exists('deleted_sites', 'profile')) {
+    db_drop_field($ret, 'deleted_sites', 'profile');
+  }
+
+  return $ret;
+}

@@ -1,0 +1,9 @@
+name = JSTree
+description = "Provides the JSTree library"
+package = "LifeDesk"
+project = "jstree"
+
+dependencies[] = jquery_update
+
+core = 6.x
+version = "6.x-1.0"

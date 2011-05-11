@@ -1,0 +1,55 @@
+/* search results */
+dl.apachesolr_search-results dt.title {
+	background:none;
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	outline: none;
+	padding: 1px 5px;
+	padding-left: 24px;
+}
+
+dl.apachesolr_search-results dt.biblio {
+  background-image: url(../images/book.png);
+}
+
+dl.apachesolr_search-results dt.taxonpage {
+  background-image: url(../images/bug.png);
+}
+
+dl.apachesolr_search-results dt.image {
+  background-image: url(../images/picture.png);
+}
+
+dl.apachesolr_search-results dt.shadedmap {
+  background-image: url(../images/map.png);
+}
+
+dl.apachesolr_search-results p.search-snippet {
+	margin:0px;
+}
+
+dl.apachesolr_search-results p.search-snippet img {
+	margin-right:5px;
+}
+
+dl.taxon_search-results dt.title {
+	background:none;
+	background-position: 6px center;
+	background-repeat: no-repeat;
+	outline: none;
+	padding: 1px 5px;
+	padding-left: 24px;
+	background-image: url(../images/bug.png);
+}
+
+dl.taxon_search-results p.search-snippet {
+	margin:0px;
+}
+
+dl.taxon_search-results p.search-snippet span.treepath {
+	display:block;
+}
+
+dl.taxon_search-results p.search-snippet span.colp {
+	color:#888;
+}

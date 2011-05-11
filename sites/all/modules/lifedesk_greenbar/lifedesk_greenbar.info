@@ -1,0 +1,7 @@
+name = LifeDesk Greenbar
+description = "The green bar at the top of every LifeDesk page. Unfortunately named because it is now grey."
+package = "LifeDesk"
+project = "lifedesk_greenbar"
+core = 6.x
+
+version = 6.0

@@ -1,0 +1,58 @@
+<?php
+/* $Id:$ */
+
+/** 
+ * @file excel_reader.module
+ * This module makes it possible to parse Excel files
+ *
+ *      IMPORTANT!
+ *      If served from Apache, auto_detect_line_endings should be set to "On".
+ *      Likewise, php_zip.so needs to be obtained and enabled under extensions
+ */
+
+function excel_reader_parse($file) {
+	if($file->filesize < 1) return;
+
+    module_load_include('php', 'excel_reader', 'includes/PHPExcel/IOFactory');
+
+    ini_set('memory_limit','1000M');
+
+	switch($file->filemime) {
+	  case 'text/plain':
+	
+		$objReader = PHPExcel_IOFactory::createReader('CSV')
+		    ->setDelimiter("\t")
+		    ->setEnclosure('')
+		    ->setLineEnding("\n\r")
+		    ->setSheetIndex(0);
+		$objPHPExcel = $objReader->load($file->filepath);
+		
+		return $objPHPExcel;
+	
+	  break;
+	  case 'text/csv':
+	
+		$objReader = PHPExcel_IOFactory::createReader('CSV')
+		    ->setDelimiter(",")
+		    ->setEnclosure('')
+		    ->setLineEnding("\n\r")
+		    ->setSheetIndex(0);
+		$objPHPExcel = $objReader->load($file->filepath);
+		
+		return $objPHPExcel;
+	
+	  break;
+      case 'application/vnd.ms-excel':
+	  case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+
+	    $objPHPExcel = PHPExcel_IOFactory::load($file->filepath);
+		
+	    return $objPHPExcel;
+	
+	  break;
+
+	  default:
+	    file_delete($file->filepath);
+		return;
+	}
+}
