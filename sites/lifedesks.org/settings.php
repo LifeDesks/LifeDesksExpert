@@ -103,7 +103,7 @@ $conf['_lifedesks_admindb'] = "lifedesk_production";
 
 $db_prefix = "";
 $base_url = "http://" . $subd . "." . $conf['_lifedesks_domain'];
-$db_url = 'mysqli://root@127.0.0.1/' . $subd;
+$db_url = 'mysqli://lifedesk:lifedesk@127.0.0.1/' . $subd;
 
 /**
  * Access control for update.php script

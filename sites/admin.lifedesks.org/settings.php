@@ -98,7 +98,7 @@ $conf['file_directory_path'] = "files/lifedesk_admin";
 
 $db_prefix = "";
 $base_url = "http://admin." . $conf['_lifedesks_domain'];
-$db_url = "mysqli://root@127.0.0.1/lifedesk_production";
+$db_url = "mysqli://lifedesk:lifedesk@127.0.0.1/lifedesk_production";
 
 /**
  * Access control for update.php script
