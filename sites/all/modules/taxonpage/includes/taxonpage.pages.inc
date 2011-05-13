@@ -113,6 +113,9 @@ function taxonpage_term_page($tid = '', $op = 'page', $options = '', $uid = '') 
               $dompdf->set_base_path($path);
               $dompdf->set_paper('letter', 'portrait');
 
+              // REPLACE UTF-8 CHARS
+              $html = utf8_char_replace($html);
+              
               if (function_exists('utf8_decode')) {
                 $html = utf8_decode($html);
               }

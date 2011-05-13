@@ -421,4 +421,21 @@ if (!defined('DEBUGKEEPTEMP')) {
 if (!defined('DEBUGCSS')) {
   define('DEBUGCSS',0);
 }
+
+// REPLACE UTF-8 CHARS
+function utf8_char_replace($str) {
+  $utf8 = array(chr(0xe2).chr(0x80).chr(0x98),  //LEFT SINGLE QUOTATION MARK
+                chr(0xe2).chr(0x80).chr(0x99),  //RIGHT SINGLE QUOTATION MARK
+                chr(0xe2).chr(0x80).chr(0x9c),  //LEFT DOUBLE QUOTATION MARK
+                chr(0xe2).chr(0x80).chr(0x9d),  //RIGHT DOUBLE QUOTATION MARK
+                chr(0xe2).chr(0x80).chr(0x9a),  //SINGLE LOW-9 QUOTATION MARK
+                chr(0xe2).chr(0x80).chr(0x9e),  //DOUBLE LOW-9 QUOTATION MARK
+                chr(0xe2).chr(0x80).chr(0x93),  //EN DASH
+                chr(0xe2).chr(0x80).chr(0x94),  //EM DASH
+                chr(0xe2).chr(0x80).chr(0xa6)); //HORIZONTAL ELLIPSIS
+
+  $base = array("'", "'", '"', '"', "'", '"', '-', '-', '...');
+  $str = str_replace($utf8, $base, $str);
+  return $str;
+}
 ?>
