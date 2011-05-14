@@ -545,13 +545,6 @@ function classification_menu() {
        'file' => 'includes/classification.edit.inc',
     );
 
-    $items['classification/pinger'] = array(
-     'page callback' => 'classification_pinger',
-     'access arguments' => array('edit classification'),
-     'type' => MENU_CALLBACK,
-     'file' => 'includes/classification.pinger.inc',
-  );
-
   $items['classification/check_destination'] = array(
     'page callback' => 'classification_check_destination',
     'access arguments' => array('edit classification'),

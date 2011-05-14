@@ -330,6 +330,12 @@ function expert_profile_tasks(&$task, $url) {
     variable_set('biblio_rss', 1);
     variable_set('lifedesk_biblio_parserurl', 'http://refman.eol.org/cgi-bin/refparser.cgi?');
     variable_set('lifedesk_biblio_pid', 'lifedesk@eol.org');
+
+    //Juggernaut settings
+    variable_set("juggernaut_host", "www.lifedesks.org");
+    variable_set("juggernaut_port", "8080");
+    variable_set("redis_host", "10.19.19.24");
+    variable_set("redis_port", 6379);
     
     //set the inactive period check
     variable_set("lifedesk_announcements_inactive_period", 2);
