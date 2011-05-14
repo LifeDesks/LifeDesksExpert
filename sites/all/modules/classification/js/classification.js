@@ -5,6 +5,15 @@ $.os = {
 
 $(function() {
 
+  //initialize a Juggernaut connection
+  var jug = new Juggernaut({
+    'host' : Drupal.settings.juggernaut_host,
+    'port' : Drupal.settings.juggernaut_port
+  });
+  jug.on("connect", function() { });
+  jug.on("disconnect", function() { });
+  jug.on("reconnect", function() { });
+
   //override the ActiveX jQuery settings
   $.ajaxSetup({
     xhr:function() { return new XMLHttpRequest(); }
@@ -28,7 +37,6 @@ $(function() {
   var tid = Drupal.settings['classification_tags']['tid'];
 
   var classification_logging = Drupal.settings.classification_show_messages;
-  var classification_logging_freq = Drupal.settings.classification_pinger_freq;
 
   if(Drupal.settings['classification_tags']['ancestry']) {
     var ancestors = Drupal.settings['classification_tags']['ancestry'].split(",");  
@@ -1181,7 +1189,9 @@ $(function() {
             alldata.push({name: n, value: this.value});
           });
 
-          $.post(Drupal.settings.classification_callback_base_url + "/update_metadata/", alldata, function(data) {_this.display_log(data);}, "json");
+          $.post(Drupal.settings.classification_callback_base_url + "/update_metadata/", alldata, function(data) {
+            _this.display_log(data);
+          }, "json");
           $.post(Drupal.settings.classification_biblio_callback_base_url+"/update_citation/", { "tid" : metadata.tid, "citation" : $('#edit-bibliographic-citation').val()});
             
           if($('select',$('#classification_relation_wrapper')).val()) {
@@ -1427,7 +1437,9 @@ $(function() {
         var message = '<div class="messages-throbber">' + Drupal.t('Deleting !name and its children (if any)...', {'!name' : name}) + '</div>';
         $('#classification-message').html(message);
         $.post(Drupal.settings.classification_callback_base_url + "/delete_name/", {"tid" : tid, "vid" : vid, "name" : name }, function(data) { 
-         _this.success_delete(data);}, "json");
+          _this.success_delete(data);
+          _this.display_log(data);
+        }, "json");
         $('#edit-vern-lang-wrapper').hide();
         $('#edit-tid').val('');
         $('#edit-parent-tid').val('');
@@ -1482,7 +1494,9 @@ $(function() {
              break;
            case "inside":
              //may use REF_NODE.id as new parent
-             $.post(Drupal.settings.classification_callback_base_url + "/move_name/", {"child" : orig, "new_parent" : dest, "vid" : vid }, function(data) {_this.display_log(data);}, "json");
+             $.post(Drupal.settings.classification_callback_base_url + "/move_name/", {"child" : orig, "new_parent" : dest, "vid" : vid }, function(data) {
+               _this.display_log(data);
+             }, "json");
              break;
         }
     };
@@ -1496,7 +1510,9 @@ $(function() {
         var _this = this;
         var orig = content.child;
         var dest = content.dest;
-        $.post(Drupal.settings.classification_callback_base_url + "/move_name/", {"child" : orig, "new_parent" : dest, "vid" : vid }, function(data) {_this.display_log(data);}, "json");
+        $.post(Drupal.settings.classification_callback_base_url + "/move_name/", {"child" : orig, "new_parent" : dest, "vid" : vid }, function(data) {
+          _this.display_log(data);
+        }, "json");
     };
 
     /*
@@ -1523,7 +1539,10 @@ $(function() {
          break;
        case "inside":
          //may use REF_NODE.id as new parent
-         $.post(Drupal.settings.classification_callback_base_url + "/copy_name/", {"child" : orig, "new_parent" : dest, "vid" : vid }, function(data) {_this.display_log(data);if(dest==0) { TREE.jsTree.refresh() } else { TREE.refresh_by_li('#n' + dest) } }, "json");
+         $.post(Drupal.settings.classification_callback_base_url + "/copy_name/", {"child" : orig, "new_parent" : dest, "vid" : vid }, function(data) {
+           _this.display_log(data);
+           if(dest==0) { TREE.jsTree.refresh() } else { TREE.refresh_by_li('#n' + dest) } 
+         }, "json");
          break; 
       }
     };
@@ -1537,7 +1556,10 @@ $(function() {
         var _this = this;
         var orig = content.child;
         var dest = content.dest;
-        $.post(Drupal.settings.classification_callback_base_url + "/copy_name/", {"child" : orig, "new_parent" : dest, "vid" : vid }, function(data) {_this.display_log(data);if(dest==0) { TREE.jsTree.refresh() } else { TREE.refresh_by_li('#n' + dest) } }, "json");    
+        $.post(Drupal.settings.classification_callback_base_url + "/copy_name/", {"child" : orig, "new_parent" : dest, "vid" : vid }, function(data) {
+          _this.display_log(data);
+          if(dest==0) { TREE.jsTree.refresh() } else { TREE.refresh_by_li('#n' + dest) } 
+        }, "json");    
     };
 
     // Static variables to set/unset status of metadata panels
@@ -2174,12 +2196,12 @@ $(function() {
     * Periodic polling by all users (if enabled) such that actions propogate to all other users' screens
     */
     if(classification_logging) {
-        $(".page-admin-classification-biological-edit").doTimeout('loop', classification_logging_freq*1000, function() { 
-          $.get(Drupal.settings.classification_callback_base_url + '/pinger', {}, function(data) {
-            if(data.status && data.message) {
+
+      jug.subscribe(Drupal.settings.juggernaut_channel, function(data) {
+            if(data.status && data.message && data.user != Drupal.settings.uid) {
                 TREE.display_log(data);
             }
-            if(data.actions && data.actions.length > 0) {
+            if(data.actions && data.actions.length > 0 && data.user != Drupal.settings.uid) {
                 
                 //chunk data actions array into pieces, then loop through pairs of chunks
                 var actionsChunk = chunk(data.actions, 2);
@@ -2298,9 +2320,7 @@ $(function() {
                     
                 }
             }
-          }, "json");
-          return true;
-        });
+       });
     }
     
 });

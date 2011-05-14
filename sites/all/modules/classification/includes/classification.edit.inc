@@ -37,8 +37,14 @@ function classification_edit_form(&$form_state, $vid_open = '', $tid = '') {
 
   jstree_add($jstree_files);
 
+  //add juggernaut client files
+  drupal_add_js($module_path . 'juggernaut/json.js');
+  drupal_add_js($module_path . 'juggernaut/socket_io.js');
+  drupal_add_js($module_path . 'juggernaut/juggernaut.js');
+
   drupal_add_css($module_path . 'css/classification.css');
   drupal_add_js($module_path . 'js/jquery.ba-dotimeout.min.js');
+  drupal_add_js($module_path . 'js/jquery.json-2.2.min.js');
   drupal_add_js($module_path . 'js/classification.js');
 
   if(module_exists('jquery_ui')) {
@@ -58,10 +64,13 @@ function classification_edit_form(&$form_state, $vid_open = '', $tid = '') {
   }
 
   $show_messages = isset($user->classification_show_messages) ? $user->classification_show_messages : 1;
-  $pinger_freq = variable_get("classification_pinger_freq",5);
   $vid_open = (array_key_exists($vid_open, $vocabs) && $vid_open !== CLASSIFICATION_PRIMARY) ? $vid_open : "";
 
-  drupal_add_js(array('classification_primary' => CLASSIFICATION_PRIMARY, 'classification_deletions' => CLASSIFICATION_DELETIONS, 'classification_lost_found' => CLASSIFICATION_LOST_FOUND, 'classification_relations' => $relations, 'classification_show_messages' => $show_messages, 'classification_pinger_freq' => $pinger_freq, 'classification_import_copypaste_limit' => variable_get('classification_import_copypaste_limit', 1000), 'classification_open' => $vid_open ), 'setting');
+  $juggernaut_host = variable_get("juggernaut_host", "www.lifedesks.org");
+  $juggernaut_port = variable_get("juggernaut_port", "8080");
+  $juggernaut_channel = variable_get("juggernaut_channel", "site.lifedesks.org");
+
+  drupal_add_js(array('classification_primary' => CLASSIFICATION_PRIMARY, 'classification_deletions' => CLASSIFICATION_DELETIONS, 'classification_lost_found' => CLASSIFICATION_LOST_FOUND, 'classification_relations' => $relations, 'classification_show_messages' => $show_messages, 'classification_import_copypaste_limit' => variable_get('classification_import_copypaste_limit', 1000), 'classification_open' => $vid_open, 'juggernaut_host' => $juggernaut_host, 'juggernaut_port' => $juggernaut_port, 'juggernaut_channel' => $juggernaut_channel, 'uid' => $user->uid), 'setting');
 
   if($tid) {
     $ancestry = array();
@@ -982,19 +991,19 @@ function classification_bulkadd() {
       _classification_unlock_classification();
     
       $status = 'bulkadded';
-      $output = t('!count name(s) added to !classification under !parent.', array('!count' => count($temp), '!classification' => $vocab->name, '!parent' => ($parent_term->name) ? $parent_term->name : t('root')));
 
       $action = array(
         'tid' => 0,
         'parent' => $parent_term->tid,
-        'vid' => $vid,
+        'vid' => $vid
       );
+      $message = t('!count name(s) were bulk inserted into !classification under !parent', array('!count' => count($temp), '!classification' => $vocab->name, '!parent' => ($parent_term->name) ? $parent_term->name : t('root')));
       $classification_log = array(
         'uid' => $user->uid,
         'vid_from' => 0,
         'vid_to' => $parent_term->vid,
         'type' => 'added',
-        'description' => t('!count name(s) were bulk inserted into !classification under !parent', array('!count' => count($temp), '!classification' => $vocab->name, '!parent' => $parent_term->name)),
+        'description' => $action['message'],
         'action' => $action,
         'created' => time(),
       );
@@ -1002,10 +1011,14 @@ function classification_bulkadd() {
   }
   else {
     $status = 'failed';
-    $output = t('Sorry, you attempted to paste more than the limit of !limit names.', array('!limit' => $limit));
+    $message = t('Sorry, you attempted to paste more than the limit of !limit names.', array('!limit' => $limit));
   }
 
-  drupal_json(array('status' => $status, 'message' => $output));
+  drupal_json(array('status' => $status, 'message' => $message));
+
+  if($status == 'bulkadded') {
+    classification_push_message('bulkadded', $action, $message);
+  }
 }
 
 /**
@@ -1087,20 +1100,21 @@ function classification_edit_name() {
     $action = array(
         'tid' => $tid,
         'parent' => $parent->parent,
-        'vid' => $vid,
+        'vid' => $vid
     );
+    $message = t('A duplicate name !value was added under !parent', array('!value' => $value, '!parent' => $parent_name));
     $classification_log = array(
         'uid' => $user->uid,
         'type' => 'added',
         'vid_to' => $vid,
         'vid_from' => $vid,
-        'description' => t('A duplicate name !value was added under !parent', array('!value' => $value, '!parent' => $parent_name)),
+        'description' => $message,
         'action' => $action,
         'created' => time(),
     );
     drupal_write_record('classification_log', $classification_log);
 
-    drupal_json(array('status' => 'duplicate', 'message' => t('!value already exists in your classification.', array('!value' => $value))));
+    drupal_json(array('status' => 'duplicate', 'message' => $message));
   }
   else {
       if($value !== $value_db) {
@@ -1116,12 +1130,13 @@ function classification_edit_name() {
          $action = array(
             'tid' => $tid,
             'parent' => $parent->parent,
-            'vid' => $vid,
+            'vid' => $vid
          );
+         $message = ($value_db == 'New taxon') ? t('!value added under !parent', array('!value' => $value, '!parent' => $parent_name)) : t('!value_db changed to !value', array('!value_db' => $value_db, '!value' => $value));
          $classification_log = array(
             'uid' => $user->uid,
-            'type' => ($value_db == 'Taxon') ? 'added' : 'updated',
-            'description' => ($value_db == 'Taxon') ? t('!value added under !parent', array('!value' => $value, '!parent' => $parent_name)) : t('!value_db changed to !value', array('!value_db' => $value_db, '!value' => $value)),
+            'type' => ($value_db == 'New taxon') ? 'added' : 'updated',
+            'description' => $message,
             'vid_from' => $vid,
             'vid_to' => $vid,
             'action' => $action,
@@ -1129,7 +1144,9 @@ function classification_edit_name() {
          );
          drupal_write_record('classification_log', $classification_log);
         
-         drupal_json(array('status' => 'edited', 'message' => t('Name successfully updated')));
+         drupal_json(array('status' => 'edited', 'message' => $message));
+
+         classification_push_message($classification_log['type'], $action, $message);
       }
       else {
          drupal_json(array('status' => '', 'message' => ''));
@@ -1461,14 +1478,15 @@ function classification_delete_name() {
   $action = array(
     'tid' => $tid,
     'parent' => $parent,
-    'vid' => $vid,
+    'vid' => $vid
   );
+  $message = t('!name and its children (if any) deleted', array('!name' => $term['name']));
   $classification_log = array(
     'uid' => $user->uid,
     'type' => 'deleted',
     'vid_to' => CLASSIFICATION_DELETIONS,
     'vid_from' => $vid,
-    'description' => t('!name and its children (if any) deleted', array('!name' => $term['name'])),
+    'description' => $message,
     'action' => $action,
     'created' => time(),
   );
@@ -1476,7 +1494,9 @@ function classification_delete_name() {
 
   _classification_unlock_classification();
 
-  drupal_json(array('status' => 'deleted', 'delete_vid' => CLASSIFICATION_DELETIONS, 'message' => t('!name and its children (if any) successfully deleted', array('!name' => $term['name']))));
+  drupal_json(array('status' => 'deleted', 'delete_vid' => CLASSIFICATION_DELETIONS, 'message' => $message));
+
+  classification_push_message('deleted', $action, $message);
 
 }
 
@@ -1520,7 +1540,7 @@ function classification_delete_name_data($vid,$tid) {
     $message = t('No content was found associated with <strong>!name</strong> or any of if its children, if any. Are you sure you want to remove these name(s)?', array('!name' => $name));
   }
 
-  drupal_json(array('status' => 'ok', 'names' => $name_content, 'message' => $message));
+  drupal_json(array('status' => 'ok', 'names' => $name_content, 'message' => $message,));
 }
 
 /**
@@ -1736,6 +1756,7 @@ function classification_move_name() {
   $action = array();
   if($child_term->vid != $new_parent_term->vid) {
     $new_parent_name = $new_parent_term->name ? $new_parent_term->name : 'root';
+    $message = t('!name and its children (if any) moved from !old_parent in !classification to !new_parent', array('!name' => $child_term->name, '!old_parent' => $old_parent_name, '!classification' => $vocab->name, '!new_parent' => $new_parent_term->name));
     $action[] = array(
       'vid' => $vocab->vid,
       'tid' => $child,
@@ -1751,7 +1772,7 @@ function classification_move_name() {
       'type' => 'moved',
       'vid_to' => $new_parent_term->vid,
       'vid_from' => $vocab->vid,
-      'description' => t('!name and its children (if any) moved from !old_parent in !classification to !new_parent', array('!name' => $child_term->name, '!old_parent' => $old_parent_name, '!classification' => $vocab->name, '!new_parent' => $new_parent_term->name)),
+      'description' => $message,
       'action' => $action,
       'created' => time(),
     );
@@ -1789,6 +1810,8 @@ function classification_move_name() {
   _classification_unlock_classification();
 
   drupal_json(array('status' => 'moved', 'message' => t('!name and its children (if any) successfully moved', array('!name' => $child_term->name))));
+
+  classification_push_message('moved', $action, $message);
 }
 
 /**
@@ -1889,6 +1912,7 @@ function classification_copy_name() {
 
   drupal_json(array('status' => 'copied', 'message' => t('!name and its children (if any) successfully copied into your classification', array('!name' => $child_term->name))));
 
+  classification_push_message('copied', $action, $message);
 }
 
 /*
@@ -1916,4 +1940,28 @@ function __classification_copy_name_create($tid,$name,$parent,$vid) {
   }
 
   return $term['tid'];
+}
+
+function classification_push_message($status, $action, $message) {
+  global $user;
+  $editor = "<em>" . $user->givenname . " " . $user->surname . "</em>";
+
+  $channel = variable_get("juggernaut_channel", "site.lifedesks.org");
+  $jug_message = array(
+    'channels' => array($channel),
+    'data' => array(
+      'status' => $status,
+      'actions' => array_key_exists(0, $action) ? $action : array($action),
+      'message' => $editor . ": " . $message,
+      'user' => $user->uid
+    )
+  );
+
+  $redis_host = variable_get("redis_host", "127.0.0.1");
+  $redis_port = variable_get("redis_port", 6379);
+
+  $redis = new Redis;
+  $redis->connect(''.$redis_host.'', $redis_port);
+  $redis->publish("juggernaut", json_encode($jug_message));
+  $redis->close();
 }
