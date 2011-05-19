@@ -29,4 +29,13 @@ Needs to be changed to:
 function taxonomy_form_alter(&$form, $form_state, $form_id) {
   if (isset($form['type']) && isset($form['#node']) && $form['type']['#value'] .'_node_form' == $form_id) {
 
+REQUIREMENTS:
+
+For real-time collaborative classification editing (if desired):
+
+Installation of the redis.so PHP extension available here: https://github.com/nicolasff/phpredis
+Install a juggernaut server using node.js as outlined here: https://github.com/maccman/juggernaut
+
+
+
 

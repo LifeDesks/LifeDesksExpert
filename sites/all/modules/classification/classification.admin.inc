@@ -13,12 +13,28 @@ function classification_admin_settings() {
     '#options' => array(1 => t('Ready'), 0 => t('Busy')),
   );
 
-  $form['classification_pinger_freq'] = array(
-    '#type' => 'select',
-    '#title' => t('Classification pinger frequency'),
-    '#description' => t('Adjust the frequency in seconds the classification polling mechanism executes.'),
-    '#default_value' => variable_get('classification_pinger_freq', 5),
-    '#options' => array(5 => 5, 6 => 6, 7 => 7),
+  $form['juggernaut_host'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Juggernaut host'),
+    '#default_value' => variable_get('juggernaut_host', 'www.lifedesks.org')
+  );
+
+  $form['juggernaut_port'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Juggernaut port'),
+    '#default_value' => variable_get('juggernaut_port', 8080)
+  );
+
+  $form['redis_host'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Redis host'),
+    '#default_value' => variable_get('redis_host', '127.0.0.1')
+  );
+
+  $form['redis_port'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Redis port'),
+    '#default_value' => variable_get('redis_port', 6379)
   );
 
   return system_settings_form($form);

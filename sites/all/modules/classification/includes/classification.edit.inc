@@ -1943,6 +1943,11 @@ function __classification_copy_name_create($tid,$name,$parent,$vid) {
 }
 
 function classification_push_message($status, $action, $message) {
+  if (!extension_loaded("redis")) {
+    echo "ERROR: redis.so extension is not loaded"; 
+    exit;
+  }
+
   global $user;
   $editor = "<em>" . $user->givenname . " " . $user->surname . "</em>";
 

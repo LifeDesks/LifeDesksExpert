@@ -1195,11 +1195,11 @@ function classification_update_6108() {
 function classification_update_6109() {
 	$ret = array();
 	variable_set("juggernaut_host", "www.lifedesks.org");
-	variable_set("juggernaut_port", "8080");
+	variable_set("juggernaut_port", 8080);
 	variable_set("redis_host", "10.19.19.24");
 	variable_set("redis_port", 6379);
 	$shortname = unserialize(db_result(db_query("SELECT value FROM variable WHERE name='shortname'")));
-	variable_set("juggernaut_channel", $shortname . ".lifedesks.org");
+	variable_set("juggernaut_channel", "" . $shortname . ".lifedesks.org");
 	$ret[] = update_sql("DELETE FROM variable WHERE name='classification_pinger_freq'");
 	return $ret;
 }

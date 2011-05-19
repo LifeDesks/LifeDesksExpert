@@ -333,7 +333,7 @@ function expert_profile_tasks(&$task, $url) {
 
     //Juggernaut settings
     variable_set("juggernaut_host", "www.lifedesks.org");
-    variable_set("juggernaut_port", "8080");
+    variable_set("juggernaut_port", 8080);
     variable_set("redis_host", "10.19.19.24");
     variable_set("redis_port", 6379);
     
