@@ -24,6 +24,12 @@ function classification_admin_settings() {
     '#title' => t('Juggernaut port'),
     '#default_value' => variable_get('juggernaut_port', 8080)
   );
+ 
+  $form['juggernaut_channel'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Juggernaut channel'),
+    '#default_value' => variable_get('juggernaut_channel', 'site.lifedesks.org')
+  );
 
   $form['redis_host'] = array(
     '#type' => 'textfield',

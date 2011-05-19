@@ -11,21 +11,21 @@ function classification_install() {
   sleep(4);
 
   $primary_classification = array(
-	 'name' => 'Taxa',
-	 'hierarchy' => 1,
-	 'module' => 'classification',
-	 'description' => t('The primary classification'),
-	 'tags' => 1,
-	 'weight' => -10
+     'name' => 'Taxa',
+     'hierarchy' => 1,
+     'module' => 'classification',
+     'description' => t('The primary classification'),
+     'tags' => 1,
+     'weight' => -10
   );
 
   $deleted_names = array(
-	'name' => 'Deleted Names',
-	'hierarchy' => 0,
-	'module' => 'classification',
-	'description' => t('A reserved (hidden) vocabulary to retain deleted biological names.'),
-	'tags' => 1,
-	'weight' => 99,
+    'name' => 'Deleted Names',
+    'hierarchy' => 0,
+    'module' => 'classification',
+    'description' => t('A reserved (hidden) vocabulary to retain deleted biological names.'),
+    'tags' => 1,
+    'weight' => 99,
   );
 
   taxonomy_save_vocabulary($primary_classification);
@@ -52,7 +52,7 @@ function classification_install() {
 
   //enable juggernaut channel
   $shortname = unserialize(db_result(db_query("SELECT value FROM variable WHERE name='shortname'")));
-  variable_set("juggernaut_channel", $shortname . ".lifedesks.org");
+  variable_set("juggernaut_channel", "" . $shortname . ".lifedesks.org");
 }
 
 /*
