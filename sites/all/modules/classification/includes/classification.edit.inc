@@ -1944,7 +1944,7 @@ function __classification_copy_name_create($tid,$name,$parent,$vid) {
 
 function classification_push_message($status, $action, $message) {
   if (!extension_loaded("redis")) {
-    echo "ERROR: redis.so extension is not loaded"; 
+    watchdog('classification', t("redis.so PHP extension is not loaded"), array(), WATCHDOG_ERROR); 
     exit;
   }
 
@@ -1965,8 +1965,13 @@ function classification_push_message($status, $action, $message) {
   $redis_host = variable_get("redis_host", "127.0.0.1");
   $redis_port = variable_get("redis_port", 6379);
 
-  $redis = new Redis;
-  $redis->connect(''.$redis_host.'', $redis_port);
-  $redis->publish("juggernaut", json_encode($jug_message));
-  $redis->close();
+  try {
+    $redis = new Redis;
+    $redis->connect(''.$redis_host.'', $redis_port);
+    $redis->publish("juggernaut", json_encode($jug_message));
+    $redis->close();
+  } catch(RedisException $e) {
+    watchdog('classification', t('Messages could not be pushed to the Juggernaut server'), array(), WATCHDOG_ERROR);
+  }
+
 }
