@@ -2198,10 +2198,10 @@ $(function() {
     if(classification_logging) {
 
       jug.subscribe(Drupal.settings.juggernaut_channel, function(data) {
-            if(data.status && data.message && data.user != Drupal.settings.uid) {
+            if(data.status && data.message && data.sid != Drupal.settings.sid) {
                 TREE.display_log(data);
             }
-            if(data.actions && data.actions.length > 0 && data.user != Drupal.settings.uid) {
+            if(data.actions && data.actions.length > 0 && data.sid != Drupal.settings.sid) {
                 
                 //chunk data actions array into pieces, then loop through pairs of chunks
                 var actionsChunk = chunk(data.actions, 2);

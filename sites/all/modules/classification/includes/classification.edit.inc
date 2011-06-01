@@ -70,7 +70,7 @@ function classification_edit_form(&$form_state, $vid_open = '', $tid = '') {
   $juggernaut_port = variable_get("juggernaut_port", 8080);
   $juggernaut_channel = variable_get("juggernaut_channel", "site.lifedesks.org");
 
-  drupal_add_js(array('classification_primary' => CLASSIFICATION_PRIMARY, 'classification_deletions' => CLASSIFICATION_DELETIONS, 'classification_lost_found' => CLASSIFICATION_LOST_FOUND, 'classification_relations' => $relations, 'classification_show_messages' => $show_messages, 'classification_import_copypaste_limit' => variable_get('classification_import_copypaste_limit', 1000), 'classification_open' => $vid_open, 'juggernaut_host' => $juggernaut_host, 'juggernaut_port' => $juggernaut_port, 'juggernaut_channel' => $juggernaut_channel, 'uid' => $user->uid), 'setting');
+  drupal_add_js(array('classification_primary' => CLASSIFICATION_PRIMARY, 'classification_deletions' => CLASSIFICATION_DELETIONS, 'classification_lost_found' => CLASSIFICATION_LOST_FOUND, 'classification_relations' => $relations, 'classification_show_messages' => $show_messages, 'classification_import_copypaste_limit' => variable_get('classification_import_copypaste_limit', 1000), 'classification_open' => $vid_open, 'juggernaut_host' => $juggernaut_host, 'juggernaut_port' => $juggernaut_port, 'juggernaut_channel' => $juggernaut_channel, 'sid' => $user->sid), 'setting');
 
   if($tid) {
     $ancestry = array();
@@ -1958,7 +1958,7 @@ function classification_push_message($status, $action, $message) {
       'status' => $status,
       'actions' => array_key_exists(0, $action) ? $action : array($action),
       'message' => $editor . ": " . $message,
-      'user' => $user->uid
+      'sid' => $user->sid
     )
   );
 
