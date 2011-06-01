@@ -1,0 +1,14 @@
+<?php
+// $Id: filterbynodetype.install,v 1.2 2008/10/20 00:06:54 crell Exp $
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function filterbynodetype_uninstall() {
+  // Clean up any variables we've created.
+  foreach (filter_formats() as $format) {
+    foreach (node_get_types() as $type) {
+      variable_del('filterbynodetype_' . $format->format . '_' . $type->type);
+    }
+  }
+}

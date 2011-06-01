@@ -1,0 +1,11 @@
+; $Id: filterbynodetype.info,v 1.3 2008/10/19 23:33:23 crell Exp $
+name = Filter By Node Type
+description = Restrict what input formats are available by node type
+core = 6.x
+
+; Information added by drupal.org packaging script on 2008-10-23
+version = "6.x-1.2"
+core = "6.x"
+project = "filterbynodetype"
+datestamp = "1224736512"
+

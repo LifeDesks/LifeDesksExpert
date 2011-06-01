@@ -1,0 +1,109 @@
+<?php
+// $Id: filterbynodetype.module,v 1.7 2008/10/23 04:29:33 crell Exp $
+
+/**
+ * @file
+ * The Filter By Node Type module, which makes input filter configurable on a per-content-type basis.
+ *
+ * Drupal core gives you no possibility to limit given input filters to a defined set of
+ * content types. This functionality is provided by the Filter By Node Type module. Common usage
+ * examples are:
+ *  - a designated filter for forums, blog entries etc. etc.
+ */
+
+/**
+ * Implementation of hook_perm().
+ */
+function filterbynodetype_perm() {
+  return array('bypass filter restrictions');
+}
+
+/**
+ * Implementation of hook_form_alter().
+ *
+ * Allow users with the necessary permission to change what input formats
+ * are allowed on a give node type.
+ */
+function filterbynodetype_form_node_type_form_alter(&$form, $form_state) {
+
+  $options = array();
+  foreach (filter_formats() as $format) {
+    $options[$format->format] = $format->name;
+  }
+
+  $defaults = array();
+  foreach (filter_formats() as $format) {
+    $defaults[] = variable_get('filterbynodetype_' . $format->format . '_' . $form['#node_type']->type, 1);
+  }
+
+  $form['submission']['input_formats'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Allowed input formats'),
+    '#description' => t('Specify which input formats will be allowed on this node type\'s body field.  Note that a user must still have access to the appropriate input format in order to be able to use it.'),
+    '#options' => $options,
+    '#default_value' => $defaults,
+    '#access' => user_access('administer filters'),
+  );
+
+  // Attach our submit handler so we can save our extra values.
+  $form['#submit'][] = 'filterbynodetype_node_type_form_submit';
+}
+
+/**
+ * Submit function for our admin form additions
+ *
+ * @see filterbynodetype_form_node_type_form_alter()
+ */
+function filterbynodetype_node_type_form_submit($form, &$form_state) {
+  $form_values = $form_state['values'];
+  foreach (filter_formats() as $format) {
+    variable_set('filterbynodetype_' . $format->format . '_' . $form_values['type'], $form_values['input_formats'][$format->format]);
+  }
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function filterbynodetype_form_alter(&$form, $form_state, $form_id) {
+
+  // For node edit forms, filter out disallowed input formats.
+  if (isset($form['#node']) && $form['#node']->type .'_node_form' == $form_id && !user_access('bypass filter restrictions')) {
+    $type = $form['type']['#value'];
+    $formats =& $form['body_field']['format'];
+    foreach (element_children($formats) as $element) {
+      if (isset($formats[$element]['#return_value']) && ! variable_get('filterbynodetype_' . $formats[$element]['#return_value'] . '_' . $type, 1)) {
+        unset($formats[$element]);
+      }
+    }
+
+    if (2 == count(element_children($formats))) { // 1 format and 1 extra item for the link
+      // If there's only one filter left, fold it down to just the description
+      $formats = $form['body_field']['format'];
+      unset($form['body_field']['format']);
+      // We don't know what the IDs are of the two fields, so we have to iterate to get them.
+      foreach (element_children($formats) as $element) {
+        if (isset($formats[$element]['#title'])) {
+          // This is a filter, so we assign it to the filter set as the only option.
+          $form['body_field']['format'][$element] = array(
+            '#type' => 'value',
+            '#value' => $element,
+            '#parents' => array('format'),
+          );
+          $form['body_field']['format']['format'] = array( // I have no idea why it uses this structure, but this is what filter.module does.
+            '#type' => 'item',
+            '#description' => $formats[$element]['#description'],
+          );
+        }
+        else {
+          // It's the guidelines text.
+          $form['body_field']['format']['guidelines_link'] = array(
+            '#value' => $formats[$element]['#value'],
+          );
+        }
+      }
+    }
+    if (1 == count(element_children($formats))) { // 1 extra item for the link, which means there's no filters left
+      // Do nothing.  The form becomes unsubmittable all on its own.
+    }
+  }
+}
