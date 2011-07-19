@@ -1514,3 +1514,21 @@ function lifedesk_alter_update_6229() {
   }
   return $ret;
 }
+
+function lifedesk_alter_update_6230() {
+    $ret = array();
+
+    $availableLanguages = array(
+        "en" => array("English"),
+        "es" => array("Spanish", "Español"),
+        "fr" => array("French", "Français"),
+        "pt-pt" => array("Portuguese, Portugal", "Português"),
+        "pt-br" => array("Portuguese, Brazil", "Português"),
+        "ro" => array("Romanian", "Română"),
+        "sw" => array("Swahili", "Kiswahili"),
+        "tl" => array("Tagalog", "Tagalog"),
+    );
+    variable_set('lifedesk_languages', $availableLanguages);
+
+    return $ret;
+}

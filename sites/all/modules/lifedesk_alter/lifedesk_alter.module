@@ -582,6 +582,7 @@ function _lifedesk_alter_locale_prepare_predefined_list() {
         "pt-br" => array("Portuguese, Brazil", "Português"),
         "ro" => array("Romanian", "Română"),
         "sw" => array("Swahili", "Kiswahili"),
+        "tl" => array("Tagalog", "Tagalog"),
     ));
   foreach ($predefined as $key => $value) {
     if (isset($languages[$key])) {

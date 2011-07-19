@@ -647,6 +647,7 @@ function expert_profile_tasks(&$task, $url) {
         "pt-br" => array("Portuguese, Brazil", "Português"),
         "ro" => array("Romanian", "Română"),
         "sw" => array("Swahili", "Kiswahili"),
+        "tl" => array("Tagalog", "Tagalog"),
     );
     variable_set('lifedesk_languages', $availableLanguages);
     variable_set('language_content_type_taxon_description',1);

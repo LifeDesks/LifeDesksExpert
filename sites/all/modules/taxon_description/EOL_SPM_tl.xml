@@ -1,0 +1,185 @@
+<drupal>
+<term>
+<name lang="tl" term="overview" type="header">Pangkalahatang-ideya</name>
+<description>Pangunahing kabanata  sa Ensiklopedya ng Buhay</description>
+<children>
+<term>
+<name lang="tl" term="description" type="chapter">Paglalarawan</name>
+<description>Ang isang kumpletong paglalarawan ng mga katangian ng mga taxon.  Ginagamit lalo na kapag marami sa mga paksa ng mga kategorya ay magkakasama sa isang bagay, ngunit hindi sa haba. Taxon biyolohiya ang gagamitin sa isang maikling buod.</description>
+</term>
+<term>
+<name lang="tl" term="biology" type="chapter">Biolohiya</name>
+<description>Ang isang listahan ng biology ng taxon. Halimbawa paguugali, pagpaparami, pagpapakalat.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="tl" term="conservation" type="header">Konserbasyon</name>
+<description>Pangunahing kabanata  sa Ensiklopedya ng Buhay</description>
+<children>
+<term>
+<name lang="tl" term="conservation" type="chapter">Konserbasyon</name>
+<description>Konserbasyon</description>
+</term>
+<term>
+<name lang="tl" term="conservationstatus" type="chapter">Kalagayan ng species sa ilang</name>
+<description>Isang paglalarawan sa posibilidad na ang ibat ibang uri ng hayop  ay mawala kasalukuyan  o sa malapit na hinaharap. Ang dami ng populasyon ay nasa sa ilalim ng Biyolohiya ng Populasyon, at mga sukat sa dami ng populasyon ay itinuturing sa ilalim ng Trends. Gayunman, ito ang nararapat na sangkap  nang isang bagay kung kasama lahat ng detalye ng conservation.</description>
+</term>
+<term>
+<name lang="tl" term="legislation" type="chapter">Lehislasyon</name>
+<description>Legal na mga regulasyon o mga palatuntunan na may kaugnayan sa taxon.</description>
+</term>
+<term>
+<name lang="tl" term="management" type="chapter">Pamamahala</name>
+<description>Naglalarawan ng mga pamamaraan at mga layunin na ginagamit sa pamamahala ng mga uri na may buhay. Maaaring kasama sa pamamahala ang isang lehislasyon.  Halimbawa, isang listahan ng CITES  [ito ay ang pagbabago sa mga layunin at kailangan isa alang alang ng TDWG].</description>
+</term>
+<term>
+<name lang="tl" term="procedures" type="chapter">Pamamaraan</name>
+<description>Kasama dito ang pamamahala ng isang taxon; kung ano ang mga alam na banta sa taxon na ito?</description>
+</term>
+<term>
+<name lang="tl" term="threats" type="chapter">Banta ng panganib</name>
+<description>Ang mga banta ng panganib na kasalukuyang hinaharap ng taxon</description>
+</term>
+<term>
+<name lang="tl" term="trends" type="chapter">Kalakaran</name>
+<description>Indikasyon kung ang isang populasyon ay matatag, o tumataas at bumababa ang bilang.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="tl" term="description" type="header">Paglalarawan sa pisikal na anyo.</name>
+<description>Pangunahing kabanata  sa Ensiklopedya ng Buhay</description>
+<children>
+<term>
+<name lang="tl" term="behaviour" type="chapter">Paguugali</name>
+<description>Paglalarawan ng asal at pag babago ng pag-uugali ng isang organismo, kabilang  dito ang mga aksyon at reaksyon na may kinalaman sa kanyang biotic at abiotic na kapaligiran. Kasama din dito ang komunikasyon,pagtingin at mga mekanismo ng pag galaw,pati na rin ang pangmatagalang  estratehiya (hindi kasama dito ang pag tatalik  at paraan ng pagpaparami na sakop sa ilalim ng pagpaparami).</description>
+</term>
+<term>
+<name lang="tl" term="cytology" type="chapter">Cytology</name>
+<description>Biyolohiya ng selula: pagbuo, istruktura ng selula at ang tungkulin nito. </description>
+</term>
+<term>
+<name lang="tl" term="diagnosticdescription" type="chapter">Mga pananda sa Paglalarawan</name>
+<description>Listahan ng mga katangian upang makilala itong taxon mula sa kanyang pinakamalapit na mga kamag-anak. Maaaring kasama ngunit hindi limitado sa mga synapomorphies.</description>
+</term>
+<term>
+<name lang="tl" term="genetics" type="chapter">Genetika</name>
+<description>Impormasyon sa genetika ng taxon, kabilang ang karyotypes,  katayuan ng paglalagay ng pagkilala  at genome sequence, bilang ng mga tangkas ng chromosomes.</description>
+</term>
+<term>
+<name lang="tl" term="growth" type="chapter">Paglaki</name>
+<description>Paglalarawan ng bilis ng paglago, allometries, mga sukat ng pagkilala, morpolohiya. Maaari ring isama ang hipotesis ng paedomorphy o neoteny, atbp</description>
+</term>
+<term>
+<name lang="tl" term="lookalikes" type="chapter">Mga species na may pagkakahawig ng itsura</name>
+<description>May ibang uri ng taxon na maaaring makalito . Kapaki-pakinabang para sa 
+pagkilala at paghahambing. Karaniwan sa mga komunidad ng nagsasalakay na uri.</description>
+</term>
+<term>
+<name lang="tl" term="molecularbiology" type="chapter">Molelukar Biyolohiya</name>
+<description>Kasama proteomic at byokimika (halimbawa:  Nakakalason).  Genomic impormasyon ay karaniwang  kasama sa ilalim ng genetika.</description>
+</term>
+<term>
+<name lang="tl" term="morphology" type="chapter">Morpolohiya</name>
+<description>Paglalarawan ng anyo ng taxon; halimbawa: plano ng katawan , hugis at kulay ng panlabas na mga tampok, tipikal na tindig. Maaring maisama ang ugali, o anatomiya.</description>
+</term>
+<term>
+<name lang="tl" term="physiology" type="chapter">Pisyolohiya</name>
+<description>Paglalarawan ng prosesong pisyolohiya. Kasama ang bilis ng metabolism at mga sistema tulad ng sirkulasyon, paghinga, pagdumi, kaligtasan sa sakit, katinuan ng isip.</description>
+</term>
+<term>
+<name lang="tl" term="size" type="chapter">Sukat</name>
+<description>Karaniwang sukat, pinakamalaking saklaw; uri ng sukat (paligid, haba, dami, timbang ...)</description>
+</term>
+<term>
+<name lang="tl" term="taxonbiology" type="chapter">Biyolohiya ng taxon</name>
+<description>Buod o pangkalahatang-ideya ng lahat ng aspeto ng biyolohiya ng organismo. </description>
+</term>
+</children>
+</term>
+<term>
+<name lang="tl" term="ecologyanddistribution" type="header">Ekolohiya at Pamamahagi</name>
+<description>Pangunahing kabanata  sa Ensiklopedya ng Buhay</description>
+<children>
+<term>
+<name lang="tl" term="associations" type="chapter">Asosasyon</name>
+<description>Ang mga paglalarawan at ang mga listahan ng taxa na nakikipag- ugnayan sa paksang taxon. Kasama ang tahasang pagtukoy sa mga uri ng ekololohiyang ugnayan: kainan ng magkaibang uri ng hayop,  parasitismo, pagdadala ng binhi, simbiyosi,  miyutualismo,    komensalismo, hibridisasyon.</description>
+</term>
+<term>
+<name lang="tl" term="cyclicity" type="chapter">Pasikutan</name>
+<description>Paglalarawan ng likas na pasikutan ng buhay, sa anumang sukat ng segundo, oras, araw, o panahon. Ang mga estado o kondisyon nagpapakilala sa pamamagitan ng regular na pag- ulit. Puwede din isama ang bilis ng pag nguya.Ang pag ikot ng buhay ay kasama sa pasikutan. Ang pag galaw base sa panahon at pagpaparami ay karaniwang hiwalay.</description>
+</term>
+<term>
+<name lang="tl" term="dispersal" type="chapter">Pagpapakalat</name>
+<description>Paglalarawan ng mga pamamaraan, mga pangyayari, at tiyempo ng pagpapakalat (kabilang ang pagkalat sa pagsilang at pagkalat sa pamamagitan ng paglahi sa ibang uri )</description>
+</term>
+<term>
+<name lang="tl" term="distribution" type="chapter">Distribusyon</name>
+<description>Covers ranges, e.g., a global range, or a narrower one; may be biogeographical, political or other (e.g., managed areas like Mga saklaw, halimbawa, isang pandaigdigang saklaw, o isang mas makitid ; maaaring distribusyon sa ibat ibang heograpiya, pampulitika o iba pa (halimbawa; pinamamahalaang mga lugar ) katutubo o galing sa ibang bansa. Hindi kasama ang pataas na distribusyon.</description>
+</term>
+<term>
+<name lang="tl" term="ecology" type="chapter">Ekolohiya</name>
+<description>Pakikipag-ugnayan sa ibat ibang organismo.</description>
+</term>
+<term>
+<name lang="tl" term="habitat" type="chapter">Tirahan (Lugar na lagging kinatatagpuan)</name>
+<description>Kabilang dito ang lupaing sakop (halimbawa: Pang-lupang atbp) at  impormasyon klimatiko (halimbawa: Hilagang hangin); kasama din ang mga kailangan at pasobra, pahalang at patayong distribusyon.</description>
+</term>
+<term>
+<name lang="tl" term="lifecycle" type="chapter">Pasikutan ng Buhay</name>
+<description>Tumutukoy at naglalarawan  ng pagbabago dala ng pagsulong. Kasama ang pagbabagong-anyo, yugto ng insekto, punla/binlig, pagbabago mula sa nakaupo at gumagalaw na anyo. Tinatalakay ang tiyempo. Karaniwang inilalarawan ang morpolohiya.</description>
+</term>
+<term>
+<name lang="tl" term="lifeexpectancy" type="chapter">Haba ng Buhay</name>
+<description>Anumang impormasyon tungkol sa tagal na buhay. Ang karaniwang panahon na ang isang  organismo ay inaasahang mabuhay.</description>
+</term>
+<term>
+<name lang="tl" term="migration" type="chapter">Pandarayuhan</name>
+<description>Paglalarawan ng mga pana-panahong pag galaw ng mga organismo mula sa isang lugar (halimbawa, para sa pagpapalahi). Karaniwang kasama ang  lokalidad, tiyempo, at hipotesis na layunin.</description>
+</term>
+<term>
+<name lang="tl" term="trophicstrategy" type="chapter">Istratehiyang Itropiko</name>
+<description>Mga buod ng pangkalahatang katangian ng pagkain. Halimbawa, ang pangunahing paaraan ng pagkain  (gumagawa ng sariling pagkain,dumedepende sa iba, kumakain ng dumi, kumakain ng nabubulok na bagay)  ang posisyon sa ugnayan (mandaragit, pangunahing gumagawa ng pagkain, dumedepende sa iba), diyeta (kumakain ng patay ng halaman at hayop, kumakain ng parehong hayop at halaman, kumakain ng halaman, kumakain ng hayop,), May listahan ng uri ng asosasyon at interaksyon ng organismo.</description>
+</term>
+<term>
+<name lang="tl" term="populationbiology" type="chapter">Biolohiya ng populasyon</name>
+<description>Kasama ang kasaganaan ng impormasyon  laki ng (populasyon ,densidad) at demograpiko 
+(halimbawa:  pagsasapin-sapin ng edad ng populasyon).</description>
+</term>
+<term>
+<name lang="tl" term="reproduction" type="chapter">Pagpaparami</name>
+<description>Paglalarawan ng pisyolohiya ng pagpaparami at pag-uugali, kabilang ang pakikipagtalik at  kasaysayan ng buhay. Kasama din ang estratehiya and bilis ng pagbabago.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="tl" term="evolutionandsystematics" type="header">Ebolusyon at Sistematika</name>
+<description>Pangunahing kabanata  sa Ensiklopedya ng Buhay.</description>
+<children>
+<term>
+<name lang="tl" term="evolution" type="chapter">Ebolusyon</name>
+<description>Paglalarawan ng ebolusyon ng taxon.</description>
+</term>
+</children>
+</term>
+<term>
+<name lang="tl" term="relevance" type="header">Kaugnayan</name>
+<description>Pangunahing kabanata  sa Ensiklopedya ng Buhay.</description>
+<children>
+<term>
+<name lang="tl" term="diseases" type="chapter">Sakit</name>
+<description>Paglalarawan ng sakit na maaring mapailalim sa mga organismo. Mga organismo na maaring makapagdulot ng sakit dahil sa asosasyon ay maaring isama.</description>
+</term>
+<term>
+<name lang="tl" term="riskstatement" type="chapter">Pahayag ng Panganib</name>
+<description>Negatibong epekto sa tao, mga komunidad. [Ito ay maaari ring isama epekto sa ekosistema 
+kung ang organismo ay mawawala).</description>
+</term>
+<term>
+<name lang="tl" term="uses" type="chapter">Gamit</name>
+<description>Benepisyo para sa mga tao. Puwede isama ang mga serbisyo ng ekosistema. Gayunman, ang mga benepisyo na hindi tiyak sa mga tao ay ilalim ng Pahayag ng Panganib (ano ang mangyayari kapag tinanggal ang organismo).</description>
+</term>
+</children>
+</term>
+</drupal>
