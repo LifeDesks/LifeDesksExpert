@@ -986,7 +986,7 @@ function _classification_update_lists($fid,$title,$list) {
 
 function classification_cron() {
   $time = variable_get('classification_logs_delete_interval',4);
-  db_query("DELETE FROM {classification_log} WHERE timestamp <= %d",time()-$time*604800);
+  db_query("DELETE FROM {classification_log} WHERE created <= %d",time()-$time*604800);
 
   //delete the classification_lost_found vocab if it's empty
   if(CLASSIFICATION_LOST_FOUND) {
