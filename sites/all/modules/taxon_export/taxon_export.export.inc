@@ -335,7 +335,7 @@ foreach ($taxa_array as $tax) {
                 if($obj["image"][$obj["object_nid"]]["image_rights"]) echo "<dcterms:rightsHolder>" . htmlspecialchars($obj["image"][$obj["object_nid"]]["image_rights"]) . "</dcterms:rightsHolder>\n";
                 echo "<dc:source>" . url("node/" . $obj["object_nid"], array("absolute" => TRUE)) . "</dc:source>\n";
                 echo "<dc:description xml:lang=\"" . $obj['object_language'] . "\">" . htmlspecialchars($obj["object_title"]) . "&lt;br&gt;" . htmlspecialchars($obj["object_body"]) . "</dc:description>\n"; //explicitly set as title once again because this what EOL uses for caption
-                echo "<mediaURL>" . url("image/view/" . $obj["object_nid"], array("absolute" => TRUE)) . "</mediaURL>\n";
+                echo "<mediaURL>" . url("image/view/" . $obj["object_nid"] . "/_original", array("absolute" => TRUE)) . "</mediaURL>\n";
                 echo "</dataObject>\n";
             }
             break;
