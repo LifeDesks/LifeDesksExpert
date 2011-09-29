@@ -4,7 +4,7 @@
 //= require <socket_io>
 
 if (typeof window != 'undefined') {
-	WEB_SOCKET_SWF_LOCATION = '/WebSocketMain.swf';
+	WEB_SOCKET_SWF_LOCATION = '/sites/all/modules/classification/juggernaut/WebSocketMain.swf';
 }
 
 var Juggernaut = function(options){
