@@ -131,6 +131,7 @@ $hiddenModules = array(
    'token_actions' => FALSE,
    'tokenSTARTER' => FALSE,
    'transaction' => TRUE,
+   'transliteration' => TRUE,
    'update' => TRUE,
    'userreference' => FALSE,
    'views' => TRUE,

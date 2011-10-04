@@ -103,6 +103,7 @@ function expert_profile_modules() {
         'term_display',
         'token',
         'transaction',
+        'transliteration',
         'update',
         'views',
         'wysiwyg',
