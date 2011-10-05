@@ -1532,3 +1532,32 @@ function lifedesk_alter_update_6230() {
 
     return $ret;
 }
+
+function lifedesk_alter_update_6231() {
+    $ret = array();
+
+    module_load_include('module', 'transliteration');
+    
+    $count = 0;
+    $errors = array();
+    $result = db_query("SELECT * FROM files WHERE filepath NOT REGEXP '/[a-z0-9_.-]+$'");
+
+    while ($file = db_fetch_object($result)) {
+      if (!file_exists('./'. $file->filepath)) {
+        // Missing file.
+        continue;
+      }
+
+      // Sanitize file name.
+      $filename = transliteration_clean_filename(basename($file->filepath));
+      // Build destination path.
+      $destination = dirname($file->filepath) . '/' . $filename;
+
+      // Rename and update the file record accordingly.
+      if (file_move($file->filepath, $destination, FILE_EXISTS_RENAME)) {
+        $ret[] = update_sql("UPDATE files SET filepath = '$file->filepath' WHERE fid = $file->fid");
+      }
+    }
+
+    return $ret;
+}
