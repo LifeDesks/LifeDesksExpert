@@ -1543,8 +1543,10 @@ function lifedesk_alter_update_6231() {
     $result = db_query("SELECT * FROM files WHERE filepath NOT REGEXP '/[a-z0-9_.-]+$'");
 
     while ($file = db_fetch_object($result)) {
+      // Missing file. 
       if (!file_exists('./'. $file->filepath)) {
-        // Missing file.
+        # We don't want the update hook to fail but need the logs of missing files.
+        $ret[] = array('success' => TRUE, 'query' => "Missing file $file->filepath");
         continue;
       }
 
@@ -1554,8 +1556,9 @@ function lifedesk_alter_update_6231() {
       $destination = dirname($file->filepath) . '/' . $filename;
 
       // Rename and update the file record accordingly.
-      if (file_move($file->filepath, $destination, FILE_EXISTS_RENAME)) {
-        $ret[] = update_sql("UPDATE files SET filepath = '$file->filepath' WHERE fid = $file->fid");
+      if ($file->filepath != $destination) {
+        rename($file->filepath, $destination);
+        $ret[] = update_sql("UPDATE files SET filepath = '$destination' WHERE fid = $file->fid");
       }
     }
 
