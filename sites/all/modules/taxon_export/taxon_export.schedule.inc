@@ -22,7 +22,7 @@ function taxon_export_schedule() {
   $form['schedule_export']['taxon_export_cron_enable'] = array(
     '#type' => 'select', 
     '#title' => t('Enable automated re-generation of your content partner endpoint'),
-    '#default_value' => variable_get('taxon_export_cron_enable', 0),
+    '#default_value' => variable_get('taxon_export_cron_enable', 1),
     '#options' => array('1' => t('Yes'), '0' => t('No')),
   );
 

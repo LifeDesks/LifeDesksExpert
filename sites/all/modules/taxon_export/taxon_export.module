@@ -149,24 +149,26 @@ function taxon_export_requirements($phase) {
  * Implementation of hook_cron()
  */
 function taxon_export_cron() {
-  if (variable_get('taxon_export_cron_enable', 0) == 1) {
-	// Calculate when the next taxon_export_cron run is due
-	$lastrun = variable_get('taxon_export_cron_lastrun', 0);
-	$interval = variable_get('taxon_export_cron_interval', 7);
-	$nextrun = $lastrun + (24 * 60 * 60 * $interval); // days
+  if(file_scan_directory(file_create_path('taxon_export'), '.gz')) {
+    if (variable_get('taxon_export_cron_enable', 1) == 1) {
+      // Calculate when the next taxon_export_cron run is due
+      $lastrun = variable_get('taxon_export_cron_lastrun', 0);
+      $interval = variable_get('taxon_export_cron_interval', 7);
+      $nextrun = $lastrun + (24 * 60 * 60 * $interval); // days
 
-	// If the configured time has passed, start the next taxon_export_cron run
-	if (time() > $nextrun) {
-		variable_set('taxon_export_cron_lastrun', time());
-		module_load_include('inc', 'taxon_export', 'taxon_export.export');
-		if(taxon_export_unmapped_chapter_check()) {
-	      return;	
-	    }
-	    else {
-		    $out = taxon_export_eol_export();	
-		    taxon_export_make_file($out,false);
-	    }
-	}
+      // If the configured time has passed, start the next taxon_export_cron run
+      if (time() > $nextrun) {
+        variable_set('taxon_export_cron_lastrun', time());
+        module_load_include('inc', 'taxon_export', 'taxon_export.export');
+        if(taxon_export_unmapped_chapter_check()) {
+          return;	
+        }
+        else {
+          $out = taxon_export_eol_export();	
+          taxon_export_make_file($out,false);
+        }
+      }
+    }
   }
 
   //delete old, unnecessary files from server
