@@ -1,0 +1,12 @@
+<?php
+
+/**
+ * Implements hook_update_N().
+ */
+function lifedesk_announcements_update_6100() {
+  $ret = array();
+  // Update text of message sent to inactive users.
+  $message = t("Dear !user,\n\nWe noticed that it has been a while since you or your fellow members logged into your LifeDesk, !site_name at !site_url. If you are taking a break, not to worry, your site will still be here for you when you return. However, if you do not need your site anymore instructions on how you can delete it can be found in the LifeDesks FAQ: http://help.lifedesks.org/node/50. If you are the owner of your LifeDesk, you may at any time download your site's underlying database before deleting it. Instructions on downloading your database and files can also be found in the LifeDesks FAQ: http://help.lifedesks.org/node/52.\n\nIf you have any questions please feel free to contact us via our online contact form: http://help.lifedesks.org/contact.\n\nThe LifeDesks Team");
+  $ret[] = variable_set('lifedesk_announcements_inactive_message', $message);
+  return $ret;
+}
