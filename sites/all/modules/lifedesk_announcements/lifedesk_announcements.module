@@ -89,21 +89,22 @@ function theme_lifedesk_announcements_message($message) {
 * Implementation of hook_cron
 */
 function lifedesk_announcements_cron() {
-    
+
     global $base_url;
 
     $interval = 60 * 60 * 24 * 30 * variable_get('lifedesk_announcements_inactive_period', 2);
     $ldsupport = variable_get('lifedesk_support', 1);
     $from = variable_get('site_mail', 'lifedesk@eol.org');
     $site_name = variable_get('site_name', 'Drupal Site');
-    $message = t("Dear !user,\n\nWe noticed that it has been a while since you or your fellow members logged into your LifeDesk, !site_name at !site_url. If you are taking a break, not to worry, your site will still be here for you when you return. However, if you do not need your site anymore, remember that you can delete it. Instructions on how to do this can be found here: http://help.lifedesks.org/node/50. If you are the owner of your site, you may at any time download the code and its underlying database before deleting it.\n\nIf you are still deciding whether or not LifeDesk is the right platform for you, that is okay. To help you decide, our new features and bug fixes can be found here: http://www.lifedesks.org/newfeatures/. If you have any questions, you can use the red feedback tab on the left-hand side of your site when logged in. There is also help documentation available at all times in the upper-right corner of every page on your site.\n\nWe hope to see you back soon,\n\nThe LifeDesks Team");
-    
-    $stale = true;    
+    // Default inactive message text is also defined in lifedesk_announcements_admin_settings() - ideally it could be set once in hook_install but for now update in both places
+    $message = t("Dear !user,\n\nWe noticed that it has been a while since you or your fellow members logged into your LifeDesk, !site_name at !site_url. If you are taking a break, not to worry, your site will still be here for you when you return. However, if you do not need your site anymore instructions on how you can delete it can be found in the LifeDesks FAQ: http://help.lifedesks.org/node/50. If you are the owner of your LifeDesk, you may at any time download your site's underlying database before deleting it. Instructions on downloading your database and files can also be found in the LifeDesks FAQ: http://help.lifedesks.org/node/52.\n\nIf you have any questions please feel free to contact us via our online contact form: http://help.lifedesks.org/contact.\n\nThe LifeDesks Team");
+
+    $stale = true;
     $qry = db_query("SELECT u.access FROM {users} u WHERE u.uid > 1 AND u.status = 1 AND u.uid != " . $ldsupport);
     while($result = db_fetch_object($qry)) {
       if ($result->access > (time()-$interval)) {
         $stale = false;
-        return;  
+        return;
       }
     }
     if($stale && variable_get("lifedesk_announcements_inactive_message_sent",0) < (time()-$interval)) {
@@ -119,7 +120,7 @@ function lifedesk_announcements_cron() {
 
         variable_set("lifedesk_announcements_inactive_message_sent", time());
     }
-}   
+}
 
 /**
  * Implementation of hook_mail
