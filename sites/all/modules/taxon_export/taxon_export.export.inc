@@ -380,8 +380,8 @@ foreach ($taxa_array as $tax) {
     
     $out = ob_get_contents();
     ob_end_clean();
-    
-    return $out;
+    $output = _taxon_export_clean_up($out);
+    return $output;
 }
 
 function _taxon_export_chapter_authors($sid) {
@@ -430,4 +430,23 @@ function taxon_export_make_file($out,$message=false) {
         drupal_set_message(t('Encyclopedia of Life content partner export successfully produced.'), 'status');
         drupal_goto('admin/export/taxon_export/export');    
     }
+}
+
+function _taxon_export_clean_up($output) {
+    $find = array(
+      '&amp;nbsp;',
+      '&nbsp;',
+      '&amp;shy;',
+      '&shy;'
+    );
+    $replace = array(
+      ' ',
+      ' ',
+      '',
+      '',
+    );
+    $output = str_ireplace($find, $replace, $output);
+    $output = preg_replace('#[\r\n\t\x0B\001-\020]#', ' ', $output); //Replace control characters ^A (\001), ^G (\007), ^H (\008), ^P (\020) using octal values http://www.robelle.com/smugbook/ascii.html
+    $output = trim($output);
+    return $output;
 }
