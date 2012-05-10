@@ -1441,7 +1441,7 @@ function lifedesk_alter_update_6227() {
   $ret[] = update_sql("DELETE FROM {users} WHERE mail LIKE '%@zensolutions.info' OR mail LIKE '%@megavigor.info' OR mail LIKE '%@thebytehouse.info' OR mail LIKE '%@mail.ru'");
   $ret[] = update_sql("INSERT INTO {access} (mask, type) VALUES ('%zensolutions.info', 'mail'), ('%megavigor.info', 'mail'), ('%thebytehouse.info', 'mail'), ('%mail.ru', 'mail')");
 
-  //give administer nodes permission to administers and editors
+  //give administer nodes permission to administrators and editors
   $add_permissions['administrator'] = array(
       'administer nodes',
   );
@@ -1563,4 +1563,32 @@ function lifedesk_alter_update_6231() {
     }
 
     return $ret;
+}
+
+function lifedesk_alter_update_6232() {
+  $ret = array();
+
+  //give 'edit users with role owner' permission to administrators
+  $add_permissions['administrator'] = array(
+      'edit users with role owner',
+  );
+  foreach($add_permissions as $role => $perms) {
+      $rid = db_result(db_query("SELECT rid FROM {role} WHERE name = '%s'", $role));
+      $perm_string = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", $rid));
+      if (strlen($perm_string) > 0) {
+      $permissions = array();
+      foreach(explode(',', $perm_string) as $perm){
+        $permissions[] = trim($perm);
+      }
+      foreach($perms as $perm) {
+          if(!in_array($perm, $permissions)) {
+            $permissions[] = trim($perm);
+          }
+      }
+      // rebuild the permission string
+      $ret[] = update_sql("UPDATE {permission} SET perm='" . join(', ', $permissions) . "' WHERE rid=" . $rid);
+    }
+  }
+  
+  return $ret;
 }
