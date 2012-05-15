@@ -264,7 +264,7 @@ function taxon_list_form(&$form_state) {
   );
 
   if($user->uid > 0) {
-    $header[] = array('data' => t('Last Modified'), 'field' => 'n.changed');
+    $header[] = array('data' => t('Last Modified'), 'field' => 'changed');
   }
 
   if($user->uid == 0) {
@@ -309,7 +309,7 @@ function taxon_list_form(&$form_state) {
     SELECT
       GROUP_CONCAT(n.type) as type,
       GROUP_CONCAT(n.language) as language,
-      n.changed,
+      MAX(n.changed) as changed,
       n.status,
       td.name as taxon,
       td.tid,
@@ -432,7 +432,7 @@ function theme_taxon_list_form($form) {
   );
 
   if($user->uid > 0) {
-    $header[] = array('data' => t('Last Modified'), 'field' => 'n.changed', 'class' => 'taxon-list-modified');
+    $header[] = array('data' => t('Last Modified'), 'field' => 'changed', 'class' => 'taxon-list-modified');
   }
 
   if (isset($form['name']) && is_array($form['name'])) {
