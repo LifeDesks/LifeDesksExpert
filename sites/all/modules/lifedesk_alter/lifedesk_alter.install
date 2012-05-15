@@ -1590,5 +1590,9 @@ function lifedesk_alter_update_6232() {
     }
   }
   
+  // Change the SMTP server across all lifedesks
+  variable_set('smtp_host', 'email.eol.org');
+  variable_set('smtp_hostbackup', '');
+  
   return $ret;
 }

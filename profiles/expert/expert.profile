@@ -255,8 +255,8 @@ function expert_profile_tasks(&$task, $url) {
      * Set SMTP settings
      */
     variable_set("smtp_on", "1");
-    variable_set("smtp_host", "10.19.19.213");
-    variable_set("smtp_hostbackup", "128.128.172.10");
+    variable_set("smtp_host", "email.eol.org");
+    variable_set("smtp_hostbackup", "");
     variable_set("smtp_port", "25");
     variable_set("smtp_protocol", "standard");
     variable_set("smtp_username","");
@@ -456,6 +456,7 @@ function expert_profile_tasks(&$task, $url) {
       'delete users with role editor',
       'edit users with role contributor',
       'edit users with role editor',
+      'edit users with role owner',
       'display site building menu',
       'display site configuration menu',
       'administer frontpage',
