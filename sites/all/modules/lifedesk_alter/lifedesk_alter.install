@@ -1596,3 +1596,24 @@ function lifedesk_alter_update_6232() {
   
   return $ret;
 }
+
+function lifedesk_alter_update_6233() {
+  $ret = array();
+
+  $role = 'administrator'
+  $permission = 'edit users with role owner'
+  
+  $rid = db_result(db_query("SELECT rid FROM {role} WHERE name = '%s'", $role));
+  $permissions_string = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", $rid));
+  $permissions_array = explode(',', $permissions_string)
+  foreach ($permissions_array as $key => &$perm) {
+    trim($perm)
+    if ($perm == $permission) unset($perm)
+  }
+  unset($perm)
+  
+  // rebuild the permission string
+  $ret[] = update_sql("UPDATE {permission} SET perm='" . join(', ', $permissions) . "' WHERE rid=" . $rid);
+
+  return $ret;
+}
