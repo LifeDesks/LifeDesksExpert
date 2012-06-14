@@ -456,7 +456,6 @@ function expert_profile_tasks(&$task, $url) {
       'delete users with role editor',
       'edit users with role contributor',
       'edit users with role editor',
-      'edit users with role owner',
       'display site building menu',
       'display site configuration menu',
       'administer frontpage',
