@@ -23,10 +23,12 @@ if(user_access('access comments')) {
 <?php
 foreach($chapters as $parent_chapter => $parents) {
     foreach($parents as $child_chapter => $children) {
-      $show_chapter = FALSE;   
-      foreach($children as $child) {
-        if($child['status'] == 1 || user_access('edit any taxon description') || (user_access('edit own taxon description') && $user->uid == $child['uid'])) {
-             $has_content = TRUE;
+      $show_chapter = FALSE;
+      if(gettype($children) == "Array") {
+        foreach($children as $child) {
+          if($child['status'] == 1 || user_access('edit any taxon description') || (user_access('edit own taxon description') && $user->uid == $child['uid'])) {
+            $has_content = TRUE;
+          }
         }
       }
     }

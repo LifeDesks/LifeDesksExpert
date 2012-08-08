@@ -284,24 +284,26 @@ function taxon_list_form(&$form_state) {
 
   $node_types = node_get_types('names');
 
-  foreach ($session as $index => $filter) {
-    list($key, $value) = $filter;
-    switch ($key) {
-      case 'user':
-        $where[] = "n.uid = ".$value; 
-        break;
-      case 'type':
-          $where['type'] = "n.type = '".$value."'";
-        break;
-      case 'taxon':
-          $where['taxon'] = "td.vid = " . $value;
-        break;
-      case 'language':
-          $where['language'] = "n.language = '" . $value . "'";
-        break;
-      case 'status':
-        $where['status'] = "n.status = " . $value;
-        break;
+  if(gettype($session) == "Array") {
+    foreach ($session as $index => $filter) {
+      list($key, $value) = $filter;
+      switch ($key) {
+        case 'user':
+          $where[] = "n.uid = ".$value; 
+          break;
+        case 'type':
+            $where['type'] = "n.type = '".$value."'";
+          break;
+        case 'taxon':
+            $where['taxon'] = "td.vid = " . $value;
+          break;
+        case 'language':
+            $where['language'] = "n.language = '" . $value . "'";
+          break;
+        case 'status':
+          $where['status'] = "n.status = " . $value;
+          break;
+      }
     }
   }
 
