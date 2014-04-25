@@ -46,8 +46,10 @@ var xslTransform = {
 		else { r = this.loadFile(xml, meth, dat); }
 
 		if(r) {
-			r.setProperty('SelectionNamespaces', 'xmlns:xsl="http://www.w3.org/1999/XSL/Transform"');
-			r.setProperty('SelectionLanguage', 'XPath');
+      if (typeof(r.setProperty) != "undefined") {
+			  r.setProperty('SelectionNamespaces', 'xmlns:xsl="http://www.w3.org/1999/XSL/Transform"');
+			  r.setProperty('SelectionLanguage', 'XPath');
+      }
 			return r;
 		}
 		else return false;
